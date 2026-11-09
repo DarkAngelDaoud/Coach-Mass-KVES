@@ -1,0 +1,15 @@
+COACH MASSE - installation sur Pixel 8 (une seule fois, avec internet)
+
+1. Crée un compte gratuit sur github.com (si tu n'en as pas).
+2. Clique sur "New repository", nomme-le coach-masse, laisse-le Public, puis "Create".
+3. Clique sur "uploading an existing file", glisse TOUS les fichiers de ce dossier
+   (index.html, app.js, styles.css, sw.js, manifest.webmanifest, icon-192.png, icon-512.png), puis "Commit changes".
+4. Va dans Settings > Pages > Source : "Deploy from a branch", branche main, dossier /(root), Save.
+5. Attends 1 à 2 minutes. L'adresse est : https://TON-PSEUDO.github.io/coach-masse/
+6. Ouvre cette adresse dans Chrome sur ton Pixel 8, puis menu (trois points) > "Installer l'application".
+7. Ouvre l'app une fois en ligne, laisse-la charger. Ensuite elle fonctionne sans internet.
+
+Pour la voix en français hors ligne : Réglages Android > Système > Langues > Synthèse vocale (Google) > installe la voix française.
+
+Tes données restent sur ton téléphone. Exporte-les de temps en temps (onglet Suivi).
+Quand tu veux une amélioration, dis-le moi : je modifie les fichiers et tu les remplaces sur GitHub.

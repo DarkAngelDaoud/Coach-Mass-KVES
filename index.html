@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Coach Masse</title>
+<meta name="theme-color" content="#0C1318">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top"><span class="brand">COACH MASSE</span><span id="weekTag" class="tag"></span></header>
+<main id="view" aria-live="polite"></main>
+<nav class="tabs" id="nav" aria-label="Navigation">
+  <button data-act="tab" data-v="today">Aujourd'hui</button>
+  <button data-act="tab" data-v="train">Séance</button>
+  <button data-act="tab" data-v="meals">Repas</button>
+  <button data-act="tab" data-v="track">Suivi</button>
+  <button data-act="tab" data-v="settings">Réglages</button>
+</nav>
+<div id="runner" class="runner" hidden></div>
+<input type="file" id="importFile" accept="application/json" hidden>
+<script src="app.js"></script>
+</body>
+</html>
