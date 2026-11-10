@@ -1,12 +1,12 @@
 {
-  "name": "Coach Masse KVES",
-  "short_name": "Coach Masse KVES",
+  "name": "Coach Masse",
+  "short_name": "Coach",
   "description": "Coach de prise de masse hors ligne",
   "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#0C1318",
   "theme_color": "#0C1318",
   "icons": [

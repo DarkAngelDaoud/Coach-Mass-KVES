@@ -1,0 +1,19 @@
+MISE A JOUR VERSION 5 (option "Forcer la rotation") - depuis Chrome sur ton Pixel
+
+1. Extrais coach-masse.zip avec l'application Fichiers.
+2. Dans Chrome, ouvre github.com (Version pour ordinateur cochee), puis ton depot coach-masse.
+3. Touche Add file > Upload files, puis choisis ces 3 fichiers :
+   app.js, sw.js, manifest.webmanifest
+4. Touche Commit changes. Attends 2 minutes.
+5. Ouvre l'application avec internet, ferme-la completement, puis rouvre-la.
+   Dans Reglages, tout en bas, tu dois lire "Version 5".
+6. Dans Reglages > Affichage, active "Forcer la rotation de l'ecran", puis tourne le telephone.
+
+EN CAS DE BLOCAGE : DIAGNOSTIC
+A. Rotation automatique : glisse deux fois depuis le haut de l'ecran et verifie que "Rotation auto" est active.
+B. Test dans Chrome : ouvre l'adresse de ton site dans un onglet Chrome (pas l'icone installee).
+   Si l'ecran tourne la, le code est bon et c'est l'icone installee qui garde l'ancien reglage.
+C. Verifie le manifest : ouvre https://TON-PSEUDO.github.io/coach-masse/manifest.webmanifest
+   Tu dois lire  "orientation": "any"  (et non "portrait"). Sinon, renvoie le fichier manifest.webmanifest sur GitHub.
+D. Reinstalle : exporte tes donnees (Suivi > Exporter), appui long sur l'icone Coach > Desinstaller,
+   puis rouvre l'adresse dans Chrome > menu > Installer l'application.
