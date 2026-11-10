@@ -17,3 +17,11 @@ C. Verifie le manifest : ouvre https://TON-PSEUDO.github.io/coach-masse/manifest
    Tu dois lire  "orientation": "any"  (et non "portrait"). Sinon, renvoie le fichier manifest.webmanifest sur GitHub.
 D. Reinstalle : exporte tes donnees (Suivi > Exporter), appui long sur l'icone Coach > Desinstaller,
    puis rouvre l'adresse dans Chrome > menu > Installer l'application.
+
+
+=== VERSION 6 : boîte à avis chiffrée + onglet Plus ===
+1. Sur GitHub, remplace TOUS les fichiers du dépôt par ceux du zip (nouveau : avis-config.js).
+2. Attends 2 minutes, ouvre l'application : onglet Plus > Espace propriétaire.
+3. Crée ta clé (phrase secrète 10 caractères min.), puis « Sauvegarder ma clé » (garde le fichier).
+4. Copie le texte affiché, ouvre avis-config.js sur GitHub, crayon, remplace tout, Commit changes.
+5. Après 2 minutes, la boîte à avis est active pour tes amis. Ils t'envoient leur code, tu le colles dans Espace propriétaire.

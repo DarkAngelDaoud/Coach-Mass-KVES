@@ -1,8 +1,8 @@
-var CACHE = 'coach-masse-v5';
-var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+var CACHE = 'coach-masse-v6';
+var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'avis-config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(FILES.map(function (f) { return c.add(new Request(f, { cache: 'reload' })); }));
+    return Promise.all(FILES.map(function (f) { return c.add(new Request(f, { cache: 'reload' })).catch(function () {}); }));
   }).then(function () { return self.skipWaiting(); }));
 });
 self.addEventListener('activate', function (e) {

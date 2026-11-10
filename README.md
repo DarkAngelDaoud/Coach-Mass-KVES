@@ -2,13 +2,14 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 5 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 6 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
   <img src="capture-exercices.png" alt="Exercices animés" width="23%">
   <img src="capture-suivi.png" alt="Suivi du poids et de la performance" width="23%">
   <img src="capture-historique.png" alt="Historique des séances" width="23%">
+  <img src="capture-avis.png" alt="Boîte à avis" width="23%">
 </p>
 
 *Captures réalisées avec des données de démonstration.*
@@ -50,7 +51,7 @@ Coach Masse s'occupe de cette organisation :
 
 L'installation se fait une seule fois, avec internet.
 
-1. Ouvre l'adresse de l'application dans **Chrome** : `https://VOTRE-PSEUDO.github.io/coach-masse/`
+1. Ouvre l'adresse de l'application dans **Chrome** : `https://darkangeldaoud.github.io/coach-masse/`
 2. Touche le menu **⋮** puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
 3. Ouvre l'icône **Coach** et laisse-la charger quelques secondes avec internet.
 4. Teste en mode avion : l'application doit s'ouvrir normalement.
@@ -62,7 +63,7 @@ L'application s'adapte à tous les formats d'écran, en **portrait** comme en **
 
 ## Utiliser l'application
 
-L'application a six onglets : **Aujourd'hui**, **Séance**, **Repas**, **Suivi**, **Historique** et **Réglages**.
+L'application a six onglets : **Aujourd'hui**, **Séance**, **Repas**, **Suivi**, **Historique** et **Plus**. L'onglet **Plus** ouvre les **Réglages**, la **Boîte à avis** et l'**Espace propriétaire**.
 
 ### 1. Premier réglage (2 minutes)
 
@@ -168,13 +169,31 @@ Le volume, le métronome et chaque signal se règlent et se testent dans **Régl
 
 ---
 
+## La boîte à avis (onglet Plus)
+
+Une idée, un problème, un merci ? Va dans **Plus > Donner mon avis**.
+
+1. Écris ton nom, ton e-mail, choisis un type (idée, problème, question, bravo), une note facultative et ton message.
+2. Coche la case d'accord, puis touche **Préparer l'envoi**. L'avis est **chiffré sur ton téléphone**.
+3. Touche **Partager** et choisis toi-même la messagerie (WhatsApp, e-mail, SMS…). Tu peux aussi **Copier le code**.
+
+**Sécurité.** Le chiffrement combine une clé publique du propriétaire, un échange de clés ECDH P-256 jetable, HKDF-SHA256 et AES-256-GCM. Seul le propriétaire, avec sa clé privée, peut lire l'avis. Aucun serveur n'est utilisé. Ton identité (nom, e-mail) n'est pas vérifiée et il n'y a pas d'accusé de réception.
+
+**Pour le propriétaire (Plus > Espace propriétaire).**
+1. Crée ta clé avec une phrase secrète d'au moins 10 caractères. La clé privée reste sur ton téléphone, protégée par cette phrase (PBKDF2 600 000 itérations + AES-GCM).
+2. **Sauvegarde ta clé** (fichier). Sans elle, si tu perds le téléphone ou la phrase, les avis sont perdus pour toujours.
+3. Copie le texte proposé et colle-le dans le fichier `avis-config.js` du dépôt GitHub (crayon, puis *Commit changes*). La boîte est alors active pour tout le monde.
+4. Pour lire : déverrouille, colle les codes reçus, classe-les (Nouveau, À traiter, Fait), réponds par e-mail ou exporte-les en clair.
+
+---
+
 ## Tes données
 
 - **Tout reste sur ton téléphone**, dans l'espace de stockage de l'application. Il n'y a ni compte, ni publicité, ni suivi, ni envoi de données. Le réseau sert seulement à charger l'application et ses mises à jour.
-- **Les données ne sont pas chiffrées par l'application.** Elles sont protégées par le verrouillage de ton téléphone.
+- **Les données du suivi ne sont pas chiffrées par l'application.** Elles sont protégées par le verrouillage de ton téléphone. Seuls les avis sont chiffrés.
 - **Sauvegarde.** *Suivi > Exporter* crée un fichier de sauvegarde, *Importer* le recharge. Ce fichier est lisible en clair : garde-le en lieu sûr.
 - **Effacement.** *Réglages > Données > Effacer toutes les données*. Vider les données de Chrome efface aussi tout : exporte avant.
-- **Hors ligne.** Après la première ouverture, l'application fonctionne sans internet. Quand tu as internet, elle se met à jour toute seule. La version affichée en bas de *Réglages* permet de vérifier.
+- **Hors ligne.** Après la première ouverture, l'application fonctionne sans internet. Quand tu as internet, elle se met à jour toute seule. La version affichée dans *Plus > À propos* permet de vérifier.
 
 ---
 
@@ -187,16 +206,16 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | `index.html` | Page unique et barre de navigation |
 | `app.js` | Toute la logique : séance guidée, animations, sons, graphiques, historique |
 | `styles.css` | Styles, thèmes clair et sombre, adaptation portrait et paysage |
+| `avis-config.js` | Clé publique de la boîte à avis (et contacts facultatifs) |
 | `sw.js` | Service worker : fonctionnement hors ligne et mises à jour |
 | `manifest.webmanifest` | Réglages d'installation (nom, icônes, orientation) |
 | `icon-192.png`, `icon-512.png` | Icônes de l'application |
 
-**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v5` devient `coach-masse-v6`).
+**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v6` devient `coach-masse-v7`).
 
 **Compatibilité.** L'application est conçue pour Chrome sur Android. La mise en page a été vérifiée avec des largeurs d'écran de 320 à 1 180 pixels, en portrait et en paysage. Les autres navigateurs n'ont pas été testés.
 
 ## Feuille de route
 
-- Une boîte à avis pour recueillir des commentaires, avec envoi chiffré de bout en bout et sans serveur (à l'étude).
 - Un chiffrement facultatif des données locales avec un code secret (à l'étude).
 - Un rappel de séance, aujourd'hui possible seulement avec l'application Horloge du téléphone.

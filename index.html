@@ -19,10 +19,14 @@
   <button data-act="tab" data-v="meals">Repas</button>
   <button data-act="tab" data-v="track">Suivi</button>
   <button data-act="tab" data-v="history">Historique</button>
-  <button data-act="tab" data-v="settings">Réglages</button>
+  <button data-act="tab" data-v="more">Plus</button>
 </nav>
 <div id="runner" class="runner" hidden></div>
+<div id="toast" class="toast" role="status" hidden></div>
 <input type="file" id="importFile" accept="application/json" hidden>
+<input type="file" id="keyFile" accept="application/json,.json" hidden>
+<input type="file" id="avisFile" accept="text/plain,.txt,.eml" multiple hidden>
+<script src="avis-config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
