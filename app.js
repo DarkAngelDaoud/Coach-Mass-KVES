@@ -5,7 +5,7 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '2';
+var VERSION = '3';
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -88,7 +88,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '' },
+      count: true, auto: true, restBonus: 15, sound: true, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '' },
     logs: {}, measures: [], sessions: [], levels: {}
   };
 }
@@ -329,36 +329,124 @@ function viewMeals() {
   return h;
 }
 
-function chartSvg() {
-  var a = weights(), t0 = P.start;
-  if (!a.some(function (x) { return x.d === t0; })) a.unshift({ d: t0, w: +P.w0 });
-  if (a.length < 2) return '<p class="small">Ajoute une pesée dans le bilan du jour pour voir ta courbe.</p>';
-  var W = 340, H = 150, L = 34, R = 8, T = 10, B = 22;
+var CH = { range: 56, ex: 'total' };
+var delArmed = -1;
+function sdate(d) { return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
+function ldate(d) { return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }); }
+function inRange(d) { return !CH.range || dnum(today()) - dnum(d) <= CH.range; }
+function niceMax(v) {
+  if (!(v > 0)) return 10;
+  var pw = Math.pow(10, Math.floor(Math.log10(v))), n = v / pw;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pw;
+}
+function tickStr(v) { return String(Math.round(v * 10) / 10).replace('.', ','); }
+
+function weightChart() {
+  var a = weights();
+  if (!a.some(function (x) { return x.d === P.start; })) a.unshift({ d: P.start, w: +P.w0 });
+  a.sort(function (x, y) { return x.d < y.d ? -1 : 1; });
+  a = a.filter(function (x) { return inRange(x.d); });
+  if (a.length < 2) return { svg: '<p class="small">Pas assez de pesées sur cette période. Note ton poids dans le bilan du jour.</p>', pts: a };
+  var W = 340, H = 170, ml = 38, mr = 10, mt = 18, mb = 26, goal = +P.goal;
   var ws = a.map(function (x) { return x.w; });
-  var lo = Math.floor(Math.min.apply(null, ws) - 1), hi = Math.ceil(Math.max.apply(null, ws.concat([+P.goal])) + 1);
+  var lo = Math.floor(Math.min.apply(null, ws.concat([goal])) - 1), hi = Math.ceil(Math.max.apply(null, ws.concat([goal])) + 1);
+  var step = Math.max(1, Math.ceil((hi - lo) / 3)); hi = lo + 3 * step;
   var x0 = dnum(a[0].d), x1 = Math.max(dnum(a[a.length - 1].d), x0 + 7);
-  function X(d) { return L + (dnum(d) - x0) / (x1 - x0) * (W - L - R); }
-  function Y(w) { return T + (hi - w) / (hi - lo) * (H - T - B); }
-  var line = a.map(function (p) { return X(p.d).toFixed(1) + ',' + Y(p.w).toFixed(1); }).join(' ');
-  var gy = Y(+P.goal).toFixed(1);
-  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Courbe de poids">';
-  s += '<line x1="' + L + '" y1="' + gy + '" x2="' + (W - R) + '" y2="' + gy + '" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="5 4"/>';
-  s += '<text x="' + (L - 4) + '" y="' + (+gy + 4) + '" text-anchor="end" fill="var(--ok)" font-size="10">' + P.goal + '</text>';
-  s += '<text x="' + (L - 4) + '" y="' + (T + 4) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + hi + '</text>';
-  s += '<text x="' + (L - 4) + '" y="' + (H - B + 4) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + lo + '</text>';
-  s += '<line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '" stroke="var(--line)"/>';
-  s += '<polyline points="' + line + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>';
+  function X(d) { return ml + (dnum(d) - x0) / (x1 - x0) * (W - ml - mr); }
+  function Y(w) { return mt + (hi - w) / (hi - lo) * (H - mt - mb); }
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Évolution du poids">', k;
+  for (k = 0; k <= 3; k++) {
+    var v = lo + k * step, y = Y(v).toFixed(1);
+    s += '<line x1="' + ml + '" y1="' + y + '" x2="' + (W - mr) + '" y2="' + y + '" stroke="var(--line)"/><text x="' + (ml - 5) + '" y="' + (+y + 3.5) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + v + '</text>';
+  }
+  var gy = Y(goal).toFixed(1);
+  s += '<line x1="' + ml + '" y1="' + gy + '" x2="' + (W - mr) + '" y2="' + gy + '" stroke="var(--ok)" stroke-width="1.5" stroke-dasharray="5 4"/>';
+  s += '<text x="' + (W - mr) + '" y="' + (+gy - 4) + '" text-anchor="end" fill="var(--ok)" font-size="10">objectif ' + tickStr(goal) + ' kg</text>';
+  s += '<polyline points="' + a.map(function (p) { return X(p.d).toFixed(1) + ',' + Y(p.w).toFixed(1); }).join(' ') + '" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>';
   a.forEach(function (p, i) { s += '<circle cx="' + X(p.d).toFixed(1) + '" cy="' + Y(p.w).toFixed(1) + '" r="' + (i === a.length - 1 ? 4.5 : 2.5) + '" fill="var(--accent)"/>'; });
-  s += '</svg>';
-  return s;
+  var last = a[a.length - 1], lx = X(last.d);
+  s += '<text x="' + (lx > W - 50 ? lx : lx).toFixed(1) + '" y="' + (Y(last.w) - 9).toFixed(1) + '" text-anchor="' + (lx > W - 50 ? 'end' : 'middle') + '" fill="var(--fg)" font-size="11" font-weight="700">' + tickStr(last.w) + ' kg</text>';
+  s += '<text x="' + ml + '" y="' + (H - 8) + '" fill="var(--muted)" font-size="10">' + sdate(a[0].d) + '</text>';
+  s += '<text x="' + (W - mr) + '" y="' + (H - 8) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + sdate(a[a.length - 1].d) + '</text></svg>';
+  return { svg: s, pts: a };
+}
+
+function barChart(items, unit) {
+  if (!items.length) return '<p class="small">Aucune séance terminée sur cette période. Fais une séance pour voir ta courbe.</p>';
+  var W = 340, H = 170, ml = 38, mr = 10, mt = 18, mb = 26, n = items.length;
+  var mx = niceMax(Math.max.apply(null, items.map(function (x) { return x.v; })) * 1.08);
+  var iw = (W - ml - mr) / n, bw = Math.min(30, iw * 0.7);
+  function Y(v) { return mt + (1 - v / mx) * (H - mt - mb); }
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Performance par séance">', k;
+  for (k = 0; k <= 2; k++) {
+    var v = mx * k / 2, y = Y(v).toFixed(1);
+    s += '<line x1="' + ml + '" y1="' + y + '" x2="' + (W - mr) + '" y2="' + y + '" stroke="var(--line)"/><text x="' + (ml - 5) + '" y="' + (+y + 3.5) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + tickStr(v) + '</text>';
+  }
+  items.forEach(function (it, i) {
+    var cx = ml + (i + 0.5) * iw, y = Y(it.v), isLast = i === n - 1;
+    s += '<rect x="' + (cx - bw / 2).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + Math.max(1, H - mb - y).toFixed(1) + '" rx="3" fill="var(--accent)" opacity="' + (isLast ? 1 : 0.55) + '"/>';
+    if (n <= 10 || isLast) s += '<text x="' + cx.toFixed(1) + '" y="' + (y - 4).toFixed(1) + '" text-anchor="middle" fill="var(--fg)" font-size="10" font-weight="700">' + it.v + '</text>';
+  });
+  s += '<text x="' + ml + '" y="' + (H - 8) + '" fill="var(--muted)" font-size="10">' + sdate(items[0].d) + '</text>';
+  if (n > 1) s += '<text x="' + (W - mr) + '" y="' + (H - 8) + '" text-anchor="end" fill="var(--muted)" font-size="10">' + sdate(items[n - 1].d) + '</text>';
+  return s + '</svg>';
+}
+
+function perfItems() {
+  var out = [];
+  D.sessions.forEach(function (s) {
+    if (s.partial || !inRange(s.date)) return;
+    var v = 0, has = false;
+    (s.logs || []).forEach(function (l) {
+      var e = FIGS[l.id];
+      if (!e) return;
+      if (CH.ex === 'total') { if (!e.timed) { v += l.reps; has = true; } }
+      else if (l.id === CH.ex) { v += l.reps; has = true; }
+    });
+    if (has) out.push({ d: s.date, v: v });
+  });
+  return out;
+}
+
+function weekRows() {
+  var cw = wkNo(), wk = {};
+  function slot(w) { return wk[w] || (wk[w] = { n: 0, reps: 0, ws: [] }); }
+  D.sessions.forEach(function (s) {
+    var w = Math.max(1, Math.floor((dnum(s.date) - dnum(P.start)) / 7) + 1), o = slot(w);
+    if (!s.partial) o.n++;
+    (s.logs || []).forEach(function (l) { var e = FIGS[l.id]; if (e && !e.timed) o.reps += l.reps; });
+  });
+  Object.keys(D.logs).forEach(function (d) {
+    if (!D.logs[d].weight) return;
+    var w = Math.max(1, Math.floor((dnum(d) - dnum(P.start)) / 7) + 1);
+    slot(w).ws.push(+D.logs[d].weight);
+  });
+  var from = Math.max(1, CH.range ? cw - Math.ceil(CH.range / 7) + 1 : 1, cw - 25), rows = [], w;
+  for (w = cw; w >= from; w--) {
+    var o = wk[w] || { n: 0, reps: 0, ws: [] };
+    rows.push('<tr><th scope="row">S' + w + (w === cw ? ' · en cours' : '') + '</th><td class="n">' + o.n + ' / ' + P.days.length + '</td><td class="n">' + o.reps + '</td><td class="n">' + (o.ws.length ? fmt(o.ws.reduce(function (a, b) { return a + b; }, 0) / o.ws.length) + ' kg' : '—') + '</td></tr>');
+  }
+  return rows.join('');
 }
 
 function viewTrack() {
   var cur = currentWeight(), sl = slopeWeek(28), goal = +P.goal;
   var eta = sl && sl > 0.05 && cur < goal ? Math.ceil((goal - cur) / sl) + ' sem.' : '—';
-  var h = '<h1>Suivi</h1><div class="card"><div class="stats"><div class="stat"><b>' + fmt(cur) + '</b><span>kg actuel</span></div><div class="stat"><b>' + fmt(goal - cur) + '</b><span>kg restants</span></div><div class="stat"><b>' + eta + '</b><span>estimation</span></div></div>' + chartSvg() +
+  var h = '<h1>Suivi</h1><div class="card"><div class="stats"><div class="stat"><b>' + fmt(cur) + '</b><span>kg actuel</span></div><div class="stat"><b>' + fmt(goal - cur) + '</b><span>kg restants</span></div><div class="stat"><b>' + eta + '</b><span>estimation</span></div></div>' +
     '<p class="small">Rythme mesuré : ' + (sl === null ? 'pas assez de pesées (3 sur 10 jours minimum)' : fmt(sl, 2) + ' kg par semaine') + '. Cible saine : 0,25 à 0,5.</p></div>';
-  h += '<div class="card"><h2>Cette semaine</h2><div class="row"><b>' + sessionsThisWeek() + ' / ' + P.days.length + '</b><span class="small">séances faites</span></div></div>';
+  h += '<div class="seg" role="group" aria-label="Période">' + [[28, '4 sem.'], [56, '8 sem.'], [182, '6 mois'], [0, 'Tout']].map(function (r) {
+    return '<button data-act="range" data-v="' + r[0] + '" class="' + (CH.range === r[0] ? 'on' : '') + '">' + r[1] + '</button>';
+  }).join('') + '</div>';
+  var wc = weightChart(), dw = '';
+  if (wc.pts.length >= 2) { var df = wc.pts[wc.pts.length - 1].w - wc.pts[0].w; dw = '<p class="small">Sur la période : ' + (df > 0 ? '+' : '') + fmt(df) + ' kg (de ' + fmt(wc.pts[0].w) + ' à ' + fmt(wc.pts[wc.pts.length - 1].w) + ' kg).</p>'; }
+  h += '<div class="card"><h2>Évolution du poids</h2>' + wc.svg + dw + '</div>';
+  var chips = '<button class="chip' + (CH.ex === 'total' ? ' on' : '') + '" data-act="exsel" data-v="total">Total</button>' + EX.map(function (e) {
+    return '<button class="chip' + (CH.ex === e.id ? ' on' : '') + '" data-act="exsel" data-v="' + e.id + '">' + esc(e.name) + '</button>';
+  }).join('');
+  var it = perfItems(), ex = FIGS[CH.ex], unit = ex && ex.timed ? 's' : 'reps', pd = '';
+  if (it.length >= 2) { var d2 = it[it.length - 1].v - it[0].v; pd = '<p class="small">Du début à la dernière séance de la période : ' + it[0].v + ' → ' + it[it.length - 1].v + ' ' + unit + ' (' + (d2 > 0 ? '+' : '') + d2 + ').</p>'; }
+  h += '<div class="card"><h2>Performance par séance</h2><div class="chips">' + chips + '</div><p class="small">' + (CH.ex === 'total' ? 'Total des répétitions (hors gainage)' : esc(ex.name) + ' : ' + (ex.timed ? 'secondes tenues' : 'répétitions') + ' cumulées sur la séance') + '</p>' + barChart(it, unit) + pd + '</div>';
+  h += '<div class="card"><h2>Semaine par semaine</h2><div class="table-wrap"><table><thead><tr><th>Semaine</th><th class="n">Séances</th><th class="n">Reps</th><th class="n">Poids moy.</th></tr></thead><tbody>' + weekRows() + '</tbody></table></div></div>';
   h += '<div class="card"><h2>Mensurations</h2><p class="small">Toutes les 2 semaines, matin à jeun, en cm.</p><div class="grid2">' +
     ['bras', 'poitrine', 'taille', 'cuisse'].map(function (k) { return '<label class="f">' + k.charAt(0).toUpperCase() + k.slice(1) + '<input type="number" inputmode="decimal" step="0.5" id="m_' + k + '"></label>'; }).join('') +
     '</div><button class="btn sm" data-act="measure">Enregistrer</button>';
@@ -373,6 +461,47 @@ function viewTrack() {
   return h;
 }
 
+function viewHistory() {
+  var ss = D.sessions, h = '<h1>Historique</h1>';
+  if (!ss.length) return h + '<div class="card"><p>Aucune séance enregistrée pour le moment. Chaque série que tu fais est conservée ici, avec la date, la variante et tes répétitions.</p></div>';
+  var done = ss.filter(function (x) { return !x.partial; }), mins = 0, reps = 0;
+  ss.forEach(function (x) { mins += x.min || 0; (x.logs || []).forEach(function (l) { var e = FIGS[l.id]; if (e && !e.timed) reps += l.reps; }); });
+  h += '<div class="card"><div class="stats"><div class="stat"><b>' + done.length + '</b><span>séances</span></div><div class="stat"><b>' + Math.round(mins / 60 * 10) / 10 + '</b><span>heures</span></div><div class="stat"><b>' + reps + '</b><span>répétitions</span></div></div></div>';
+  var rec = '';
+  EX.forEach(function (e) {
+    var best = null, first = null, lastv = null;
+    ss.forEach(function (x) {
+      var tot = 0, has = false;
+      (x.logs || []).forEach(function (l) {
+        if (l.id !== e.id) return;
+        has = true; tot += l.reps;
+        if (!best || l.reps > best.v) best = { v: l.reps, d: x.date };
+      });
+      if (has && !x.partial) { if (first === null) first = tot; lastv = tot; }
+    });
+    if (!best) return;
+    var u = e.timed ? ' s' : '';
+    rec += '<li><span>' + esc(e.name) + '</span><span>meilleure série ' + best.v + u + ' · ' + sdate(best.d) + (first !== null && lastv !== null && first !== lastv ? '<br>total par séance : ' + first + ' → ' + lastv + u : '') + '</span></li>';
+  });
+  if (rec) h += '<div class="card"><h2>Records et progression</h2><ul class="list">' + rec + '</ul></div>';
+  h += '<h2>Toutes les séances</h2>';
+  for (var i = ss.length - 1; i >= 0; i--) {
+    var s = ss[i], g = {}, rows = '', tot = 0;
+    (s.logs || []).forEach(function (l) { (g[l.id] = g[l.id] || []).push(l); var e = FIGS[l.id]; if (e && !e.timed) tot += l.reps; });
+    EX.forEach(function (e) {
+      if (!g[e.id]) return;
+      var arr = g[e.id].slice().sort(function (a, b) { return a.sn - b.sn; });
+      rows += '<li><span>' + esc(arr[0].name || e.name) + '</span><span>' + arr.map(function (l) { return l.reps; }).join(' · ') + (e.timed ? ' s' : '') + '</span></li>';
+    });
+    h += '<details class="card"' + (delArmed === i ? ' open' : '') + '><summary><span class="grow">' + esc(ldate(s.date)) + '</span>' +
+      (s.partial ? '<span class="pill">incomplète</span>' : '') + (s.light ? '<span class="pill">allégée</span>' : '') + '</summary>' +
+      '<p class="small">' + s.min + ' min · ' + s.sets + ' séries · ' + tot + ' répétitions · semaine ' + (s.week || '—') + '</p>' +
+      '<ul class="list">' + (rows || '<li><span>Aucune série enregistrée</span></li>') + '</ul>' +
+      '<button class="btn bad sm" data-act="delsession" data-i="' + i + '">' + (delArmed === i ? 'Confirmer la suppression' : 'Supprimer cette séance') + '</button></details>';
+  }
+  return h;
+}
+
 function tog(key, label, hint) {
   return '<label class="meal"><input type="checkbox" data-set="' + key + '"' + (P[key] ? ' checked' : '') + '><span><b>' + label + '</b>' + (hint ? '<br><span class="small">' + hint + '</span>' : '') + '</span></label>';
 }
@@ -383,6 +512,11 @@ function viewSettings() {
     '<div class="grid2"><label class="f">Secondes par répétition<input type="number" inputmode="numeric" min="2" max="6" data-set="tempo" value="' + P.tempo + '"></label>' +
     '<label class="f">Repos en plus (secondes)<input type="number" inputmode="numeric" min="0" max="60" step="5" data-set="restBonus" value="' + P.restBonus + '"></label></div>' +
     '<button class="btn alt sm" data-act="testvoice">Tester la voix</button></div>';
+  h += '<div class="card"><h2>Signaux sonores</h2>' + tog('sound', 'Sons activés', 'Bips de fin de série, d\'exercice et de repos') + tog('metro', 'Métronome de cadence', 'Bip grave à la descente, bip aigu à la montée') + tog('warn10', 'Alerte 10 secondes avant la fin du repos') +
+    '<label class="f">Volume : ' + P.vol + ' sur 10<input type="range" min="1" max="10" step="1" data-set="vol" value="' + P.vol + '" aria-label="Volume des sons"></label>' +
+    '<p class="small">Teste chaque signal :</p><div class="chips">' + [['setend', 'Fin de série'], ['exend', 'Fin d\'exercice'], ['go', 'Fin du repos'], ['warn', 'Alerte 10 s'], ['count', 'Compte à rebours'], ['beat', 'Cadence'], ['fanfare', 'Fin de séance']].map(function (x) {
+      return '<button class="chip" data-act="testsnd" data-v="' + x[0] + '">' + x[1] + '</button>';
+    }).join('') + '</div></div>';
   h += '<div class="card"><h2>Profil et objectif</h2><div class="grid2">' +
     '<label class="f">Poids de départ (kg)<input type="number" inputmode="decimal" step="0.1" data-set="w0" value="' + P.w0 + '"></label>' +
     '<label class="f">Objectif (kg)<input type="number" inputmode="decimal" step="0.5" data-set="goal" value="' + P.goal + '"></label>' +
@@ -395,20 +529,53 @@ var resetArmed = false;
 
 function render() {
   $('#weekTag').textContent = 'Semaine ' + wkNo() + ' · ' + fmt(currentWeight()) + ' kg → ' + P.goal;
-  var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, settings: viewSettings };
+  var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, history: viewHistory, settings: viewSettings };
   view.innerHTML = map[tab]();
   document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === tab); });
 }
 
 /* ====================== audio, voix, vibration ====================== */
 var actx = null;
-function beep(f, ms) {
+function unlockAudio() {
   try {
     actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    var o = actx.createOscillator(), g = actx.createGain();
-    o.frequency.value = f || 880; g.gain.value = 0.15; o.connect(g); g.connect(actx.destination);
-    o.start(); o.stop(actx.currentTime + (ms || 120) / 1000);
+    if (actx.state === 'suspended') actx.resume();
   } catch (e) {}
+}
+function tone(f, dur, delay, type, vol) {
+  if (!P.sound) return;
+  try {
+    unlockAudio();
+    if (!actx) return;
+    var t0 = actx.currentTime + (delay || 0), o = actx.createOscillator(), g = actx.createGain();
+    var v = (vol || 1) * Math.pow((+P.vol || 7) / 10, 2) * 0.5;
+    o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(v, 0.0002), t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  } catch (e) {}
+}
+var SND = {
+  tick: function () { tone(1200, 0.04, 0, 'square', 0.35); },
+  down: function () { tone(520, 0.1, 0, 'triangle', 1); },
+  up: function () { tone(780, 0.1, 0, 'triangle', 1); },
+  beat: function () { tone(520, 0.1, 0, 'triangle', 1); tone(780, 0.1, 0.5, 'triangle', 1); },
+  count: function () { tone(700, 0.1, 0, 'sine', 1); },
+  start: function () { tone(1000, 0.25, 0, 'sine', 1); },
+  warn: function () { tone(900, 0.09, 0, 'square', 0.5); tone(900, 0.09, 0.16, 'square', 0.5); },
+  setend: function () { tone(880, 0.16, 0, 'sine', 1); tone(660, 0.16, 0.18, 'sine', 1); tone(440, 0.3, 0.36, 'sine', 1); },
+  exend: function () { SND.setend(); tone(660, 0.14, 0.75, 'triangle', 0.9); tone(990, 0.3, 0.9, 'triangle', 0.9); },
+  go: function () { tone(523, 0.12, 0, 'triangle', 1); tone(659, 0.12, 0.14, 'triangle', 1); tone(784, 0.3, 0.28, 'triangle', 1); },
+  newex: function () { tone(392, 0.14, 0, 'triangle', 1); tone(523, 0.14, 0.16, 'triangle', 1); tone(659, 0.14, 0.32, 'triangle', 1); tone(784, 0.35, 0.48, 'triangle', 1); },
+  chime: function () { tone(988, 0.14, 0, 'sine', 0.8); tone(1318, 0.26, 0.12, 'sine', 0.8); },
+  fanfare: function () { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, 0.2, i * 0.18, 'triangle', 1); }); tone(1046, 0.5, 0.8, 'triangle', 1); }
+};
+function play(n) { if (SND[n]) SND[n](); }
+function beep(f, ms) { tone(f || 880, (ms || 120) / 1000, 0, 'sine', 1); }
+function flash() {
+  try { runner.classList.add('flash'); setTimeout(function () { runner.classList.remove('flash'); }, 450); } catch (e) {}
 }
 function say(t) {
   if (!P.voice) return;
@@ -442,21 +609,23 @@ function startSession() {
   plan.forEach(function (p, i) { for (var s = 1; s <= p.sets; s++) steps.push({ k: 'set', pi: i, sn: s }); });
   R = { plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
   runner.hidden = false; document.body.style.overflow = 'hidden';
+  unlockAudio();
   wake();
   say(light ? 'Séance allégée aujourd\'hui. Échauffement.' : 'Séance. Échauffement d\'abord.');
   advance();
 }
 
 function clearTimer() { if (R) { if (R.timer) { clearInterval(R.timer); R.timer = null; } R.last = -1; } }
-function setTimer(sec, onTick, onEnd) {
+function setTimer(sec, onTick, onEnd, onFine) {
   clearTimer();
   R.endAt = performance.now() + sec * 1000; R.last = -1;
   R.timer = setInterval(function () {
     if (!R || R.paused) return;
-    var left = Math.ceil((R.endAt - performance.now()) / 1000);
+    var rem = R.endAt - performance.now(), left = Math.ceil(rem / 1000);
+    if (onFine) onFine(rem);
     if (left !== R.last) { R.last = left; onTick(Math.max(0, left)); }
     if (left <= 0) { clearTimer(); onEnd(); }
-  }, 200);
+  }, 100);
 }
 function setTxt(id, t) { var n = $('#' + id); if (n) n.textContent = t; }
 
@@ -469,7 +638,7 @@ function advance() {
   if (s.k === 'warm') {
     R.phase = 'warm'; draw();
     say(s.label);
-    setTimer(s.sec, function (left) { setTxt('tmr', left); if (left > 0 && left <= 3) { beep(660, 80); vib(40); } }, function () { beep(880, 200); vib([120]); advance(); });
+    setTimer(s.sec, function (left) { setTxt('tmr', left); if (left > 0 && left <= 3) { play('count'); vib(40); } }, function () { play('chime'); vib([120]); flash(); advance(); });
   } else {
     prep();
   }
@@ -482,26 +651,38 @@ function prep() {
   var unit = p.e.timed ? p.hi + ' secondes' : p.hi + ' répétitions';
   say((s.sn === 1 ? 'Exercice : ' + p.name + '. ' : 'Série ' + s.sn + '. ') + unit + '. Position.');
   if (P.auto) {
-    setTimer(6, function (left) { setTxt('tmr', left); if (left > 0 && left <= 3) { beep(660, 80); vib(40); } }, work);
+    setTimer(6, function (left) { setTxt('tmr', left); if (left > 0 && left <= 3) { play('count'); vib(40); } }, work);
   }
 }
+function metroFn(totalSec, tempo, maxBeat) {
+  return function (rem) {
+    if (!P.metro) return;
+    var h = Math.floor((totalSec * 1000 - rem) / (tempo * 500));
+    if (h > R.beat && h <= maxBeat) { R.beat = h; if (h % 2 === 1) SND.up(); else SND.down(); }
+  };
+}
 function work() {
-  var o = setInfo(), p = o.p;
-  clearTimer(); R.phase = 'work'; R.count = 0; draw();
-  beep(1000, 250); vib([200]);
+  var o = setInfo(), p = o.p, tempo = Math.max(2, Math.round(+P.tempo || 3));
+  clearTimer(); R.phase = 'work'; R.count = 0; R.beat = 0; draw();
+  play('start'); vib([200]); flash();
   if (p.e.timed) {
+    var half = Math.floor(p.hi / 2);
     setTimer(p.hi, function (left) {
       setTxt('tmr', left);
-      if (left === Math.floor(p.hi / 2)) say('Tiens. Moitié.');
-      if (left === 10) say('Dix secondes. Ne lâche pas.');
-      if (left > 0 && left <= 3) { beep(660, 80); vib(40); }
+      var el = p.hi - left;
+      if (left === half) { say('Tiens. Moitié.'); play('chime'); }
+      else if (left === 10) { say('Dix secondes. Ne lâche pas.'); play('warn'); }
+      else if (left > 3 && P.metro && el > 0 && el % 5 === 0) play('tick');
+      if (left > 0 && left <= 3) { play('count'); vib(40); }
     }, function () { finishSet(p.hi); });
   } else if (P.count) {
-    var tempo = Math.max(2, Math.round(+P.tempo || 3)), total = p.hi * tempo;
+    var total = p.hi * tempo;
     setTimer(total, function (left) {
       var c = Math.floor((total - left) / tempo);
       if (c > R.count && c <= p.hi) { R.count = c; setTxt('cnt', c); say(c === p.hi ? c + '. Terminé.' : String(c)); vib(30); }
-    }, function () { finishSet(p.hi); });
+    }, function () { finishSet(p.hi); }, metroFn(total, tempo, 2 * p.hi - 1));
+  } else if (P.metro) {
+    setTimer(900, function () {}, function () {}, metroFn(900, tempo, 99999));
   }
 }
 function stopWork() {
@@ -512,19 +693,19 @@ function stopWork() {
 function finishSet(reps) {
   var o = setInfo(), p = o.p;
   clearTimer();
-  var prev = lastReps(p.e.id, o.s.sn);
-  R.logs.push({ id: p.e.id, hi: p.hi, sn: o.s.sn, reps: reps });
+  R.logs.push({ id: p.e.id, name: p.name, hi: p.hi, sn: o.s.sn, reps: reps });
   R.reps = reps;
   if (R.i + 1 >= R.steps.length) return finish(false);
-  R.phase = 'rest'; draw();
   var nx = R.steps[R.i + 1], np = R.plan[nx.pi];
+  play(nx.sn === 1 ? 'exend' : 'setend'); vib([300, 80, 300]); flash();
+  R.phase = 'rest'; draw();
   say('Repos. Prochain : ' + (nx.sn === 1 ? np.name : 'série ' + nx.sn) + '. Sois honnête sur tes répétitions.');
   setTimer(p.rest, function (left) {
     setTxt('tmr', left);
-    if (left > 0 && left <= 3) { beep(660, 80); vib(40); }
-  }, function () { beep(880, 200); vib([100, 60, 100]); advance(); });
+    if (P.warn10 && left === 10 && p.rest > 15) { play('warn'); vib([60, 60, 60]); }
+    if (left > 0 && left <= 3) { play('count'); vib(40); }
+  }, function () { play(nx.sn === 1 ? 'newex' : 'go'); vib([100, 60, 100]); flash(); advance(); });
 }
-function lastReps() { return null; }
 
 function finish(partial) {
   clearTimer();
@@ -535,7 +716,7 @@ function finish(partial) {
   save();
   R.phase = 'done'; R.ups = ups; R.min = min; R.partial = partial;
   unwake(); drawDone();
-  if (!partial) { say('Séance terminée. ' + min + ' minutes. Maintenant, tu manges.'); vib([300, 100, 300]); }
+  if (!partial) { play('fanfare'); say('Séance terminée. ' + min + ' minutes. Maintenant, tu manges.'); vib([300, 100, 300]); flash(); }
 }
 function applyProgress(logs) {
   var ups = [];
@@ -604,6 +785,7 @@ document.addEventListener('click', function (ev) {
   if (!t) return;
   var a = t.getAttribute('data-act');
   if (a !== 'reset') resetArmed = false;
+  if (a !== 'delsession') delArmed = -1;
   if (a === 'tab') { tab = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); return; }
   if (a === 'start') { startSession(); return; }
   if (a === 'energy') { log().energy = +t.getAttribute('data-n'); save(); render(); return; }
@@ -618,6 +800,14 @@ document.addEventListener('click', function (ev) {
     return;
   }
   if (a === 'day') { var d = +t.getAttribute('data-d'), i = P.days.indexOf(d); if (i >= 0) P.days.splice(i, 1); else P.days.push(d); save(); render(); return; }
+  if (a === 'range') { CH.range = +t.getAttribute('data-v'); render(); return; }
+  if (a === 'exsel') { CH.ex = t.getAttribute('data-v'); render(); return; }
+  if (a === 'testsnd') { unlockAudio(); play(t.getAttribute('data-v')); vib([100]); return; }
+  if (a === 'delsession') {
+    var di = +t.getAttribute('data-i');
+    if (delArmed !== di) { delArmed = di; render(); return; }
+    D.sessions.splice(di, 1); delArmed = -1; save(); render(); return;
+  }
   if (a === 'animtoggle') {
     var card = t.closest('.card'), sv = card && card.querySelector('svg.anim');
     if (sv) {

@@ -66,8 +66,8 @@ input:focus-visible, button:focus-visible { outline: 3px solid var(--accent); ou
 .list li { padding: 8px 0; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; }
 .list li:last-child { border-bottom: 0; }
 details summary { cursor: pointer; font-weight: 700; min-height: 36px; display: flex; align-items: center; }
-.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 5; }
-.tabs button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 0.72rem; font-weight: 700; padding: 14px 2px; min-height: 56px; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(6, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); z-index: 5; }
+.tabs button { appearance: none; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 0.66rem; font-weight: 700; padding: 14px 0; min-height: 56px; }
 .tabs button.on { color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
 
 /* illustrations */
@@ -96,3 +96,15 @@ details summary { cursor: pointer; font-weight: 700; min-height: 36px; display: 
 .scrub { display: flex; gap: 12px; align-items: center; }
 .scrub input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); min-height: 40px; }
 .runner .draw svg { max-height: 36vh; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { appearance: none; border: 1px solid var(--line); background: var(--surface2); color: var(--fg); border-radius: 99px; padding: 8px 12px; font: inherit; font-size: 0.85rem; min-height: 40px; cursor: pointer; }
+.chip.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.runner.flash { box-shadow: inset 0 0 0 12px var(--accent); }
+details.card summary { gap: 8px; }
+details.card[open] summary { margin-bottom: 4px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+th, td { text-align: left; padding: 8px 8px 8px 0; border-bottom: 1px solid var(--line); }
+th.n, td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+thead th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
