@@ -5,7 +5,7 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '3';
+var VERSION = '4';
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -306,11 +306,13 @@ function viewToday() {
 function viewTrain() {
   var h = '<h1>Séance corps entier</h1><p class="small">Semaine ' + wkNo() + ' · ' + (wkNo() <= 2 ? '3 séries' : '4 séries') + ' sur les exercices principaux. Jours prévus : ' + P.days.slice().sort().map(function (d) { return JOURS[d]; }).join(', ') + '.</p>';
   h += '<button class="btn go" data-act="start">Lancer la séance' + (isLight() ? ' (allégée)' : '') + '</button>';
+  h += '<div class="cards2">';
   EX.forEach(function (e) {
     var L = lv(e.id), names = levelsFor(e), li = Math.min(L.level, names.length - 1);
     var tgt = e.timed ? (e.lo + L.off) + '–' + (e.hi + L.off) + ' s' : (e.lo + L.off) + '–' + (e.hi + L.off) + ' reps';
     h += '<div class="card"><div class="row"><h3 class="grow">' + esc(names[li]) + '</h3><span class="pill on">' + tgt + '</span></div>' + animBlock(e.id) + '<p class="small">' + esc(e.tip) + '</p></div>';
   });
+  h += '</div>';
   var last = D.sessions.slice(-5).reverse();
   if (last.length) h += '<div class="card"><h2>Dernières séances</h2><ul class="list">' + last.map(function (s) {
     return '<li><span>' + s.date + (s.partial ? ' · incomplète' : '') + '</span><span>' + s.min + ' min · ' + s.sets + ' séries</span></li>';
@@ -746,11 +748,11 @@ function draw() {
     '<span class="row"><button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
   h += '<div class="bar"><i style="width:' + pr + '%"></i></div>';
   if (s.k === 'warm') {
-    h += '<p class="title">' + esc(s.label) + '</p><div class="draw">' + animSvg(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button>';
+    h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p><div class="draw">' + animSvg(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div></div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
   } else {
     var p = R.plan[s.pi], e = p.e, unit = e.timed ? 'secondes' : 'répétitions';
     var ds = R.phase === 'rest' && R.steps[R.i + 1] ? R.plan[R.steps[R.i + 1].pi] : p;
-    h += '<p class="title">' + esc(ds.name) + '</p><div class="draw">' + animSvg(ds.e.id, (R.paused || ds.e.timed) ? 'hold' : 'loop', Math.max(2, +P.tempo || 3)) + '</div>';
+    h += '<div class="rbody"><div class="rl"><p class="title">' + esc(ds.name) + '</p><div class="draw">' + animSvg(ds.e.id, (R.paused || ds.e.timed) ? 'hold' : 'loop', Math.max(2, +P.tempo || 3)) + '</div></div><div class="rr">';
     if (R.phase === 'prep') {
       h += '<p class="sub">Vise ' + p.hi + ' ' + unit + (e.timed ? '' : ' (minimum ' + p.lo + ')') + '</p>';
       h += P.auto ? '<div class="big" id="tmr">6</div><p class="sub">Prépare-toi</p><button class="btn go" data-act="begin">Commencer maintenant</button>' : '<button class="btn go" data-act="begin">Commencer</button>';
@@ -765,6 +767,7 @@ function draw() {
       if (!e.timed) h += '<p class="sub">Répétitions réussies (corrige si besoin)</p><div class="stepper"><button data-act="repm">−</button><b id="reps">' + R.reps + '</b><button data-act="repp">+</button></div>';
       h += '<p class="sub">Ensuite : ' + esc(nx.sn === 1 ? np.name : 'série ' + nx.sn + ' · ' + np.name) + '</p><div class="row"><button class="btn alt grow" data-act="plus">+ 15 s</button><button class="btn go grow" data-act="skip">Passer</button></div>';
     }
+    h += '</div></div>';
   }
   runner.innerHTML = h;
   if (R.last >= 0) setTxt('tmr', R.last);
@@ -772,10 +775,10 @@ function draw() {
 }
 function drawDone() {
   var h = '<div class="rtop"><span class="small">' + (R.partial ? 'Séance interrompue' : 'Séance terminée') + '</span></div>';
-  h += '<p class="title">' + (R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div>';
+  h += '<div class="rbody"><div class="rl"><p class="title">' + (R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
   if (R.ups && R.ups.length) h += '<div class="card"><h2>Tu passes au niveau supérieur</h2><ul class="list">' + R.ups.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
-  h += '<button class="btn go" data-act="closerun">Fermer</button>';
+  h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
   runner.innerHTML = h;
 }
 
