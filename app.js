@@ -5,7 +5,7 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '4';
+var VERSION = '5';
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -88,7 +88,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '' },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '' },
     logs: {}, measures: [], sessions: [], levels: {}
   };
 }
@@ -100,6 +100,14 @@ function normalize(o) {
 var D;
 try { D = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { D = defaults(); }
 var P = D.profile;
+function applyRotate() {
+  try {
+    var so = window.screen && window.screen.orientation;
+    if (!so) return;
+    if (P.rotate) { var r = so.lock && so.lock('any'); if (r && r.catch) r.catch(function () {}); }
+    else if (so.unlock) so.unlock();
+  } catch (e) {}
+}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
 
 function log(d) { return D.logs[d || today()] || (D.logs[d || today()] = {}); }
@@ -524,6 +532,7 @@ function viewSettings() {
     '<label class="f">Objectif (kg)<input type="number" inputmode="decimal" step="0.5" data-set="goal" value="' + P.goal + '"></label>' +
     '<label class="f">Date de départ<input type="text" data-set="start" value="' + P.start + '"></label></div>' +
     tog('hasBar', 'J\'ai une barre de traction', 'Ajoute les tractions au tirage') + tog('cigs', 'Suivre mes cigarettes', 'Un compteur dans le bilan du jour') + '</div>';
+  h += '<div class="card"><h2>Affichage</h2>' + tog('rotate', 'Forcer la rotation de l\'écran', 'À activer si l\'application reste bloquée en portrait. Elle suit alors le capteur du téléphone.') + '</div>';
   h += '<div class="card"><h2>Données</h2><button class="btn bad sm" data-act="reset">' + (resetArmed ? 'Confirmer : tout effacer' : 'Effacer toutes les données') + '</button><p class="small">Version ' + VERSION + '</p></div>';
   return h;
 }
@@ -872,6 +881,7 @@ document.addEventListener('change', function (ev) {
     if (t.type === 'checkbox') P[key] = t.checked;
     else if (key === 'start') { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) P[key] = t.value; }
     else { var n = parseFloat(t.value.replace(',', '.')); if (!isNaN(n)) P[key] = n; }
+    if (key === 'rotate') applyRotate();
     save(); render(); return;
   }
   if (t.getAttribute('data-act') === 'meal') {
@@ -897,6 +907,7 @@ function exportData() {
   } catch (e) {}
 }
 
+applyRotate();
 render();
 requestAnimationFrame(frame);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
