@@ -5,11 +5,12 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
+var VERSION = '2';
 var WARM = [
-  { l: 'Sauts légers sur place', s: 60 },
-  { l: 'Rotations des épaules et des hanches', s: 60 },
-  { l: '10 squats lents, sans effort', s: 60 },
-  { l: '10 pompes lentes, mains sur une table', s: 60 }
+  { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
+  { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
+  { l: '10 squats lents, sans effort', s: 60, fig: 'squats', period: 3 },
+  { l: '10 pompes lentes, mains sur une table', s: 60, fig: 'pompes', period: 3 }
 ];
 
 var EX = [
@@ -36,8 +37,8 @@ var EX = [
   { id: 'fentes', name: 'Fentes marchées', lo: 10, hi: 12, rest: 60, grow: true,
     levels: ['Fentes marchées', 'Fentes marchées + sac à dos', 'Fentes marchées + sac à dos lourd'],
     tip: 'Grand pas, buste droit, genou arrière près du sol. Reps par jambe.',
-    a: { paths: [[[95,98],[105,52],[118,98]], [[105,52],[105,26]], [[105,30],[100,52]], [[95,98],[105,98]], [[118,98],[128,98]]], head: [105,14] },
-    b: { paths: [[[135,98],[133,72],[105,70]], [[105,70],[72,90],[48,97]], [[105,70],[105,42]], [[105,46],[112,66]], [[135,98],[148,98]]], head: [105,30] }, la: 'Debout', lb: 'Bas de la fente' },
+    a: { paths: [[[118,98],[112,75],[105,52]], [[92,98],[98,75],[105,52]], [[105,52],[105,26]], [[105,30],[100,52]], [[118,98],[128,98]], [[92,98],[82,98]]], head: [105,14] },
+    b: { paths: [[[135,98],[133,72],[105,70]], [[48,97],[72,90],[105,70]], [[105,70],[105,42]], [[105,46],[112,66]], [[135,98],[148,98]], [[48,97],[38,97]]], head: [105,30] }, la: 'Debout', lb: 'Bas de la fente' },
   { id: 'pont', name: 'Pont fessier', lo: 12, hi: 15, rest: 45, grow: false,
     levels: ['Pont fessier', 'Pont fessier sur une jambe', 'Pont une jambe, pied surélevé'],
     tip: 'Monte les hanches en serrant les fessiers, pause 1 s en haut.',
@@ -47,13 +48,26 @@ var EX = [
     levels: ['Montées sur pointes', 'Montées sur une jambe', 'Une jambe + sac à dos'],
     tip: 'Monte haut, pause, redescends lentement. Bord d\'une marche si possible.',
     a: { paths: [[[100,96],[100,62]], [[100,62],[100,36]], [[100,40],[104,62]], [[88,98],[112,98]]], head: [100,24] },
-    b: { paths: [[[96,86],[100,52]], [[100,52],[100,26]], [[100,30],[104,52]], [[112,98],[92,88]]], head: [100,14] }, la: 'Talons au sol', lb: 'Sur les pointes' },
+    b: { paths: [[[96,86],[100,52]], [[100,52],[100,26]], [[100,30],[104,52]], [[92,88],[112,98]]], head: [100,14] }, la: 'Talons au sol', lb: 'Sur les pointes' },
   { id: 'gainage', name: 'Gainage avant-bras', lo: 30, hi: 45, rest: 45, grow: false, timed: true,
     levels: ['Gainage sur les avant-bras', 'Gainage avec levée de jambe alternée', 'Gainage bras tendus, épaules qui touchent'],
     tip: 'Coudes sous les épaules, corps aligné, fessiers et ventre serrés. Respire.',
     a: { paths: [[[35,97],[130,70]], [[130,70],[128,97],[152,97]]], head: [144,62] },
     b: { paths: [[[35,97],[100,90],[130,70]], [[130,70],[128,97],[152,97]]], head: [144,62] }, la: 'À tenir', lb: 'À éviter : hanches basses', bad2: true }
 ];
+
+var LEGS = [[[92,98],[98,74],[100,50]], [[108,98],[102,74],[100,50]]];
+var FIG = {
+  jump: { name: 'Sauts légers', la: 'Pieds joints', lb: 'Jambes et bras écartés',
+    a: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[92,44],[90,58]], [[100,32],[108,44],[110,58]]], head: [100,16] },
+    b: { paths: [[[78,92],[90,68],[100,46]], [[122,92],[110,68],[100,46]], [[100,46],[100,22]], [[100,28],[86,20],[76,8]], [[100,28],[114,20],[124,8]]], head: [100,12] } },
+  arms: { name: 'Rotations des épaules', la: 'Bras bas', lb: 'Bras hauts',
+    a: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[84,40],[70,50]], [[100,32],[116,40],[130,50]]], head: [100,16] },
+    b: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[90,16],[84,2]], [[100,32],[110,16],[116,2]]], head: [100,16] } }
+};
+var FIGS = {};
+EX.forEach(function (e) { FIGS[e.id] = e; });
+Object.keys(FIG).forEach(function (k) { FIGS[k] = FIG[k]; });
 
 var MEALS = [
   { t: '9 h 30', x: 'Omelette de 3 œufs, 1 pain, 1 c. à soupe d\'huile d\'olive, 1 verre de lait au chocolat', k: 660, p: 32 },
@@ -159,6 +173,82 @@ function drawEx(e, single) {
     figure(e.a, 0, e.la) + (single ? '' : figure(e.b, 220, e.lb, e.bad2)) + '</svg></div>';
 }
 
+/* ====================== animations ====================== */
+var REDUCED = false;
+try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+function lerp(a, b, t) { return a + (b - a) * t; }
+function resample(p, n) {
+  if (p.length === n) return p;
+  var d = [0], i, k;
+  for (i = 1; i < p.length; i++) d.push(d[i - 1] + Math.hypot(p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]));
+  var tot = d[d.length - 1] || 1, out = [];
+  for (k = 0; k < n; k++) {
+    var x = tot * k / (n - 1), j = 0;
+    while (j < p.length - 2 && d[j + 1] < x) j++;
+    var seg = (d[j + 1] - d[j]) || 1, f = Math.min(1, Math.max(0, (x - d[j]) / seg));
+    out.push([lerp(p[j][0], p[j + 1][0], f), lerp(p[j][1], p[j + 1][1], f)]);
+  }
+  return out;
+}
+function prepFig(f) {
+  if (f._P) return f._P;
+  f._P = f.a.paths.map(function (pa, i) {
+    var pb = f.b.paths[i], n = Math.max(pa.length, pb.length);
+    return { a: resample(pa, n), b: resample(pb, n) };
+  });
+  return f._P;
+}
+function ptsAt(P, t) {
+  return P.a.map(function (q, j) { return lerp(q[0], P.b[j][0], t).toFixed(1) + ',' + lerp(q[1], P.b[j][1], t).toFixed(1); }).join(' ');
+}
+function animSvg(id, mode, period) {
+  var f = FIGS[id], P = prepFig(f);
+  var o = '<svg class="anim" viewBox="0 0 200 128" role="img" aria-label="' + esc(f.name || id) + '" data-fig="' + id + '" data-mode="' + mode + '" data-period="' + period + '" data-origin="' + Math.round(performance.now()) + '" data-t="0">';
+  o += '<line class="ground" x1="6" y1="101" x2="194" y2="101"/>';
+  (f.a.props || []).forEach(function (q) { o += '<polyline class="prop" points="' + pts(q) + '"/>'; });
+  P.forEach(function (q) { o += '<polyline class="fig" points="' + ptsAt(q, 0) + '"/>'; });
+  o += '<circle class="fig head" cx="' + f.a.head[0] + '" cy="' + f.a.head[1] + '" r="8"/>';
+  o += '<text class="lbl" x="100" y="121" text-anchor="middle">' + esc(f.la) + '</text></svg>';
+  return o;
+}
+function animBlock(id) {
+  var f = FIGS[id], manual = !!f.timed;
+  return '<div class="draw">' + animSvg(id, manual ? 'manual' : 'loop', Math.max(2, +P.tempo || 3)) + '</div>' +
+    '<div class="scrub"><button class="btn alt sm" data-act="animtoggle">' + (manual ? 'Animer' : 'Figer') + '</button>' +
+    '<input type="range" min="0" max="100" value="0" data-scrub aria-label="Décomposer le mouvement"></div>';
+}
+function applyPose(sv, f, t) {
+  var P = prepFig(f), pl = sv.querySelectorAll('polyline.fig'), i;
+  for (i = 0; i < P.length && i < pl.length; i++) pl[i].setAttribute('points', ptsAt(P[i], t));
+  var c = sv.querySelector('circle.head');
+  c.setAttribute('cx', lerp(f.a.head[0], f.b.head[0], t).toFixed(1));
+  c.setAttribute('cy', lerp(f.a.head[1], f.b.head[1], t).toFixed(1));
+  var bad = !!(f.bad2 && t > 0.5);
+  for (i = 0; i < pl.length; i++) pl[i].classList.toggle('bad', bad);
+  c.classList.toggle('bad', bad);
+  var tx = sv.querySelector('text.lbl'), lab = t < 0.5 ? f.la : f.lb;
+  if (tx && tx.textContent !== lab) tx.textContent = lab;
+}
+var lastF = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  if (ts - lastF < 33) return;
+  lastF = ts;
+  var list = document.querySelectorAll('svg.anim');
+  for (var i = 0; i < list.length; i++) {
+    var sv = list[i], f = FIGS[sv.getAttribute('data-fig')];
+    if (!f) continue;
+    var mode = sv.getAttribute('data-mode'), t = 0;
+    if (mode === 'manual') t = parseFloat(sv.getAttribute('data-t')) || 0;
+    else if (mode === 'loop' && !REDUCED) {
+      var per = parseFloat(sv.getAttribute('data-period')) || 3, org = parseFloat(sv.getAttribute('data-origin')) || 0;
+      t = 0.5 - 0.5 * Math.cos(2 * Math.PI * ((ts - org) / 1000 / per));
+    }
+    sv._t = t;
+    applyPose(sv, f, t);
+  }
+}
+
 /* ====================== coach (messages) ====================== */
 function pick(a) { var d = new Date(); return a[(d.getDate() + d.getHours()) % a.length]; }
 function coachMsg() {
@@ -219,7 +309,7 @@ function viewTrain() {
   EX.forEach(function (e) {
     var L = lv(e.id), names = levelsFor(e), li = Math.min(L.level, names.length - 1);
     var tgt = e.timed ? (e.lo + L.off) + '–' + (e.hi + L.off) + ' s' : (e.lo + L.off) + '–' + (e.hi + L.off) + ' reps';
-    h += '<div class="card"><div class="row"><h3 class="grow">' + esc(names[li]) + '</h3><span class="pill on">' + tgt + '</span></div>' + drawEx(e) + '<p class="small">' + esc(e.tip) + '</p></div>';
+    h += '<div class="card"><div class="row"><h3 class="grow">' + esc(names[li]) + '</h3><span class="pill on">' + tgt + '</span></div>' + animBlock(e.id) + '<p class="small">' + esc(e.tip) + '</p></div>';
   });
   var last = D.sessions.slice(-5).reverse();
   if (last.length) h += '<div class="card"><h2>Dernières séances</h2><ul class="list">' + last.map(function (s) {
@@ -298,7 +388,7 @@ function viewSettings() {
     '<label class="f">Objectif (kg)<input type="number" inputmode="decimal" step="0.5" data-set="goal" value="' + P.goal + '"></label>' +
     '<label class="f">Date de départ<input type="text" data-set="start" value="' + P.start + '"></label></div>' +
     tog('hasBar', 'J\'ai une barre de traction', 'Ajoute les tractions au tirage') + tog('cigs', 'Suivre mes cigarettes', 'Un compteur dans le bilan du jour') + '</div>';
-  h += '<div class="card"><h2>Données</h2><button class="btn bad sm" data-act="reset">' + (resetArmed ? 'Confirmer : tout effacer' : 'Effacer toutes les données') + '</button></div>';
+  h += '<div class="card"><h2>Données</h2><button class="btn bad sm" data-act="reset">' + (resetArmed ? 'Confirmer : tout effacer' : 'Effacer toutes les données') + '</button><p class="small">Version ' + VERSION + '</p></div>';
   return h;
 }
 var resetArmed = false;
@@ -348,7 +438,7 @@ function startSession() {
     return { e: e, name: names[li], sets: Math.max(2, base - (light ? 1 : 0)), lo: e.lo + L.off, hi: e.hi + L.off, rest: e.rest + (+P.restBonus || 0), step: step };
   });
   var steps = [];
-  WARM.forEach(function (x) { steps.push({ k: 'warm', label: x.l, sec: x.s }); });
+  WARM.forEach(function (x) { steps.push({ k: 'warm', label: x.l, sec: x.s, fig: x.fig, period: x.period }); });
   plan.forEach(function (p, i) { for (var s = 1; s <= p.sets; s++) steps.push({ k: 'set', pi: i, sn: s }); });
   R = { plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
   runner.hidden = false; document.body.style.overflow = 'hidden';
@@ -475,10 +565,11 @@ function draw() {
     '<span class="row"><button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
   h += '<div class="bar"><i style="width:' + pr + '%"></i></div>';
   if (s.k === 'warm') {
-    h += '<p class="title">' + esc(s.label) + '</p><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button>';
+    h += '<p class="title">' + esc(s.label) + '</p><div class="draw">' + animSvg(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button>';
   } else {
     var p = R.plan[s.pi], e = p.e, unit = e.timed ? 'secondes' : 'répétitions';
-    h += '<p class="title">' + esc(p.name) + '</p>' + drawEx(e);
+    var ds = R.phase === 'rest' && R.steps[R.i + 1] ? R.plan[R.steps[R.i + 1].pi] : p;
+    h += '<p class="title">' + esc(ds.name) + '</p><div class="draw">' + animSvg(ds.e.id, (R.paused || ds.e.timed) ? 'hold' : 'loop', Math.max(2, +P.tempo || 3)) + '</div>';
     if (R.phase === 'prep') {
       h += '<p class="sub">Vise ' + p.hi + ' ' + unit + (e.timed ? '' : ' (minimum ' + p.lo + ')') + '</p>';
       h += P.auto ? '<div class="big" id="tmr">6</div><p class="sub">Prépare-toi</p><button class="btn go" data-act="begin">Commencer maintenant</button>' : '<button class="btn go" data-act="begin">Commencer</button>';
@@ -527,6 +618,16 @@ document.addEventListener('click', function (ev) {
     return;
   }
   if (a === 'day') { var d = +t.getAttribute('data-d'), i = P.days.indexOf(d); if (i >= 0) P.days.splice(i, 1); else P.days.push(d); save(); render(); return; }
+  if (a === 'animtoggle') {
+    var card = t.closest('.card'), sv = card && card.querySelector('svg.anim');
+    if (sv) {
+      if (sv.getAttribute('data-mode') === 'loop') {
+        sv.setAttribute('data-t', sv._t || 0); sv.setAttribute('data-mode', 'manual'); t.textContent = 'Animer';
+        var rg = card.querySelector('[data-scrub]'); if (rg) rg.value = Math.round((sv._t || 0) * 100);
+      } else { sv.setAttribute('data-origin', performance.now()); sv.setAttribute('data-mode', 'loop'); t.textContent = 'Figer'; }
+    }
+    return;
+  }
   if (a === 'testvoice') { say('Je suis ton coach. Pas d\'excuses. On commence.'); beep(880, 150); vib([150]); return; }
   if (a === 'export') { exportData(); return; }
   if (a === 'import') { $('#importFile').click(); return; }
@@ -556,6 +657,14 @@ document.addEventListener('click', function (ev) {
     return;
   }
   if (a === 'closerun') { closeRunner(); return; }
+});
+document.addEventListener('input', function (ev) {
+  var t = ev.target;
+  if (!t.hasAttribute || !t.hasAttribute('data-scrub')) return;
+  var card = t.closest('.card'), sv = card && card.querySelector('svg.anim');
+  if (!sv) return;
+  sv.setAttribute('data-mode', 'manual'); sv.setAttribute('data-t', String(t.value / 100));
+  var b = card.querySelector('[data-act="animtoggle"]'); if (b) b.textContent = 'Animer';
 });
 document.addEventListener('change', function (ev) {
   var t = ev.target;
@@ -596,6 +705,7 @@ function exportData() {
 }
 
 render();
+requestAnimationFrame(frame);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
 window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); } };
 })();

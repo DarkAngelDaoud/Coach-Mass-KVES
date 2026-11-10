@@ -92,3 +92,7 @@ details summary { cursor: pointer; font-weight: 700; min-height: 36px; display: 
 .stepper button { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface2); color: var(--fg); font-size: 2rem; font-weight: 700; }
 .stepper b { font-size: 2.4rem; min-width: 2.4ch; text-align: center; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: no-preference) { .big.pulse { animation: p 1s ease-in-out infinite; } @keyframes p { 50% { opacity: 0.7; } } }
+
+.scrub { display: flex; gap: 12px; align-items: center; }
+.scrub input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); min-height: 40px; }
+.runner .draw svg { max-height: 36vh; }
