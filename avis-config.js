@@ -1,6 +1,5 @@
-/* Configuration de la boîte à avis. Rempli depuis Plus > Espace propriétaire. */
 window.AVIS_CONFIG = {
-  publicKey: null,
+  publicKey: {"kty":"EC","crv":"P-256","x":"fEsLMiD_3JvjwEpYbi8CnW9rqcSJevpt2aOWHdm3NOI","y":"23Gfyw69tdT8zeoNtfoDWLWScTYLeDPJiNxtm8_eSKw"},
   email: "",
   whatsapp: ""
 };
