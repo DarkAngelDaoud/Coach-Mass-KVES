@@ -2,7 +2,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 6 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 7 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -51,7 +51,7 @@ Coach Masse s'occupe de cette organisation :
 
 L'installation se fait une seule fois, avec internet.
 
-1. Ouvre l'adresse de l'application dans **Chrome** : `https://darkangeldaoud.github.io/coach-masse/`
+1. Ouvre l'adresse de l'application dans **Chrome** : `https://darkangeldaoud.github.io/Coach-Mass-KVES/`
 2. Touche le menu **⋮** puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
 3. Ouvre l'icône **Coach** et laisse-la charger quelques secondes avec internet.
 4. Teste en mode avion : l'application doit s'ouvrir normalement.
@@ -101,6 +101,13 @@ L'onglet **Séance** présente aussi chaque exercice avec un curseur pour **déc
 ### 4. Les repas (onglet Repas)
 
 Coche chaque repas quand tu l'as fini : la barre de calories se remplit. Des variantes sont proposées (sans poulet, petit appétit, budget serré), ainsi qu'une liste de courses de la semaine.
+
+### Nouveautés de la version 7
+
+- **Liste de courses automatique** (onglet Repas) : choisis le nombre de jours (3, 7 ou 14) et tes variantes (poulet, sardines ou alterné ; lentilles, pois chiches ou alterné). Les quantités se calculent seules, avec des cases à cocher et un bouton *Copier la liste*. Aucun prix n'est affiché.
+- **Minuteur et compteur sur chaque exercice** (onglet Séance) : touche **+** à chaque répétition, lance le **Minuteur** (bip à l'objectif pour les exercices chronométrés), puis **Enregistrer la série**. Elle apparaît dans l'historique avec la mention *libre*.
+- **Rappels** (*Plus > Réglages > Rappels*) : notification pour noter ton poids (07 h 30 par défaut) et valider tes repas (22 h par défaut), seulement si ce n'est pas déjà fait. Application fermée, Android peut retarder ou ignorer le rappel : ajoute aussi une alarme dans l'Horloge.
+- **Thème** (*Réglages > Affichage*) : Auto, Clair ou Sombre. Le fond, la barre d'état et les graphiques suivent ton choix.
 
 ### 5. Suivre ses progrès (onglets Suivi et Historique)
 
@@ -211,7 +218,7 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | `manifest.webmanifest` | Réglages d'installation (nom, icônes, orientation) |
 | `icon-192.png`, `icon-512.png` | Icônes de l'application |
 
-**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v6` devient `coach-masse-v7`).
+**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v7` devient `coach-masse-v8`).
 
 **Compatibilité.** L'application est conçue pour Chrome sur Android. La mise en page a été vérifiée avec des largeurs d'écran de 320 à 1 180 pixels, en portrait et en paysage. Les autres navigateurs n'ont pas été testés.
 

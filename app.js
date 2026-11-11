@@ -5,7 +5,7 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '6';
+var VERSION = '7';
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -88,7 +88,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', avisName: '', avisEmail: '' },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
 }
@@ -108,7 +108,7 @@ function applyRotate() {
     else if (so.unlock) so.unlock();
   } catch (e) {}
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} try { syncRemind(); } catch (e) {} }
 
 function log(d) { return D.logs[d || today()] || (D.logs[d || today()] = {}); }
 function lv(id) { return D.levels[id] || (D.levels[id] = { level: 0, off: 0 }); }
@@ -318,12 +318,12 @@ function viewTrain() {
   EX.forEach(function (e) {
     var L = lv(e.id), names = levelsFor(e), li = Math.min(L.level, names.length - 1);
     var tgt = e.timed ? (e.lo + L.off) + '–' + (e.hi + L.off) + ' s' : (e.lo + L.off) + '–' + (e.hi + L.off) + ' reps';
-    h += '<div class="card"><div class="row"><h3 class="grow">' + esc(names[li]) + '</h3><span class="pill on">' + tgt + '</span></div>' + animBlock(e.id) + '<p class="small">' + esc(e.tip) + '</p></div>';
+    h += '<div class="card"><div class="row"><h3 class="grow">' + esc(names[li]) + '</h3><span class="pill on">' + tgt + '</span></div>' + animBlock(e.id) + '<p class="small">' + esc(e.tip) + '</p>' + mtHtml(e, e.hi + L.off) + '</div>';
   });
   h += '</div>';
   var last = D.sessions.slice(-5).reverse();
   if (last.length) h += '<div class="card"><h2>Dernières séances</h2><ul class="list">' + last.map(function (s) {
-    return '<li><span>' + s.date + (s.partial ? ' · incomplète' : '') + '</span><span>' + s.min + ' min · ' + s.sets + ' séries</span></li>';
+    return '<li><span>' + s.date + (s.free ? ' · libre' : s.partial ? ' · incomplète' : '') + '</span><span>' + (s.free ? '' : s.min + ' min · ') + s.sets + ' série' + (s.sets > 1 ? 's' : '') + '</span></li>';
   }).join('') + '</ul></div>';
   return h;
 }
@@ -335,7 +335,7 @@ function viewMeals() {
     h += '<label class="meal"><input type="checkbox" data-act="meal" data-i="' + i + '"' + (c[i] ? ' checked' : '') + '><span><span class="t">' + x.t + '</span><br>' + esc(x.x) + '</span><span class="k">' + x.k + ' kcal<br>' + x.p + ' g</span></label>';
   });
   h += '</div><div class="card"><h2>Variantes</h2><ul class="list"><li><span>Pas de poulet</span><span>4 sardines ou 200 g de lentilles</span></li><li><span>Peu d\'appétit</span><span>Bois le smoothie en plus</span></li><li><span>Budget serré</span><span>Œufs, légumineuses, sardines</span></li></ul></div>';
-  h += '<details class="card"><summary>Liste de courses de la semaine</summary><ul class="list"><li><span>Œufs</span><span>35</span></li><li><span>Lait</span><span>5 L</span></li><li><span>Poulet ou sardines</span><span>1 kg</span></li><li><span>Lentilles ou pois chiches secs</span><span>500 g</span></li><li><span>Riz</span><span>600 g</span></li><li><span>Flocons d\'avoine</span><span>300 g</span></li><li><span>Bananes</span><span>14</span></li><li><span>Pains</span><span>20 à 25</span></li><li><span>Yaourts</span><span>7</span></li><li><span>Amlou ou beurre de cacahuète, huile d\'olive</span><span>1 pot, 1 bouteille</span></li></ul></details>';
+  h += shopCard();
   return h;
 }
 
@@ -504,7 +504,7 @@ function viewHistory() {
       rows += '<li><span>' + esc(arr[0].name || e.name) + '</span><span>' + arr.map(function (l) { return l.reps; }).join(' · ') + (e.timed ? ' s' : '') + '</span></li>';
     });
     h += '<details class="card"' + (delArmed === i ? ' open' : '') + '><summary><span class="grow">' + esc(ldate(s.date)) + '</span>' +
-      (s.partial ? '<span class="pill">incomplète</span>' : '') + (s.light ? '<span class="pill">allégée</span>' : '') + '</summary>' +
+      (s.free ? '<span class="pill">libre</span>' : s.partial ? '<span class="pill">incomplète</span>' : '') + (s.light ? '<span class="pill">allégée</span>' : '') + '</summary>' +
       '<p class="small">' + s.min + ' min · ' + s.sets + ' séries · ' + tot + ' répétitions · semaine ' + (s.week || '—') + '</p>' +
       '<ul class="list">' + (rows || '<li><span>Aucune série enregistrée</span></li>') + '</ul>' +
       '<button class="btn bad sm" data-act="delsession" data-i="' + i + '">' + (delArmed === i ? 'Confirmer la suppression' : 'Supprimer cette séance') + '</button></details>';
@@ -532,7 +532,8 @@ function viewSettings() {
     '<label class="f">Objectif (kg)<input type="number" inputmode="decimal" step="0.5" data-set="goal" value="' + P.goal + '"></label>' +
     '<label class="f">Date de départ<input type="text" data-set="start" value="' + P.start + '"></label></div>' +
     tog('hasBar', 'J\'ai une barre de traction', 'Ajoute les tractions au tirage') + tog('cigs', 'Suivre mes cigarettes', 'Un compteur dans le bilan du jour') + '</div>';
-  h += '<div class="card"><h2>Affichage</h2>' + tog('rotate', 'Forcer la rotation de l\'écran', 'À activer si l\'application reste bloquée en portrait. Elle suit alors le capteur du téléphone.') + '</div>';
+  h += rmCard();
+  h += '<div class="card"><h2>Affichage</h2>' + themeCard() + tog('rotate', 'Forcer la rotation de l\'écran', 'À activer si l\'application reste bloquée en portrait. Elle suit alors le capteur du téléphone.') + '</div>';
   h += '<div class="card"><h2>Données</h2><button class="btn bad sm" data-act="reset">' + (resetArmed ? 'Confirmer : tout effacer' : 'Effacer toutes les données') + '</button><p class="small">Version ' + VERSION + '</p></div>';
   return h;
 }
@@ -1181,6 +1182,218 @@ document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'hidden') OW.hiddenAt = Date.now();
   else if (OW.priv && OW.hiddenAt && Date.now() - OW.hiddenAt > 5 * 60000) { owLock(); render(); }
 });
+
+/* ====================== v7 : thème, courses, rappels, mini-compteurs ====================== */
+/* thème */
+function applyTheme() {
+  var th = P.theme || 'auto', r = document.documentElement;
+  if (th === 'light' || th === 'dark') r.setAttribute('data-theme', th); else r.removeAttribute('data-theme');
+  var light = th === 'light' || (th === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', light ? '#F2F4F3' : '#0C1318'); });
+}
+if (window.matchMedia) {
+  try { window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () { if ((P.theme || 'auto') === 'auto') applyTheme(); }); } catch (e) {}
+}
+applyTheme();
+function themeCard() {
+  var th = P.theme || 'auto';
+  return '<div class="seg" role="group" aria-label="Thème">' + [['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']].map(function (x) { return '<button data-act="theme" data-v="' + x[0] + '" class="' + (th === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><p class="small">Auto suit le mode clair ou sombre d\'Android. Le fond, la barre d\'état et les graphiques suivent ton choix.</p>';
+}
+
+/* liste de courses */
+function qG(g) { return g >= 1000 ? (Math.round(g / 100) / 10).toString().replace('.', ',') + ' kg' : g + ' g'; }
+function qL(l) { return (Math.ceil(l * 2) / 2).toString().replace('.', ',') + ' L'; }
+function shopList() {
+  var d = P.shopDays || 7, ex = P.kcalAdj >= 300 ? d : 0;
+  var a3 = P.shopM3 === 'poulet' ? d : P.shopM3 === 'sardines' ? 0 : Math.ceil(d / 2), s3 = d - a3;
+  var a5 = P.shopM5 === 'lentilles' ? d : P.shopM5 === 'pois' ? 0 : Math.ceil(d / 2), p5 = d - a5;
+  var L = [
+    ['oeufs', 'Œufs', String(d * 5)], ['pain', 'Pain', String(d * 3 + ex)],
+    ['lait', 'Lait', qL(d * 0.55 + ex * 0.25)], ['cacao', 'Cacao en poudre (lait au chocolat)', d + ' verres'],
+    ['bananes', 'Bananes', String(d * 2)], ['flocons', 'Flocons d\'avoine', qG(d * 40)],
+    ['amlou', 'Amlou ou beurre de cacahuète', qG(d * 30 + ex * 15)], ['huile', 'Huile d\'olive', Math.round(d * 30 + 0) + ' ml'],
+    ['yaourts', 'Yaourts', String(d)], ['riz', 'Riz', qG(d * 80)], ['legumes', 'Légumes de saison (environ)', qG(d * 200)]
+  ];
+  if (a3) L.push(['poulet', 'Poulet', qG(a3 * 150)]);
+  if (s3) L.push(['sardines', 'Sardines', s3 * 4 + ' pièces']);
+  if (a5) L.push(['lentilles', 'Lentilles sèches', qG(a5 * 60)]);
+  if (p5) L.push(['pois', 'Pois chiches secs', qG(p5 * 60)]);
+  return L;
+}
+function shopSeg(act, cur, opts) {
+  return '<div class="seg" role="group">' + opts.map(function (o) { return '<button data-act="' + act + '" data-v="' + o[0] + '" class="' + (String(cur) === String(o[0]) ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>';
+}
+function shopCard() {
+  var done = P.shopDone || {}, L = shopList(), n = 0;
+  var h = '<div class="card"><h2>Liste de courses</h2><p class="small">Choisis tes variantes : la liste se calcule toute seule, d\'après les repas ci-dessus.</p>' +
+    '<label class="f">Pour combien de jours</label>' + shopSeg('shopdays', P.shopDays, [[3, '3 jours'], [7, '7 jours'], [14, '14 jours']]) +
+    '<label class="f">Repas de 14 h 30</label>' + shopSeg('shopm3', P.shopM3, [['poulet', 'Poulet'], ['sardines', 'Sardines'], ['mix', 'Alterné']]) +
+    '<label class="f">Repas de 21 h 30</label>' + shopSeg('shopm5', P.shopM5, [['lentilles', 'Lentilles'], ['pois', 'Pois chiches'], ['mix', 'Alterné']]) + '<div class="shop">';
+  L.forEach(function (x) {
+    if (done[x[0]]) n++;
+    h += '<label class="meal"><input type="checkbox" data-shop="' + x[0] + '"' + (done[x[0]] ? ' checked' : '') + '><span>' + esc(x[1]) + '</span><span class="k">' + esc(x[2]) + '</span></label>';
+  });
+  return h + '</div><p class="small">Quantités par jour : voir les repas. Légumes estimés, lentilles et pois chiches comptés secs (60 g secs pour 150 g cuits). Les prix varient : aucun coût n\'est affiché.</p>' +
+    '<div class="row"><button class="btn sm grow" data-act="shopcopy">Copier la liste</button><button class="btn alt sm" data-act="shopreset">Tout décocher</button></div></div>';
+}
+function shopText() {
+  return 'Courses (' + P.shopDays + ' jours)\n' + shopList().map(function (x) { return '- ' + x[1] + ' : ' + x[2]; }).join('\n');
+}
+
+/* rappels */
+function hm(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+function mealsAllDone() { var c = (D.logs[today()] || {}).meals || []; return mealsList().every(function (_, i) { return c[i]; }); }
+function rmDue() {
+  var out = [];
+  if (!P.rmOn) return out;
+  var d = new Date(), n = d.getHours() * 60 + d.getMinutes(), w = hm(P.rmW), m = hm(P.rmM), l = D.logs[today()] || {};
+  if (w !== null && n >= w && !l.weight && P.rmLw !== today()) out.push('w');
+  if (m !== null && n >= m && !mealsAllDone() && P.rmLm !== today()) out.push('m');
+  return out;
+}
+function syncRemind() {
+  if (!window.caches || !P.rmOn) return;
+  var l = D.logs[today()] || {};
+  var o = { on: !!P.rmOn, w: P.rmW, m: P.rmM, wd: l.weight ? today() : '', md: mealsAllDone() ? today() : '', lw: P.rmLw || '', lm: P.rmLm || '' };
+  caches.open('coach-masse-remind').then(function (c) { return c.put('remind.json', new Response(JSON.stringify(o))); }).catch(function () {});
+}
+function sysNotify(txt, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return false;
+  navigator.serviceWorker.ready.then(function (reg) { reg.showNotification('Coach Masse', { body: txt, tag: tag, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: [200, 100, 200] }); }).catch(function () {});
+  return true;
+}
+function rmNotify(kind) {
+  var txt = kind === 'w' ? 'Pèse-toi à jeun et note ton poids.' : 'Valide tes repas du jour.';
+  if (kind === 'w') P.rmLw = today(); else P.rmLm = today();
+  save();
+  if (document.visibilityState === 'visible') { toast('Rappel : ' + txt); vib([200, 100, 200]); } else sysNotify(txt, 'cm-' + kind);
+}
+function rmCheck() { rmDue().forEach(rmNotify); syncRemind(); }
+function regPeriodic() {
+  if (!navigator.serviceWorker) return;
+  navigator.serviceWorker.ready.then(function (reg) { if (reg.periodicSync) return reg.periodicSync.register('cm-remind', { minInterval: 3600000 }); }).catch(function () {});
+}
+function rmEnable() {
+  P.rmOn = true; save();
+  function go() { regPeriodic(); render(); rmCheck(); }
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(function (p) { if (p !== 'granted') toast('Notifications refusées : rappels seulement quand l\'application est ouverte.'); go(); }).catch(go);
+  } else go();
+}
+function alarmHref(hhmm, msg) {
+  var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  if (!m) return '#';
+  return 'intent:#Intent;action=android.intent.action.SET_ALARM;i.android.intent.extra.alarm.HOUR=' + (+m[1]) + ';i.android.intent.extra.alarm.MINUTES=' + (+m[2]) + ';S.android.intent.extra.alarm.MESSAGE=' + encodeURIComponent(msg) + ';end';
+}
+function rmCard() {
+  var np = 'Notification' in window ? Notification.permission : 'none';
+  return '<div class="card"><h2>Rappels</h2><label class="meal"><input type="checkbox" data-rm="on"' + (P.rmOn ? ' checked' : '') + '><span><b>Rappels quotidiens</b><br><span class="small">Poids le matin, validation des repas le soir. Rien n\'est envoyé si c\'est déjà fait.</span></span></label>' +
+    '<div class="grid2"><label class="f">Poids à<input type="time" data-rm="w" value="' + esc(P.rmW) + '"></label><label class="f">Repas à<input type="time" data-rm="m" value="' + esc(P.rmM) + '"></label></div>' +
+    '<p class="small">' + (np === 'granted' ? 'Notifications autorisées. ' : np === 'denied' ? 'Notifications bloquées : autorise-les dans les réglages Android de Chrome. ' : np === 'none' ? 'Notifications non disponibles ici. ' : '') +
+    'Application fermée, Android peut retarder ou ignorer le rappel. Pour être sûr de l\'heure, ajoute une alarme dans l\'Horloge.</p>' +
+    '<div class="row"><button class="btn alt sm" data-act="rmtest">Tester</button><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmW, 'Coach Masse : poids') + '">Alarme poids</a><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmM, 'Coach Masse : repas') + '">Alarme repas</a></div>' +
+    '<p class="small">Si le bouton Alarme n\'ouvre rien, ouvre l\'Horloge et crée une alarme quotidienne à la main.</p></div>';
+}
+
+/* mini compteur et minuteur par exercice */
+var MT = {}, MT_I = null;
+function mt(id) { return MT[id] || (MT[id] = { c: 0, ms: 0, run: false, t0: 0, beeped: false }); }
+function mtMs(m) { return m.ms + (m.run ? Date.now() - m.t0 : 0); }
+function mtFmt(ms) { var s = Math.floor(ms / 1000); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+function mtFind(id) { for (var i = 0; i < EX.length; i++) if (EX[i].id === id) return EX[i]; return null; }
+function mtHtml(e, tgt) {
+  var m = mt(e.id), id = e.id;
+  return '<div class="mt">' + (e.timed ? '' :
+    '<div class="mtrow"><button class="btn alt round" data-act="mtdec" data-id="' + id + '" aria-label="Moins une répétition">−</button><b class="mtv" id="mt_c_' + id + '">' + m.c + '</b><button class="btn round" data-act="mtinc" data-id="' + id + '" aria-label="Plus une répétition">+</button><span class="small grow">répétitions</span></div>') +
+    '<div class="mtrow"><b class="mtv wide" id="mt_t_' + id + '">' + mtFmt(mtMs(m)) + '</b><button class="btn alt sm" id="mt_b_' + id + '" data-act="mttoggle" data-id="' + id + '">' + (m.run ? 'Pause' : 'Minuteur') + '</button><button class="btn alt sm" data-act="mtreset" data-id="' + id + '">Zéro</button>' + (e.timed ? '<span class="small">objectif ' + tgt + ' s</span>' : '') + '</div>' +
+    '<button class="btn alt sm" data-act="mtsave" data-id="' + id + '">Enregistrer la série</button></div>';
+}
+function mtTick() {
+  var any = false;
+  Object.keys(MT).forEach(function (id) {
+    var m = MT[id];
+    if (!m.run) return;
+    any = true;
+    var n = $('#mt_t_' + id);
+    if (n) n.textContent = mtFmt(mtMs(m));
+    var e = mtFind(id);
+    if (e && e.timed && !m.beeped) {
+      var tg = e.hi + lv(id).off;
+      if (mtMs(m) >= tg * 1000) { m.beeped = true; if (P.sound) play('setend'); vib([300, 100, 300]); toast('Objectif atteint : ' + tg + ' s'); }
+    }
+  });
+  if (!any && MT_I) { clearInterval(MT_I); MT_I = null; }
+}
+function mtSave(id) {
+  var e = mtFind(id), m = mt(id);
+  if (!e) return;
+  var L = lv(id), names = levelsFor(e), val = e.timed ? Math.round(mtMs(m) / 1000) : m.c;
+  if (!(val > 0)) { toast(e.timed ? 'Lance le minuteur d\'abord.' : 'Compte au moins une répétition.'); return; }
+  var s = null;
+  D.sessions.forEach(function (x) { if (x.free && x.date === today()) s = x; });
+  if (!s) { s = { date: today(), min: 0, sets: 0, partial: true, free: true, light: false, week: wkNo(), logs: [] }; D.sessions.push(s); }
+  var sn = s.logs.filter(function (l) { return l.id === id; }).length + 1;
+  s.logs.push({ id: id, name: names[Math.min(L.level, names.length - 1)], hi: e.hi + L.off, sn: sn, reps: val });
+  s.sets = s.logs.length;
+  m.c = 0; m.ms = 0; m.run = false; m.beeped = false;
+  save(); render(); toast('Série enregistrée dans l\'historique : ' + val + (e.timed ? ' s' : ' répétitions'));
+}
+
+document.addEventListener('click', function (ev) {
+  var t = ev.target.closest('[data-act]');
+  if (!t) return;
+  var a = t.getAttribute('data-act'), id = t.getAttribute('data-id'), v = t.getAttribute('data-v');
+  if (a === 'theme') { P.theme = v; save(); applyTheme(); render(); return; }
+  if (a === 'shopdays') { P.shopDays = +v; save(); render(); return; }
+  if (a === 'shopm3') { P.shopM3 = v; save(); render(); return; }
+  if (a === 'shopm5') { P.shopM5 = v; save(); render(); return; }
+  if (a === 'shopreset') { P.shopDone = {}; save(); render(); return; }
+  if (a === 'shopcopy') { copyText(shopText()); return; }
+  if (a === 'rmtest') {
+    var go = function () { if (!sysNotify('Test : tes rappels fonctionnent.', 'cm-test')) toast('Notifications non autorisées sur cet appareil.'); else toast('Notification envoyée. Ferme l\'écran pour la voir.'); };
+    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().then(go).catch(go); else go();
+    return;
+  }
+  if (a.indexOf('mt') !== 0 || !id) return;
+  unlockAudio();
+  var m = mt(id), e = mtFind(id);
+  if (a === 'mtinc' || a === 'mtdec') {
+    m.c = Math.max(0, Math.min(999, m.c + (a === 'mtinc' ? 1 : -1)));
+    var c = $('#mt_c_' + id); if (c) c.textContent = m.c;
+    if (a === 'mtinc') { vib(15); if (P.sound) beep(m.c % 5 === 0 ? 990 : 660, 40); }
+    return;
+  }
+  if (a === 'mttoggle') {
+    if (m.run) { m.ms = mtMs(m); m.run = false; }
+    else { m.t0 = Date.now(); m.run = true; if (!MT_I) MT_I = setInterval(mtTick, 250); }
+    t.textContent = m.run ? 'Pause' : 'Minuteur';
+    return;
+  }
+  if (a === 'mtreset') {
+    m.ms = 0; m.run = false; m.c = 0; m.beeped = false;
+    var tn = $('#mt_t_' + id), cn = $('#mt_c_' + id), bn = $('#mt_b_' + id);
+    if (tn) tn.textContent = '00:00'; if (cn) cn.textContent = '0'; if (bn) bn.textContent = 'Minuteur';
+    return;
+  }
+  if (a === 'mtsave') { if (m.run) { m.ms = mtMs(m); m.run = false; } mtSave(id); return; }
+});
+document.addEventListener('change', function (ev) {
+  var t = ev.target, k;
+  if (!t.getAttribute) return;
+  if (t.hasAttribute('data-shop')) {
+    k = t.getAttribute('data-shop'); P.shopDone = P.shopDone || {};
+    if (t.checked) P.shopDone[k] = 1; else delete P.shopDone[k];
+    save(); return;
+  }
+  k = t.getAttribute('data-rm');
+  if (!k) return;
+  if (k === 'on') { if (t.checked) rmEnable(); else { P.rmOn = false; save(); render(); } return; }
+  if (hm(t.value) !== null) { if (k === 'w') P.rmW = t.value; else P.rmM = t.value; save(); render(); rmCheck(); }
+});
+setInterval(rmCheck, 30000);
+document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') rmCheck(); });
+if (P.rmOn) { regPeriodic(); setTimeout(rmCheck, 1500); }
+
 
 /* ====================== événements ====================== */
 document.addEventListener('click', function (ev) {

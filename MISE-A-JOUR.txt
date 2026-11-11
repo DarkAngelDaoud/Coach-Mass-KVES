@@ -13,7 +13,7 @@ EN CAS DE BLOCAGE : DIAGNOSTIC
 A. Rotation automatique : glisse deux fois depuis le haut de l'ecran et verifie que "Rotation auto" est active.
 B. Test dans Chrome : ouvre l'adresse de ton site dans un onglet Chrome (pas l'icone installee).
    Si l'ecran tourne la, le code est bon et c'est l'icone installee qui garde l'ancien reglage.
-C. Verifie le manifest : ouvre https://TON-PSEUDO.github.io/coach-masse/manifest.webmanifest
+C. Verifie le manifest : ouvre https://darkangeldaoud.github.io/Coach-Mass-KVES/manifest.webmanifest
    Tu dois lire  "orientation": "any"  (et non "portrait"). Sinon, renvoie le fichier manifest.webmanifest sur GitHub.
 D. Reinstalle : exporte tes donnees (Suivi > Exporter), appui long sur l'icone Coach > Desinstaller,
    puis rouvre l'adresse dans Chrome > menu > Installer l'application.
@@ -25,3 +25,9 @@ D. Reinstalle : exporte tes donnees (Suivi > Exporter), appui long sur l'icone C
 3. Crée ta clé (phrase secrète 10 caractères min.), puis « Sauvegarder ma clé » (garde le fichier).
 4. Copie le texte affiché, ouvre avis-config.js sur GitHub, crayon, remplace tout, Commit changes.
 5. Après 2 minutes, la boîte à avis est active pour tes amis. Ils t'envoient leur code, tu le colles dans Espace propriétaire.
+
+
+=== VERSION 7 : courses, rappels, minuteur/compteur, theme ===
+1. Dans le depot Coach-Mass-KVES, remplace TOUS les fichiers par ceux du zip (ne touche pas a avis-config.js si tu l'as deja rempli avec ta cle).
+2. Attends 2 minutes, ferme completement l'application puis rouvre-la : Plus > A propos doit afficher la version 7.
+3. Plus > Reglages > Rappels : active, regle les heures, appuie sur Tester et accepte les notifications.

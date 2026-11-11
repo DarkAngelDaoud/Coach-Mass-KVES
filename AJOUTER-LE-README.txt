@@ -8,5 +8,5 @@ AJOUTER LE README ET LES CAPTURES SUR GITHUB (depuis Chrome sur ton Pixel)
    capture-historique.png, capture-seance.png, capture-paysage.png
    (README.md remplace le fichier existant)
 4. Touche Commit changes. La page d'accueil du depot affiche alors le README avec les images.
-5. Dans README.md, remplace VOTRE-PSEUDO par ton pseudo GitHub :
+5. Dans README.md, remplace darkangeldaoud par ton pseudo GitHub :
    ouvre README.md > icone crayon > modifie la ligne "Ouvre l'adresse de l'application" > Commit changes.
