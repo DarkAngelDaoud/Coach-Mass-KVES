@@ -2,7 +2,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 7 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 8 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -198,7 +198,9 @@ Une idée, un problème, un merci ? Va dans **Plus > Donner mon avis**.
 
 - **Tout reste sur ton téléphone**, dans l'espace de stockage de l'application. Il n'y a ni compte, ni publicité, ni suivi, ni envoi de données. Le réseau sert seulement à charger l'application et ses mises à jour.
 - **Les données du suivi ne sont pas chiffrées par l'application.** Elles sont protégées par le verrouillage de ton téléphone. Seuls les avis sont chiffrés.
-- **Sauvegarde.** *Suivi > Exporter* crée un fichier de sauvegarde, *Importer* le recharge. Ce fichier est lisible en clair : garde-le en lieu sûr.
+- **Sauvegarde en fichier.** *Plus > Réglages > Sauvegarde > Sauvegarder maintenant* crée un fichier et te propose de l'envoyer (Drive, WhatsApp, e-mail) ou de le télécharger. L'application te le rappelle tous les 7 jours par défaut (réglable). C'est la seule protection contre un téléphone perdu ou réinitialisé. Le fichier est lisible en clair : garde-le en lieu sûr.
+- **Copies automatiques.** Une copie du jour est gardée dans Chrome (7 jours), ainsi qu'une copie avant chaque import, restauration ou effacement, et une copie des données si elles sont un jour abîmées. Elles protègent d'une erreur, pas d'un effacement des données de Chrome. *Réglages > Sauvegarde > Restaurer* les remet en place. L'import refuse un fichier invalide sans rien modifier.
+- **La clé du propriétaire** (boîte à avis) se sauvegarde à part, dans *Plus > Espace propriétaire*.
 - **Effacement.** *Réglages > Données > Effacer toutes les données*. Vider les données de Chrome efface aussi tout : exporte avant.
 - **Hors ligne.** Après la première ouverture, l'application fonctionne sans internet. Quand tu as internet, elle se met à jour toute seule. La version affichée dans *Plus > À propos* permet de vérifier.
 
@@ -211,18 +213,24 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Page unique et barre de navigation |
-| `app.js` | Toute la logique : séance guidée, animations, sons, graphiques, historique |
+| `app.js` | Fichier **généré** : toute la logique, assemblée depuis `src/` |
+| `src/` | Le code source, découpé en 19 modules numérotés (données, état, vues, séance, avis, courses, rappels, sauvegarde...) |
+| `build.js` | Assemble `src/` en `app.js` : `node build.js` |
+| `tests/run.js` | Tests automatiques : `node build.js && node tests/run.js` |
 | `styles.css` | Styles, thèmes clair et sombre, adaptation portrait et paysage |
 | `avis-config.js` | Clé publique de la boîte à avis (et contacts facultatifs) |
 | `sw.js` | Service worker : fonctionnement hors ligne et mises à jour |
 | `manifest.webmanifest` | Réglages d'installation (nom, icônes, orientation) |
 | `icon-192.png`, `icon-512.png` | Icônes de l'application |
 
-**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v7` devient `coach-masse-v8`).
+**Modifier le code.** On modifie les fichiers de `src/`, jamais `app.js`. Ensuite `node build.js` régénère `app.js`, et `node tests/run.js` lance une soixantaine de vérifications (démarrage, onglets, débordements d'écran, courses, minuteur, thème, sauvegarde et restauration, données abîmées, boîte à avis chiffrée). Les tests demandent Node.js et Playwright (`npm i -D playwright`). Seuls les fichiers de la racine servent à l'application : `src/`, `tests/` et `build.js` sont facultatifs sur GitHub Pages.
+
+**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v8` devient `coach-masse-v9`).
 
 **Compatibilité.** L'application est conçue pour Chrome sur Android. La mise en page a été vérifiée avec des largeurs d'écran de 320 à 1 180 pixels, en portrait et en paysage. Les autres navigateurs n'ont pas été testés.
 
 ## Feuille de route
 
 - Un chiffrement facultatif des données locales avec un code secret (à l'étude).
+- Un onboarding pour d'autres profils (objectif, niveau, budget) et des programmes adaptables.
 - Un rappel de séance, aujourd'hui possible seulement avec l'application Horloge du téléphone.
