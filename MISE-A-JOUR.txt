@@ -31,3 +31,10 @@ D. Reinstalle : exporte tes donnees (Suivi > Exporter), appui long sur l'icone C
 1. Dans le depot Coach-Mass-KVES, remplace TOUS les fichiers par ceux du zip (ne touche pas a avis-config.js si tu l'as deja rempli avec ta cle).
 2. Attends 2 minutes, ferme completement l'application puis rouvre-la : Plus > A propos doit afficher la version 7.
 3. Plus > Reglages > Rappels : active, regle les heures, appuie sur Tester et accepte les notifications.
+
+
+=== VERSION 8 : sauvegarde + code decoupe ===
+1. Remplace les fichiers de la racine du depot : index.html, app.js, styles.css, sw.js, manifest.webmanifest, icones. Garde ton avis-config.js.
+2. Les dossiers src/ et tests/ et le fichier build.js sont pour le developpement : tu peux les envoyer aussi (recommande, pour garder tout au meme endroit) mais l'application n'en a pas besoin.
+3. Ferme completement l'application, rouvre-la : Plus > A propos = version 8.
+4. Plus > Reglages > Sauvegarde : appuie sur Sauvegarder maintenant et envoie le fichier sur Drive ou par WhatsApp.
