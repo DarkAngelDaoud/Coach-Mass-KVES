@@ -1,7 +1,7 @@
 {
-  "name": "Coach Masse",
-  "short_name": "Coach",
-  "description": "Coach de prise de masse hors ligne",
+  "name": "Coach-Mass-KVES",
+  "short_name": "Coach-Mass",
+  "description": "Coach-Mass-KVES · coach de prise de masse hors ligne · © KVES",
   "lang": "fr",
   "start_url": "./index.html",
   "scope": "./",

@@ -1,8 +1,10 @@
-# Coach Masse
+<p align="center"><img src="banner.jpg" alt="Coach-Mass-KVES : ton corps, ton rythme, ton coach" width="100%"></p>
+
+# Coach-Mass-KVES
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 9 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 10 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -18,7 +20,7 @@ Version 9 · Application web installable (PWA) · Toutes les données restent su
 
 ## En bref
 
-Coach Masse accompagne une personne mince qui veut gagner de la masse musculaire en s'entraînant chez elle, avec le seul poids du corps. L'application réunit au même endroit :
+Coach-Mass-KVES accompagne une personne mince qui veut gagner de la masse musculaire en s'entraînant chez elle, avec le seul poids du corps. L'application réunit au même endroit :
 
 - **3 séances d'une heure par semaine**, guidées à la voix, avec des dessins animés pour chaque exercice ;
 - **un plan de 5 repas par jour** pour atteindre les calories et les protéines nécessaires, même quand l'appétit est petit ;
@@ -30,7 +32,7 @@ Elle s'installe comme une vraie application sur un téléphone Android, fonction
 
 Prendre du poids sans salle demande trois choses qu'on fait rarement ensemble : s'entraîner régulièrement, manger assez, et mesurer ses progrès. Sans cadre, on saute une séance, on oublie un repas, et on ne sait plus si on avance.
 
-Coach Masse s'occupe de cette organisation :
+Coach-Mass-KVES s'occupe de cette organisation :
 
 | Le problème | Ce que fait l'application |
 |---|---|
@@ -110,6 +112,10 @@ Coche chaque repas quand tu l'as fini : la barre de calories se remplit. Des var
 - **Vibrations réglables** (*Réglages > Coach*) : intensité Normale, Forte (par défaut) ou Très forte, et un bouton *Tester la vibration* qui dit si Chrome l'a bloquée.
 - **Thème** (*Réglages > Affichage*) : Auto, Clair ou Sombre. Le fond, la barre d'état et les graphiques suivent ton choix.
 
+### Signature KVES
+
+Chaque fichier source porte la marque `© KVES · Coach-Mass-KVES`, qui apparaît aussi dans *Plus > À propos* et dans les fichiers de sauvegarde. `SIGNATURE-KVES.txt` liste l'empreinte SHA-256 de chaque fichier publié : si un fichier est modifié, son empreinte change (`sha256sum app.js` pour vérifier). Ce n'est pas une signature cryptographique à clé : elle prouve l'intégrité, pas l'identité de l'auteur.
+
 ### Historique des versions
 
 | Version | Apports |
@@ -118,7 +124,8 @@ Coche chaque repas quand tu l'as fini : la barre de calories se remplit. Des var
 | 6 | Onglet Plus, boîte à avis chiffrée de bout en bout, espace propriétaire |
 | 7 | Liste de courses automatique, rappels poids et repas, mini-compteur et minuteur par exercice, thème Auto, Clair ou Sombre |
 | 8 | Sauvegarde (copies automatiques, rappel, export, restauration), code découpé en modules, tests automatiques |
-| 9 | Vibrations plus fortes et réglables, test de vibration, versions et documents harmonisés |
+| 9 | Vibrations plus fortes et réglables, test de vibration, nouveau logo, nom Coach-Mass-KVES, signature KVES |
+| 10 | Garde-fou de la boîte à avis : un message contenant déjà un code d'avis chiffré est refusé |
 
 ### 5. Suivre ses progrès (onglets Suivi et Historique)
 
@@ -229,6 +236,8 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | `build.js` | Assemble `src/` en `app.js` : `node build.js` |
 | `tests/run.js` | Tests automatiques : `node build.js && node tests/run.js` |
 | `styles.css` | Styles, thèmes clair et sombre, adaptation portrait et paysage |
+| `banner.jpg` | Bannière du projet (README et Plus > À propos) |
+| `SIGNATURE-KVES.txt` | Signature KVES : empreintes SHA-256 des fichiers publiés, régénérées par `node build.js` |
 | `avis-config.js` | Clé publique de la boîte à avis (et contacts facultatifs) |
 | `sw.js` | Service worker : fonctionnement hors ligne et mises à jour |
 | `manifest.webmanifest` | Réglages d'installation (nom, icônes, orientation) |
@@ -236,7 +245,7 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 
 **Modifier le code.** On modifie les fichiers de `src/`, jamais `app.js`. Ensuite `node build.js` régénère `app.js`, et `node tests/run.js` lance une soixantaine de vérifications (démarrage, onglets, débordements d'écran, courses, minuteur, thème, sauvegarde et restauration, données abîmées, boîte à avis chiffrée). Les tests demandent Node.js et Playwright (`npm i -D playwright`). Seuls les fichiers de la racine servent à l'application : `src/`, `tests/` et `build.js` sont facultatifs sur GitHub Pages.
 
-**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v9` devient `coach-masse-v10`).
+**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v10` devient `coach-masse-v11`).
 
 **Compatibilité.** L'application est conçue pour Chrome sur Android. La mise en page a été vérifiée avec des largeurs d'écran de 320 à 1 180 pixels, en portrait et en paysage. Les autres navigateurs n'ont pas été testés.
 

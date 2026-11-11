@@ -1,5 +1,6 @@
-var CACHE = 'coach-masse-v9';
-var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'avis-config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+/* © KVES · Coach-Mass-KVES */
+var CACHE = 'coach-masse-v10';
+var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'avis-config.js', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     return Promise.all(FILES.map(function (f) { return c.add(new Request(f, { cache: 'reload' })).catch(function () {}); }));
@@ -42,8 +43,8 @@ self.addEventListener('periodicsync', function (e) {
       var d = new Date(), n = d.getHours() * 60 + d.getMinutes(), t = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
       function mins(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
       var jobs = [];
-      if (mins(o.w) !== null && n >= mins(o.w) && o.wd !== t && o.lw !== t) { o.lw = t; jobs.push(self.registration.showNotification('Coach Masse', { body: 'Pèse-toi à jeun et note ton poids.', tag: 'cm-w', icon: 'icon-192.png', badge: 'icon-192.png' })); }
-      if (mins(o.m) !== null && n >= mins(o.m) && o.md !== t && o.lm !== t) { o.lm = t; jobs.push(self.registration.showNotification('Coach Masse', { body: 'Valide tes repas du jour.', tag: 'cm-m', icon: 'icon-192.png', badge: 'icon-192.png' })); }
+      if (mins(o.w) !== null && n >= mins(o.w) && o.wd !== t && o.lw !== t) { o.lw = t; jobs.push(self.registration.showNotification('Coach-Mass-KVES', { body: 'Pèse-toi à jeun et note ton poids.', tag: 'cm-w', icon: 'icon-192.png', badge: 'icon-192.png' })); }
+      if (mins(o.m) !== null && n >= mins(o.m) && o.md !== t && o.lm !== t) { o.lm = t; jobs.push(self.registration.showNotification('Coach-Mass-KVES', { body: 'Valide tes repas du jour.', tag: 'cm-m', icon: 'icon-192.png', badge: 'icon-192.png' })); }
       return Promise.all(jobs).then(function () { return c.put('remind.json', new Response(JSON.stringify(o))); });
     });
   }));

@@ -1,13 +1,15 @@
-/* FICHIER GÉNÉRÉ par build.js à partir de src/. Ne le modifie pas à la main : modifie src/ puis lance : node build.js */
+/* © KVES · Coach-Mass-KVES. FICHIER GÉNÉRÉ par build.js à partir de src/. Ne le modifie pas à la main : modifie src/ puis lance : node build.js */
 (function () {
 'use strict';
 
+/* © KVES · Coach-Mass-KVES */
 
 /* ====================== données fixes ====================== */
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '9';
+var VERSION = '10';
+var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -81,6 +83,7 @@ var MEALS = [
 var EXTRA = { t: 'Avant de dormir', x: 'Verre de lait + 1 pain à l\'amlou (ajout de 300 kcal)', k: 300, p: 10 };
 var BASE_KCAL = MEALS.reduce(function (a, m) { return a + m.k; }, 0);
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== état ====================== */
 function pad(n) { return String(n).padStart(2, '0'); }
 function dstr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -165,6 +168,7 @@ function suggestion() {
   return null;
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== utilitaires UI ====================== */
 function $(s, r) { return (r || document).querySelector(s); }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -183,6 +187,7 @@ function drawEx(e, single) {
     figure(e.a, 0, e.la) + (single ? '' : figure(e.b, 220, e.lb, e.bad2)) + '</svg></div>';
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== animations ====================== */
 var REDUCED = false;
 try { REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
@@ -259,6 +264,7 @@ function frame(ts) {
   }
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== coach (messages) ====================== */
 function pick(a) { var d = new Date(); return a[(d.getDate() + d.getHours()) % a.length]; }
 function coachMsg() {
@@ -274,6 +280,7 @@ function coachMsg() {
   return ['Jour de récupération', pick(['Récupération. 30 minutes de marche, tes 5 repas, 2,5 litres d\'eau. Rien de plus, rien de moins.', 'Pas de séance. Le muscle se construit maintenant : mange, bois, dors.'])];
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== rendu des onglets ====================== */
 var tab = 'today';
 var view = $('#view');
@@ -342,6 +349,7 @@ function viewMeals() {
   return h;
 }
 
+/* © KVES · Coach-Mass-KVES */
 var CH = { range: 56, ex: 'total' };
 var delArmed = -1;
 function sdate(d) { return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
@@ -515,6 +523,7 @@ function viewHistory() {
   return h;
 }
 
+/* © KVES · Coach-Mass-KVES */
 function tog(key, label, hint) {
   return '<label class="meal"><input type="checkbox" data-set="' + key + '"' + (P[key] ? ' checked' : '') + '><span><b>' + label + '</b>' + (hint ? '<br><span class="small">' + hint + '</span>' : '') + '</span></label>';
 }
@@ -550,6 +559,7 @@ function render() {
   document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more' })[tab] || tab)); });
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== audio, voix, vibration ====================== */
 var actx = null;
 function unlockAudio() {
@@ -615,6 +625,7 @@ function wake() { try { if (navigator.wakeLock) navigator.wakeLock.request('scre
 function unwake() { try { wl && wl.release(); } catch (e) {} wl = null; }
 document.addEventListener('visibilitychange', function () { if (R && document.visibilityState === 'visible') wake(); });
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== séance guidée ====================== */
 var R = null;
 var runner = $('#runner');
@@ -803,6 +814,7 @@ function drawDone() {
   runner.innerHTML = h;
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== boîte à avis (chiffrée de bout en bout) ====================== */
 /* Principe : l'avis est chiffré sur le téléphone de l'utilisateur avec la clé PUBLIQUE du propriétaire
    (ECDH P-256 éphémère + HKDF-SHA256 + AES-256-GCM). Seule la clé PRIVÉE du propriétaire, gardée sur son
@@ -968,7 +980,7 @@ function owIngest(text) {
   });
 }
 function owReadable() {
-  var out = 'Avis reçus - Coach Masse (export du ' + today() + ')\n\n';
+  var out = 'Avis reçus - Coach-Mass-KVES (export du ' + today() + ')\n\n';
   OW.items.slice().reverse().forEach(function (x) {
     var d = x.data;
     if (!d) return;
@@ -978,12 +990,13 @@ function owReadable() {
 }
 
 /* envoi par l'utilisateur */
-function avText(code) { return 'Avis pour Coach Masse (chiffré : seul le propriétaire peut le lire)\n' + code; }
+function avText(code) { return 'Avis pour Coach-Mass-KVES (chiffré : seul le propriétaire peut le lire)\n' + code; }
 function avValidate() {
   var n = AV.name.trim(), e = AV.email.trim(), m = AV.msg.trim();
   if (n.length < 2) return 'Écris ton nom.';
   if (!EMAIL_RE.test(e)) return 'Écris une adresse e-mail valide.';
   if (m.length < 5) return 'Écris ton message (5 caractères minimum).';
+  if (/CM[01]\.[A-Za-z0-9_-]{40,}/.test(m) || /^Avis pour Coach/i.test(m)) return 'Ton message contient un code d\'avis déjà chiffré. Efface-le et écris ton texte à la main.';
   if (!AV.consent) return 'Coche la case pour accepter.';
   var last = D.avis.sent[0];
   if (last && Date.now() - last.id < 30000) return 'Attends quelques secondes avant un nouvel avis.';
@@ -1009,11 +1022,11 @@ function avShare(it, via) {
   var text = avText(it.code);
   function mark() { it.shared = true; save(); render(); }
   if (via === 'mail' && CFG.email) {
-    mark(); window.location.href = 'mailto:' + CFG.email + '?subject=' + encodeURIComponent('Avis Coach Masse') + '&body=' + encodeURIComponent(text);
+    mark(); window.location.href = 'mailto:' + CFG.email + '?subject=' + encodeURIComponent('Avis Coach-Mass-KVES') + '&body=' + encodeURIComponent(text);
   } else if (via === 'wa' && CFG.whatsapp) {
     mark(); window.open('https://wa.me/' + String(CFG.whatsapp).replace(/\D/g, '') + '?text=' + encodeURIComponent(text), '_blank');
   } else if (navigator.share) {
-    navigator.share({ title: 'Avis Coach Masse', text: text }).then(mark).catch(function () {});
+    navigator.share({ title: 'Avis Coach-Mass-KVES', text: text }).then(mark).catch(function () {});
   } else { copyText(text); }
 }
 
@@ -1023,7 +1036,7 @@ function viewMore() {
   return '<h1>Plus</h1>' +
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
-    '<div class="card"><h2>À propos</h2><p class="small">Coach Masse · version ' + VERSION + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>';
+    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>';
 }
 function avItem(it, i) {
   var share = navigator.share ? '<button class="btn sm grow" data-act="avshare" data-i="' + i + '" data-via="share">Partager</button>' : '';
@@ -1097,7 +1110,7 @@ function viewOwner() {
       '<p class="small">' + esc(d.d || x.rec.added) + ' · ' + esc(d.e) + ' · v' + esc(d.a) + ' · ' + esc(d.s) + '</p>' +
       '<p class="msgtxt">' + esc(d.m) + '</p><div class="row">' +
       '<button class="btn sm" data-act="owstatus" data-i="' + i + '">' + ST_LABEL[st] + '</button>' +
-      (okMail ? '<a class="btn alt sm linkbtn" href="mailto:' + esc(d.e) + '?subject=' + encodeURIComponent('Re : ton avis sur Coach Masse') + '">Répondre</a>' : '') +
+      (okMail ? '<a class="btn alt sm linkbtn" href="mailto:' + esc(d.e) + '?subject=' + encodeURIComponent('Re : ton avis sur Coach-Mass-KVES') + '">Répondre</a>' : '') +
       '<button class="btn alt sm" data-act="owdel" data-i="' + i + '">' + (OW.armed === 'd' + i ? 'Confirmer' : 'Supprimer') + '</button></div></div>';
   }
   if (!shown) h += '<div class="card"><p class="small">' + (items.length ? 'Aucun avis dans ce filtre.' : 'Aucun avis pour le moment. Quand un utilisateur t\'en envoie un, colle-le ci-dessus.') + '</p></div>';
@@ -1142,7 +1155,7 @@ document.addEventListener('click', function (ev) {
     return;
   }
   if (a === 'owlock') { owLock(); render(); return; }
-  if (a === 'owexportkey') { var rec = ownerRec(); if (rec) download('coach-masse-cle-proprietaire.json', JSON.stringify(rec), 'application/json'); return; }
+  if (a === 'owexportkey') { var rec = ownerRec(); if (rec) download('coach-mass-kves-cle-proprietaire.json', JSON.stringify(rec), 'application/json'); return; }
   if (a === 'owimportkey') { $('#keyFile').click(); return; }
   if (a === 'owdelkey') {
     if (OW.armed !== 'key') { OW.armed = 'key'; render(); return; }
@@ -1165,7 +1178,7 @@ document.addEventListener('click', function (ev) {
     return;
   }
   if (a === 'owcopyall') { if (OW.items) copyText(owReadable()); return; }
-  if (a === 'owexport') { if (OW.items) download('coach-masse-avis.txt', owReadable(), 'text/plain'); return; }
+  if (a === 'owexport') { if (OW.items) download('coach-mass-kves-avis.txt', owReadable(), 'text/plain'); return; }
 });
 $('#keyFile').addEventListener('change', function (ev) {
   var f = ev.target.files && ev.target.files[0];
@@ -1194,6 +1207,7 @@ document.addEventListener('visibilitychange', function () {
   else if (OW.priv && OW.hiddenAt && Date.now() - OW.hiddenAt > 5 * 60000) { owLock(); render(); }
 });
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== v7 : thème, courses, rappels, mini-compteurs ====================== */
 /* thème */
 function applyTheme() {
@@ -1211,6 +1225,7 @@ function themeCard() {
   return '<div class="seg" role="group" aria-label="Thème">' + [['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']].map(function (x) { return '<button data-act="theme" data-v="' + x[0] + '" class="' + (th === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div><p class="small">Auto suit le mode clair ou sombre d\'Android. Le fond, la barre d\'état et les graphiques suivent ton choix.</p>';
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* liste de courses */
 function qG(g) { return g >= 1000 ? (Math.round(g / 100) / 10).toString().replace('.', ',') + ' kg' : g + ' g'; }
 function qL(l) { return (Math.ceil(l * 2) / 2).toString().replace('.', ',') + ' L'; }
@@ -1251,6 +1266,7 @@ function shopText() {
   return 'Courses (' + P.shopDays + ' jours)\n' + shopList().map(function (x) { return '- ' + x[1] + ' : ' + x[2]; }).join('\n');
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* rappels */
 function hm(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
 function mealsAllDone() { var c = (D.logs[today()] || {}).meals || []; return mealsList().every(function (_, i) { return c[i]; }); }
@@ -1270,7 +1286,7 @@ function syncRemind() {
 }
 function sysNotify(txt, tag) {
   if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return false;
-  navigator.serviceWorker.ready.then(function (reg) { reg.showNotification('Coach Masse', { body: txt, tag: tag, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: [200, 100, 200] }); }).catch(function () {});
+  navigator.serviceWorker.ready.then(function (reg) { reg.showNotification('Coach-Mass-KVES', { body: txt, tag: tag, icon: 'icon-192.png', badge: 'icon-192.png', vibrate: [200, 100, 200] }); }).catch(function () {});
   return true;
 }
 function rmNotify(kind) {
@@ -1302,10 +1318,11 @@ function rmCard() {
     '<div class="grid2"><label class="f">Poids à<input type="time" data-rm="w" value="' + esc(P.rmW) + '"></label><label class="f">Repas à<input type="time" data-rm="m" value="' + esc(P.rmM) + '"></label></div>' +
     '<p class="small">' + (np === 'granted' ? 'Notifications autorisées. ' : np === 'denied' ? 'Notifications bloquées : autorise-les dans les réglages Android de Chrome. ' : np === 'none' ? 'Notifications non disponibles ici. ' : '') +
     'Application fermée, Android peut retarder ou ignorer le rappel. Pour être sûr de l\'heure, ajoute une alarme dans l\'Horloge.</p>' +
-    '<div class="row"><button class="btn alt sm" data-act="rmtest">Tester</button><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmW, 'Coach Masse : poids') + '">Alarme poids</a><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmM, 'Coach Masse : repas') + '">Alarme repas</a></div>' +
+    '<div class="row"><button class="btn alt sm" data-act="rmtest">Tester</button><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmW, 'Coach-Mass-KVES : poids') + '">Alarme poids</a><a class="btn alt sm linkbtn" href="' + alarmHref(P.rmM, 'Coach-Mass-KVES : repas') + '">Alarme repas</a></div>' +
     '<p class="small">Si le bouton Alarme n\'ouvre rien, ouvre l\'Horloge et crée une alarme quotidienne à la main.</p></div>';
 }
 
+/* © KVES · Coach-Mass-KVES */
 /* mini compteur et minuteur par exercice */
 var MT = {}, MT_I = null;
 function mt(id) { return MT[id] || (MT[id] = { c: 0, ms: 0, run: false, t0: 0, beeped: false }); }
@@ -1406,6 +1423,7 @@ document.addEventListener('visibilitychange', function () { if (document.visibil
 if (P.rmOn) { regPeriodic(); setTimeout(rmCheck, 1500); }
 
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== sauvegarde : copies automatiques, rappel, export, restauration ====================== */
 /* Les copies automatiques sont gardées dans IndexedDB (autre espace que le stockage principal) : elles protègent
    contre une erreur (effacement, import raté, données abîmées), pas contre un « Effacer les données » de Chrome.
@@ -1481,8 +1499,8 @@ function applyData(o, label) {
 /* export : partage de fichier (Drive, WhatsApp, e-mail...) ou téléchargement */
 function bkMark() { P.bkLast = today(); save(); render(); toast('Sauvegarde créée.'); }
 function exportData() {
-  var txt = JSON.stringify({ coachMasse: VERSION, exportedAt: new Date().toISOString(), data: D });
-  var name = 'coach-masse-sauvegarde-' + today() + '.json', file = null;
+  var txt = JSON.stringify({ app: NOM, auteur: AUTEUR, coachMasse: VERSION, exportedAt: new Date().toISOString(), data: D });
+  var name = 'coach-mass-kves-sauvegarde-' + today() + '.json', file = null;
   function dl() {
     try {
       var b = new Blob([txt], { type: 'application/json' }), a = document.createElement('a');
@@ -1493,7 +1511,7 @@ function exportData() {
   }
   try { file = new File([txt], name, { type: 'application/json' }); } catch (e) {}
   if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-    navigator.share({ files: [file], title: 'Sauvegarde Coach Masse' }).then(bkMark).catch(function (e) { if (!e || e.name !== 'AbortError') dl(); });
+    navigator.share({ files: [file], title: 'Sauvegarde Coach-Mass-KVES' }).then(bkMark).catch(function (e) { if (!e || e.name !== 'AbortError') dl(); });
   } else dl();
 }
 function bkDays() { return P.bkLast ? dnum(today()) - dnum(P.bkLast) : null; }
@@ -1562,6 +1580,7 @@ document.addEventListener('visibilitychange', function () { if (document.visibil
 setTimeout(bkAuto, 2500);
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(function (p) { PERSIST = p; if (tab === 'settings') render(); }); } catch (e) {}
 
+/* © KVES · Coach-Mass-KVES */
 /* ====================== événements ====================== */
 document.addEventListener('click', function (ev) {
   var t = ev.target.closest('[data-act]');
@@ -1671,6 +1690,7 @@ document.addEventListener('change', function (ev) {
     var lg = log(); lg.meals = lg.meals || []; lg.meals[+t.getAttribute('data-i')] = t.checked; save();
   }
 });
+/* © KVES · Coach-Mass-KVES */
 applyRotate();
 render();
 requestAnimationFrame(frame);
