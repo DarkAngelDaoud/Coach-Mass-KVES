@@ -90,7 +90,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
 }
@@ -521,7 +521,7 @@ function tog(key, label, hint) {
 function viewSettings() {
   var h = '<button class="btn alt sm back" data-act="tab" data-v="more">← Plus</button><h1>Réglages</h1><div class="card"><h2>Jours de séance</h2><div class="seg">' +
     [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<button data-act="day" data-d="' + d + '" class="' + (isTrainDay(d) ? 'on' : '') + '">' + JOURS[d] + '</button>'; }).join('') + '</div></div>';
-  h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle en français dans tes écouteurs') + tog('vib', 'Vibrations') + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
+  h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle en français dans tes écouteurs') + tog('vib', 'Vibrations') + '<label class="f">Intensité des vibrations</label><div class="seg" role="group">' + [[1, 'Normale'], [2, 'Forte'], [3, 'Très forte']].map(function (x) { return '<button data-act="vibpow" data-v="' + x[0] + '" class="' + ((P.vibLevel || 2) === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
     '<div class="grid2"><label class="f">Secondes par répétition<input type="number" inputmode="numeric" min="2" max="6" data-set="tempo" value="' + P.tempo + '"></label>' +
     '<label class="f">Repos en plus (secondes)<input type="number" inputmode="numeric" min="0" max="60" step="5" data-set="restBonus" value="' + P.restBonus + '"></label></div>' +
     '<div class="row"><button class="btn alt sm" data-act="testvoice">Tester la voix</button><button class="btn alt sm" data-act="testvib">Tester la vibration</button></div></div>';
@@ -602,7 +602,14 @@ function say(t) {
     window.speechSynthesis.speak(u);
   } catch (e) {}
 }
-function vib(p) { if (P.vib) { try { return navigator.vibrate ? navigator.vibrate(p) : null; } catch (e) { return false; } } return null; }
+/* Intensité : 1 = normale (impulsions telles quelles), 2 = forte (impulsions allongées, mini 90 ms), 3 = très forte (mini 160 ms).
+   Les impulsions de 30-40 ms sont trop brèves pour être senties sur beaucoup de téléphones. */
+function vibScale(p) {
+  var lv = P.vibLevel || 2, mini = lv >= 3 ? 160 : lv === 2 ? 90 : 0, k = lv >= 3 ? 3 : lv === 2 ? 2 : 1;
+  var a = Array.isArray(p) ? p : [p];
+  return a.map(function (v, i) { return i % 2 === 0 ? Math.max(mini, Math.round(v * k)) : v; });
+}
+function vib(p) { if (P.vib) { try { return navigator.vibrate ? navigator.vibrate(vibScale(p)) : null; } catch (e) { return false; } } return null; }
 var wl = null;
 function wake() { try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(function (s) { wl = s; }).catch(function () {}); } catch (e) {} }
 function unwake() { try { wl && wl.release(); } catch (e) {} wl = null; }
@@ -1594,8 +1601,9 @@ document.addEventListener('click', function (ev) {
     }
     return;
   }
+  if (a === 'vibpow') { P.vibLevel = +t.getAttribute('data-v'); save(); render(); vib([40, 120, 40]); return; }
   if (a === 'testvib') {
-    var vr = navigator.vibrate ? navigator.vibrate([200, 100, 200]) : null;
+    var vr = navigator.vibrate ? navigator.vibrate(vibScale([40, 150, 40, 150, 200])) : null;
     toast(!P.vib ? 'Les vibrations sont désactivées dans les réglages de l\'application.' : vr === null ? 'Ce navigateur ne gère pas la vibration.' : vr === false ? 'Chrome a bloqué la vibration. Touche l\'écran puis réessaie.' : 'Vibration envoyée. Rien senti ? Vérifie les réglages Android : Son et vibration > Vibrations et retour haptique.');
     return;
   }
