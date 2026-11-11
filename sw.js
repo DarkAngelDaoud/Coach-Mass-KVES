@@ -1,4 +1,4 @@
-var CACHE = 'coach-masse-v8';
+var CACHE = 'coach-masse-v9';
 var FILES = ['./', 'index.html', 'styles.css', 'app.js', 'avis-config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {

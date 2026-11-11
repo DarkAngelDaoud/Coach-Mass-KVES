@@ -2,7 +2,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 8 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 9 · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -107,7 +107,18 @@ Coche chaque repas quand tu l'as fini : la barre de calories se remplit. Des var
 - **Liste de courses automatique** (onglet Repas) : choisis le nombre de jours (3, 7 ou 14) et tes variantes (poulet, sardines ou alterné ; lentilles, pois chiches ou alterné). Les quantités se calculent seules, avec des cases à cocher et un bouton *Copier la liste*. Aucun prix n'est affiché.
 - **Minuteur et compteur sur chaque exercice** (onglet Séance) : touche **+** à chaque répétition, lance le **Minuteur** (bip à l'objectif pour les exercices chronométrés), puis **Enregistrer la série**. Elle apparaît dans l'historique avec la mention *libre*.
 - **Rappels** (*Plus > Réglages > Rappels*) : notification pour noter ton poids (07 h 30 par défaut) et valider tes repas (22 h par défaut), seulement si ce n'est pas déjà fait. Application fermée, Android peut retarder ou ignorer le rappel : ajoute aussi une alarme dans l'Horloge.
+- **Vibrations réglables** (*Réglages > Coach*) : intensité Normale, Forte (par défaut) ou Très forte, et un bouton *Tester la vibration* qui dit si Chrome l'a bloquée.
 - **Thème** (*Réglages > Affichage*) : Auto, Clair ou Sombre. Le fond, la barre d'état et les graphiques suivent ton choix.
+
+### Historique des versions
+
+| Version | Apports |
+|---|---|
+| 1 à 5 | Séances guidées (voix, vibrations, sons, métronome), figures animées, bilan du jour, repas, graphiques, historique, portrait et paysage |
+| 6 | Onglet Plus, boîte à avis chiffrée de bout en bout, espace propriétaire |
+| 7 | Liste de courses automatique, rappels poids et repas, mini-compteur et minuteur par exercice, thème Auto, Clair ou Sombre |
+| 8 | Sauvegarde (copies automatiques, rappel, export, restauration), code découpé en modules, tests automatiques |
+| 9 | Vibrations plus fortes et réglables, test de vibration, versions et documents harmonisés |
 
 ### 5. Suivre ses progrès (onglets Suivi et Historique)
 
@@ -225,7 +236,7 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 
 **Modifier le code.** On modifie les fichiers de `src/`, jamais `app.js`. Ensuite `node build.js` régénère `app.js`, et `node tests/run.js` lance une soixantaine de vérifications (démarrage, onglets, débordements d'écran, courses, minuteur, thème, sauvegarde et restauration, données abîmées, boîte à avis chiffrée). Les tests demandent Node.js et Playwright (`npm i -D playwright`). Seuls les fichiers de la racine servent à l'application : `src/`, `tests/` et `build.js` sont facultatifs sur GitHub Pages.
 
-**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v8` devient `coach-masse-v9`).
+**Publier ou mettre à jour avec GitHub Pages.** Dans le dépôt, *Add file > Upload files* pour envoyer ou remplacer les fichiers, puis *Settings > Pages*, branche `main`, dossier `/ (root)`. Les fichiers sont rechargés depuis le réseau dès qu'il est disponible. Pour forcer le nettoyage de l'ancien cache, change son nom dans `sw.js` (par exemple `coach-masse-v9` devient `coach-masse-v10`).
 
 **Compatibilité.** L'application est conçue pour Chrome sur Android. La mise en page a été vérifiée avec des largeurs d'écran de 320 à 1 180 pixels, en portrait et en paysage. Les autres navigateurs n'ont pas été testés.
 
