@@ -264,3 +264,5 @@ p.bad { color: var(--bad); font-weight: 700; }
 [dir=rtl] .meal .t { display: inline-block; }
 
 input[type=range] { width: 100%; margin: 8px 0; accent-color: var(--accent, #1d3fb8); }
+.mini { align-items: center; gap: 6px; margin: 6px 0; }
+.mini .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '13.5';
+var VERSION = '13.6';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Nouveau : lecteur de musique (Plus > Lecteur) pour tes MP3 et M4A, avec liste, aléatoire, répétition et commandes écran verrouillé.', 'La musique reste sur ton téléphone : rien n\'est copié ni envoyé.'];
+var NOTES = ['Mini-lecteur de musique pendant la séance (pause, précédent, suivant).', 'La musique baisse quand le coach parle, puis remonte.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1048,6 +1048,7 @@ function say(t) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     var u = new SpeechSynthesisUtterance(t); u.lang = 'fr-FR'; u.rate = 1.05;
+    mDuckSay(u);
     window.speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -1229,7 +1230,7 @@ function draw() {
   var s = cur(), h = '', pr = Math.round(R.i / R.steps.length * 100);
   h += '<div class="rtop"><span class="small">' + (s.k === 'warm' ? 'Échauffement' : 'Exercice ' + (s.pi + 1) + '/' + R.plan.length + ' · série ' + s.sn + '/' + R.plan[s.pi].sets) + '</span>' +
     '<span class="row"><button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
-  h += '<div class="bar"><i style="width:' + pr + '%"></i></div>';
+  h += '<div class="bar"><i style="width:' + pr + '%"></i></div>' + mMiniHtml();
   if (s.k === 'warm') {
     h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p>' + drawBox(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
   } else {
@@ -2312,6 +2313,27 @@ function mAdd(files) {
   toast(n + ' morceau(x) ajouté(s).');
   if (MP.i < 0) mPlay(0); else if (tab === 'player') render();
 }
+/* mini-lecteur de la séance + baisse du volume quand le coach parle (13.6) */
+var mDuckN = 0;
+function mDuck(on) { try { mAudio.volume = on ? MP.vol * 0.3 : MP.vol; } catch (e) {} }
+function mDuckSay(u) {
+  if (mAudio.paused || !MP.list.length) return;
+  var id = ++mDuckN;
+  function back() { if (id === mDuckN) mDuck(false); }
+  mDuck(true);
+  u.onend = back; u.onerror = back;
+  setTimeout(back, 9000);
+}
+function mMiniHtml() {
+  if (!MP.list.length) return '';
+  var playing = MP.i >= 0 && !mAudio.paused;
+  return '<div class="row mini"><button class="btn alt sm" data-act="mprev" aria-label="Précédent">⏮</button><button class="btn alt sm" id="mmtoggle" data-act="mtoggle" aria-label="' + (playing ? 'Pause' : 'Lecture') + '">' + (playing ? '⏸' : '▶') + '</button><button class="btn alt sm" data-act="mnext" aria-label="Suivant">⏭</button><span class="small grow" id="mmname">♪ ' + esc(MP.i >= 0 ? MP.list[MP.i].name : '') + '</span></div>';
+}
+function mMiniSync() {
+  var b = document.getElementById('mmtoggle'), n = document.getElementById('mmname');
+  if (b) { var pl = !mAudio.paused; b.textContent = pl ? '⏸' : '▶'; b.setAttribute('aria-label', trText(pl ? 'Pause' : 'Lecture')); }
+  if (n && MP.i >= 0) n.textContent = '♪ ' + MP.list[MP.i].name;
+}
 function mMeta() {
   if (!('mediaSession' in navigator) || typeof MediaMetadata !== 'function' || MP.i < 0) return;
   try { navigator.mediaSession.metadata = new MediaMetadata({ title: MP.list[MP.i].name, artist: NOM, album: 'Ma musique' }); } catch (e) {}
@@ -2323,7 +2345,7 @@ function mPlay(i, noHist) {
   mAudio.src = MP.list[i].url;
   mAudio.volume = MP.vol;
   var p = mAudio.play(); if (p && p.catch) p.catch(function () { toast('Lecture impossible : touche Lecture.'); });
-  mMeta();
+  mMeta(); mMiniSync();
   if (tab === 'player') render();
 }
 function mToggle() {
@@ -2353,8 +2375,8 @@ function mClear() {
   if (tab === 'player') render();
 }
 mAudio.addEventListener('ended', function () { mNext(true); });
-mAudio.addEventListener('play', function () { if (tab === 'player') render(); });
-mAudio.addEventListener('pause', function () { if (tab === 'player') render(); });
+mAudio.addEventListener('play', function () { if (tab === 'player') render(); mMiniSync(); });
+mAudio.addEventListener('pause', function () { if (tab === 'player') render(); mMiniSync(); });
 mAudio.addEventListener('error', function () { if (MP.i >= 0) toast('Fichier illisible : ' + MP.list[MP.i].name); });
 mAudio.addEventListener('timeupdate', function () {
   var s = document.getElementById('mpos'), t = document.getElementById('mtime');
