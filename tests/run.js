@@ -20,9 +20,11 @@ var server = http.createServer(function (q, r) {
   r.writeHead(200, { 'content-type': types[path.extname(f)] || 'application/octet-stream' }); r.end(fs.readFileSync(f));
 });
 async function newPage(br, opts) {
-  var onb = !!(opts && opts.onb); opts = Object.assign({}, opts || {}); delete opts.onb;
+  var onb = !!(opts && opts.onb), keepClosed = !!(opts && opts.closed); opts = Object.assign({}, opts || {}); delete opts.onb; delete opts.closed;
   var ctx = await br.newContext(Object.assign({ viewport: { width: 412, height: 915 }, serviceWorkers: 'block', permissions: ['notifications'], acceptDownloads: true }, opts || {}));
   if (!onb) await ctx.addInitScript(function () { try { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true } })); } catch (e) {} });
+  /* les sections de Réglages sont repliées : les tests les ouvrent toutes (sauf demande contraire) */
+  if (!keepClosed) await ctx.addInitScript(function () { new MutationObserver(function () { document.querySelectorAll('details[data-sec]:not([open])').forEach(function (d) { d.open = true; }); }).observe(document, { childList: true, subtree: true }); });
   var pg = await ctx.newPage(); pg.errs = [];
   pg.on('pageerror', function (e) { pg.errs.push(e.message); });
   pg.on('console', function (m) { if (/Content Security Policy|Refused to/i.test(m.text())) pg.errs.push('CSP : ' + m.text()); });
@@ -170,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '13.7' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '13.8' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -390,6 +392,18 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   var aft = await pg.evaluate(function () { return JSON.parse(JSON.stringify(window.__coach.D())); });
   function same(a, b) { if (a && typeof a === 'object') { if (!b || typeof b !== 'object') return false; return Object.keys(a).every(function (k) { return same(a[k], b[k]); }); } return a === b; }
   t('données V11 conservées intactes après nettoyage', ['profile', 'logs', 'measures', 'sessions', 'levels', 'avis'].every(function (k) { return same(V11[k], aft[k]); }), aft.profile);
+  await pg.context().close();
+
+  /* réglages : sections repliées par défaut, ouvertes à la demande, état gardé */
+  pg = await newPage(br, { closed: true }); await pg.goto(url);
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
+  var secN = await pg.$$eval('details[data-sec]', function (e) { return e.length; }), secOpen = await pg.$$eval('details[data-sec][open]', function (e) { return e.length; });
+  t('réglages : sections repliables (une seule ouverte au départ)', secN >= 7 && secOpen === 1, [secN, secOpen]);
+  t('réglages : "Coach" masqué tant que la section est fermée', !(await pg.isVisible('[data-act=testvoice]')));
+  await pg.click('details[data-sec="Coach"] summary'); await pg.waitForTimeout(150);
+  t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
+  await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
+  t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
   /* langues : aucune phrase française ne doit rester visible en anglais ni en arabe (écrans principaux) */
