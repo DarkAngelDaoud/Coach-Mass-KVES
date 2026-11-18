@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '13.8';
+var VERSION = '13.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Réglages en sections repliables : touche un titre pour l\'ouvrir ou le fermer.', 'La section Jours de séance reste ouverte au départ.'];
+var NOTES = ['Nouvelle page Légal (Plus) : avertissement santé, confidentialité et conditions d\'utilisation.', 'Case de confirmation à l\'inscription (18 ans ou plus). Textes en 4 langues, à faire relire.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -254,7 +254,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', legalOk: false, noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
 }
@@ -1008,10 +1008,10 @@ document.addEventListener('toggle', function (ev) { var d = ev.target; if (d && 
 
 function render() {
   $('#weekTag').textContent = 'Semaine ' + wkNo() + ' · ' + fmt(currentWeight()) + ' kg → ' + P.goal;
-  var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, history: viewHistory, settings: viewSettings, more: viewMore, avis: viewAvis, owner: viewOwner, sources: viewSources, player: viewPlayer };
+  var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, history: viewHistory, settings: viewSettings, more: viewMore, avis: viewAvis, owner: viewOwner, sources: viewSources, player: viewPlayer, legal: viewLegal };
   view.innerHTML = map[tab]();
-  document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more' })[tab] || tab)); });
-  document.body.setAttribute('data-tab', ({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more' })[tab] || tab);
+  document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', legal: 'more' })[tab] || tab)); });
+  document.body.setAttribute('data-tab', ({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', legal: 'more' })[tab] || tab);
 }
 
 /* © KVES · Coach-Mass-KVES */
@@ -1505,6 +1505,7 @@ function viewMore() {
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
+    '<div class="card"><h2>Légal</h2><p class="small">Avertissement santé, confidentialité et conditions d\'utilisation.</p><button class="btn alt" data-act="tab" data-v="legal">Lire</button></div>' +
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
     shareCard() +
     '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>';
@@ -1678,6 +1679,32 @@ document.addEventListener('visibilitychange', function () {
   else if (OW.priv && OW.hiddenAt && Date.now() - OW.hiddenAt > 5 * 60000) { owLock(); render(); }
 });
 
+/* © KVES · Coach-Mass-KVES */
+/* ====================== page Légal (13.9) : avertissement santé, confidentialité, conditions ====================== */
+var LEGAL_OWNER = 'KVES';
+var LEGAL_CONTACT = '';
+function viewLegal() {
+  var h = backBtn() + '<h1>Légal</h1>';
+  h += '<div class="card warn"><h2>Avertissement santé</h2><p>Coach-Mass-KVES donne des repères généraux de sport et d\'alimentation pour un adulte en bonne santé. Ce n\'est ni un avis médical, ni un diagnostic, ni un traitement.</p><ul>' +
+    '<li>Consulte un médecin avant de commencer, surtout en cas de maladie cardiaque, de tension élevée, de diabète, de blessure, de grossesse, de douleur au thorax, ou au moindre doute.</li>' +
+    '<li>Arrête l\'exercice en cas de douleur vive, de vertige, de malaise ou d\'essoufflement anormal, et demande un avis médical.</li>' +
+    '<li>Les calories et les repas sont des estimations. Ils ne tiennent pas compte des allergies, des intolérances ni des régimes médicaux.</li>' +
+    '<li>Tu es responsable de ta pratique. Les résultats varient d\'une personne à l\'autre et ne sont pas garantis.</li>' +
+    '<li>Application réservée aux personnes de 18 ans et plus.</li></ul></div>';
+  h += '<div class="card"><h2>Politique de confidentialité</h2><p><b>Responsable :</b> ' + esc(LEGAL_OWNER) + '</p><p><b>Contact :</b> ' + (LEGAL_CONTACT ? esc(LEGAL_CONTACT) : '<span>[à compléter avant la publication]</span>') + '</p><ul>' +
+    '<li>Tes données : poids, mensurations, repas, sommeil, séances, profil. Elles restent sur ton téléphone. Aucun serveur ne les reçoit, et l\'application n\'utilise ni compte, ni publicité, ni outil de mesure.</li>' +
+    '<li>Ce qui peut quitter ton téléphone : uniquement ce que tu choisis d\'envoyer, à savoir un avis (chiffré), une sauvegarde que tu exportes, ou le lien de partage.</li>' +
+    '<li>Boîte à avis : si tu écris ton nom et ton e-mail, ils sont chiffrés avec ton message. Seul l\'éditeur peut les lire, pour te répondre et améliorer l\'application. Conservation : 12 mois. Pour les consulter ou les effacer, écris au contact ci-dessus.</li>' +
+    '<li>Tes droits : accès, correction, suppression. Pour tes données locales, tu les effaces toi-même dans Réglages > Données.</li>' +
+    '<li>Sécurité : tes données locales ne sont pas chiffrées. Protège ton téléphone avec un verrouillage d\'écran.</li>' +
+    '<li>Ce texte peut évoluer. La date de version est indiquée dans Réglages > Données.</li></ul></div>';
+  h += '<div class="card"><h2>Conditions d\'utilisation</h2><ul>' +
+    '<li>L\'application est fournie telle quelle, sans garantie de résultat. Elle ne remplace ni un médecin, ni un coach, ni un diététicien.</li>' +
+    '<li>L\'éditeur n\'est pas responsable des blessures ou dommages liés à une mauvaise utilisation, dans les limites permises par la loi.</li>' +
+    '<li>Le code, le nom, le logo et les textes sont protégés : © KVES, tous droits réservés.</li>' +
+    '<li>Droit applicable : droit marocain.</li></ul></div>';
+  return h;
+}
 /* © KVES · Coach-Mass-KVES */
 /* ====================== v7 : thème, courses, rappels, mini-compteurs ====================== */
 /* thème */
@@ -2463,6 +2490,7 @@ function showOnboarding() {
     '<label class="f">Poids visé (kg)<input type="number" inputmode="decimal" step="0.5" id="ob_goal" value="' + v(P.goal) + '" placeholder="75"></label></div>' +
     '<details class="cfg"><summary>Mensurations (facultatif, en cm)</summary><div class="grid2">' + MKEYS.map(function (k) { return '<label class="f">' + MLAB[k] + '<input type="number" inputmode="decimal" step="0.5" id="ob_m_' + k + '"></label>'; }).join('') + '</div></details>' +
     '<p class="small">Repères généraux, pas un avis médical. En cas de maladie, de traitement, de grossesse ou de doute, parle à un médecin avant de changer ton alimentation ou ton sport.</p>' +
+    (P.legalOk ? '' : '<label class="meal"><input type="checkbox" id="ob_legal"><span>J\'ai lu l\'avertissement santé (Plus > Légal), j\'ai 18 ans ou plus, et je comprends que l\'application ne remplace pas un médecin.</span></label>') +
     '<p class="small bad" id="obErr" role="alert" hidden></p>' +
     '<button class="btn go" data-act="obsave">Valider</button>' +
     (OB.fresh ? '<button class="btn alt" data-act="import">J\'ai déjà une sauvegarde : l\'importer</button>' : '<button class="btn alt" data-act="modalclose">Plus tard</button>') + '</div>';
@@ -2472,6 +2500,8 @@ function obErr(t) { var n = $('#obErr'); if (n) { n.textContent = t; n.hidden = 
 function num(id) { var n = $('#' + id); return n ? parseFloat((n.value || '').replace(',', '.')) : NaN; }
 function saveOnboarding() {
   var age = num('ob_age'), h = num('ob_h'), w = num('ob_w'), goal = num('ob_goal'), o = OB.obj;
+  var lg = document.getElementById('ob_legal');
+  if (lg && !lg.checked) return obErr('Coche la case pour confirmer l\'avertissement santé.');
   if (!(age >= 1)) return obErr('Indique ton âge.');
   if (age < 18) return obErr('Cette application est réservée aux personnes de 18 ans et plus. Reviens à tes 18 ans ou demande conseil à un professionnel.');
   if (age > 99) return obErr('Âge invalide.');
@@ -2484,7 +2514,7 @@ function saveOnboarding() {
   var imc = goal / Math.pow(h / 100, 2);
   if (o === 'perte' && imc < 18.5) return obErr('Ce poids visé est trop bas pour ta taille (IMC sous 18,5). Choisis un objectif plus haut ou parle à un médecin.');
   var fresh = !userHasData(), changed = obj() !== o;
-  P.gender = OB.gender; P.obj = o; P.age = Math.round(age); P.height = Math.round(h); P.goal = goal; P.onboarded = true;
+  P.gender = OB.gender; P.obj = o; P.age = Math.round(age); P.height = Math.round(h); P.goal = goal; P.onboarded = true; P.legalOk = true;
   if (fresh) { P.w0 = w; P.start = today(); }
   else if (Math.abs(w - currentWeight()) >= 0.05) log().weight = w;
   if (changed) { P.kcalAdj = 0; P.lastAdj = ''; }
@@ -3771,6 +3801,103 @@ function startI18n() {
   var Y = {"en": {". Le fichier protège de tout, même d'un téléphone perdu. La clé du propriétaire se sauvegarde à part (Plus > Espace propriétaire).": ". The file protects against everything, even a lost phone. The owner's key is backed up separately (More > Owner area).", "Dis-moi ce qui marche, ce qui manque, ce qui te gêne. Ton message est chiffré avant de quitter ton téléphone.": "Tell me what works, what is missing, what bothers you. Your message is encrypted before it leaves your phone.", "Ton avis": "Your feedback", "Ton nom": "Your name", "Ton e-mail (pour te répondre)": "Your e-mail (so I can reply)", "Idée": "Idea", "Problème": "Problem", "Ton message": "Your message", "J'accepte que le propriétaire lise mon nom, mon e-mail et mon message pour me répondre et améliorer l'application. Ces informations sont chiffrées avec l'avis.": "I agree that the owner reads my name, e-mail and message to reply to me and improve the app. This information is encrypted with the feedback.", "Préparer l'envoi": "Prepare to send", "Tu choisis ensuite toi-même comment l'envoyer (partage, e-mail, messagerie). Ton identité n'est pas vérifiée.": "You then choose yourself how to send it (share, e-mail, messaging). Your identity is not verified."}, "ar": {". Le fichier protège de tout, même d'un téléphone perdu. La clé du propriétaire se sauvegarde à part (Plus > Espace propriétaire).": ". الملف يحميك من كل شيء حتى من ضياع الهاتف. يُحفظ مفتاح المالك على حدة (المزيد > فضاء المالك).", "Dis-moi ce qui marche, ce qui manque, ce qui te gêne. Ton message est chiffré avant de quitter ton téléphone.": "قل لي ما الذي يعمل وما الذي ينقص وما الذي يزعجك. تُشفَّر رسالتك قبل أن تغادر هاتفك.", "Ton avis": "رأيك", "Ton nom": "اسمك", "Ton e-mail (pour te répondre)": "بريدك الإلكتروني (للرد عليك)", "Idée": "فكرة", "Problème": "مشكلة", "Ton message": "رسالتك", "J'accepte que le propriétaire lise mon nom, mon e-mail et mon message pour me répondre et améliorer l'application. Ces informations sont chiffrées avec l'avis.": "أوافق على أن يقرأ المالك اسمي وبريدي ورسالتي للرد علي وتحسين التطبيق. هذه المعلومات مشفّرة مع الرأي.", "Préparer l'envoi": "تحضير الإرسال", "Tu choisis ensuite toi-même comment l'envoyer (partage, e-mail, messagerie). Ton identité n'est pas vérifiée.": "ثم تختار بنفسك طريقة الإرسال (مشاركة، بريد، رسائل). لا يتم التحقق من هويتك."}, "ma": {". Le fichier protège de tout, même d'un téléphone perdu. La clé du propriétaire se sauvegarde à part (Plus > Espace propriétaire).": ". L-fichier kay 7mik mn koulchi, 7ta mn tilifon d-dayea3. Mfta7 mol l-application kay t-sjjel b 7dou (Ktar > Espace d mol l-application).", "Dis-moi ce qui marche, ce qui manque, ce qui te gêne. Ton message est chiffré avant de quitter ton téléphone.": "9ol liya ach khddam, ach nqss, ach kayz3ejek. R-risala dyalek kat-cheffer qbel ma tkhroj mn t-tilifon dyalek.", "Ton avis": "R-ray dyalek", "Ton nom": "Smitek", "Ton e-mail (pour te répondre)": "E-mail dyalek (bach njawbek)", "Idée": "Fekra", "Problème": "Mochkil", "Ton message": "Risalatek", "J'accepte que le propriétaire lise mon nom, mon e-mail et mon message pour me répondre et améliorer l'application. Ces informations sont chiffrées avec l'avis.": "Kan wafeq bli mol l-application y9ra smiti, e-mail dyali w risalti bach yjawbni w y7essen l-application. Had l-ma3lomat mcheffrin m3a r-ray.", "Préparer l'envoi": "7ddar l-irsal", "Tu choisis ensuite toi-même comment l'envoyer (partage, e-mail, messagerie). Ton identité n'est pas vérifiée.": "Mn b3d nta li katkhtar kifach tsifto (partage, e-mail, messagerie). L-hawiya dyalek ma kat t2kkedch."}};
   Object.keys(Y).forEach(function (l) { if (LANG_DATA[l]) Object.keys(Y[l]).forEach(function (k) { LANG_DATA[l].w[k] = Y[l][k]; }); });
   Object.keys(Q).forEach(function (l) { if (LANG_DATA[l]) Q[l].slice().reverse().forEach(function (x) { LANG_DATA[l].p.push({ re: PT(x[0], '').re, en: x[1] }); }); });
+})();
+/* © KVES · Coach-Mass-KVES */
+/* ====================== 13.9 : textes légaux (EN, AR, darija) · brouillon à faire relire par un juriste ====================== */
+(function () {
+  var X = {
+ "en": {
+  "Légal": "Legal",
+  "Avertissement santé, confidentialité et conditions d'utilisation.": "Health warning, privacy and terms of use.",
+  "Lire": "Read",
+  "Avertissement santé": "Health warning",
+  "Coach-Mass-KVES donne des repères généraux de sport et d'alimentation pour un adulte en bonne santé. Ce n'est ni un avis médical, ni un diagnostic, ni un traitement.": "Coach-Mass-KVES gives general sport and nutrition guidelines for a healthy adult. It is not medical advice, a diagnosis or a treatment.",
+  "Consulte un médecin avant de commencer, surtout en cas de maladie cardiaque, de tension élevée, de diabète, de blessure, de grossesse, de douleur au thorax, ou au moindre doute.": "See a doctor before starting, especially in case of heart disease, high blood pressure, diabetes, injury, pregnancy, chest pain, or any doubt.",
+  "Arrête l'exercice en cas de douleur vive, de vertige, de malaise ou d'essoufflement anormal, et demande un avis médical.": "Stop exercising in case of sharp pain, dizziness, discomfort or abnormal breathlessness, and seek medical advice.",
+  "Les calories et les repas sont des estimations. Ils ne tiennent pas compte des allergies, des intolérances ni des régimes médicaux.": "Calories and meals are estimates. They do not take allergies, intolerances or medical diets into account.",
+  "Tu es responsable de ta pratique. Les résultats varient d'une personne à l'autre et ne sont pas garantis.": "You are responsible for your own practice. Results vary from person to person and are not guaranteed.",
+  "Application réservée aux personnes de 18 ans et plus.": "App for people aged 18 and over.",
+  "Politique de confidentialité": "Privacy policy",
+  "Responsable :": "Controller:",
+  "Contact :": "Contact:",
+  "[à compléter avant la publication]": "[to be completed before publication]",
+  "Tes données : poids, mensurations, repas, sommeil, séances, profil. Elles restent sur ton téléphone. Aucun serveur ne les reçoit, et l'application n'utilise ni compte, ni publicité, ni outil de mesure.": "Your data: weight, measurements, meals, sleep, workouts, profile. It stays on your phone. No server receives it, and the app uses no account, no advertising and no tracking tool.",
+  "Ce qui peut quitter ton téléphone : uniquement ce que tu choisis d'envoyer, à savoir un avis (chiffré), une sauvegarde que tu exportes, ou le lien de partage.": "What can leave your phone: only what you choose to send, namely feedback (encrypted), a backup you export, or the share link.",
+  "Boîte à avis : si tu écris ton nom et ton e-mail, ils sont chiffrés avec ton message. Seul l'éditeur peut les lire, pour te répondre et améliorer l'application. Conservation : 12 mois. Pour les consulter ou les effacer, écris au contact ci-dessus.": "Feedback box: if you write your name and e-mail, they are encrypted with your message. Only the publisher can read them, to reply to you and improve the app. Retention: 12 months. To view or delete them, write to the contact above.",
+  "Tes droits : accès, correction, suppression. Pour tes données locales, tu les effaces toi-même dans Réglages > Données.": "Your rights: access, correction, deletion. For your local data, you erase it yourself in Settings > Data.",
+  "Sécurité : tes données locales ne sont pas chiffrées. Protège ton téléphone avec un verrouillage d'écran.": "Security: your local data is not encrypted. Protect your phone with a screen lock.",
+  "Ce texte peut évoluer. La date de version est indiquée dans Réglages > Données.": "This text may change. The version date is shown in Settings > Data.",
+  "Conditions d'utilisation": "Terms of use",
+  "L'application est fournie telle quelle, sans garantie de résultat. Elle ne remplace ni un médecin, ni un coach, ni un diététicien.": "The app is provided as is, with no guarantee of results. It does not replace a doctor, a coach or a dietitian.",
+  "L'éditeur n'est pas responsable des blessures ou dommages liés à une mauvaise utilisation, dans les limites permises par la loi.": "The publisher is not liable for injuries or damage resulting from misuse, within the limits permitted by law.",
+  "Le code, le nom, le logo et les textes sont protégés : © KVES, tous droits réservés.": "The code, name, logo and texts are protected: © KVES, all rights reserved.",
+  "Droit applicable : droit marocain.": "Applicable law: Moroccan law.",
+  "J'ai lu l'avertissement santé (Plus > Légal), j'ai 18 ans ou plus, et je comprends que l'application ne remplace pas un médecin.": "I have read the health warning (More > Legal), I am 18 or older, and I understand the app does not replace a doctor.",
+  "Coche la case pour confirmer l'avertissement santé.": "Tick the box to confirm the health warning.",
+  "Ouvrir Légal": "Open Legal"
+ },
+ "ar": {
+  "Légal": "القانوني",
+  "Avertissement santé, confidentialité et conditions d'utilisation.": "تنبيه صحي، الخصوصية وشروط الاستخدام.",
+  "Lire": "قراءة",
+  "Avertissement santé": "تنبيه صحي",
+  "Coach-Mass-KVES donne des repères généraux de sport et d'alimentation pour un adulte en bonne santé. Ce n'est ni un avis médical, ni un diagnostic, ni un traitement.": "يقدّم Coach-Mass-KVES مرجعًا عامًا في الرياضة والتغذية لشخص بالغ يتمتع بصحة جيدة. ليس رأيًا طبيًا ولا تشخيصًا ولا علاجًا.",
+  "Consulte un médecin avant de commencer, surtout en cas de maladie cardiaque, de tension élevée, de diabète, de blessure, de grossesse, de douleur au thorax, ou au moindre doute.": "استشر طبيبًا قبل البدء، خصوصًا عند مرض القلب أو ارتفاع الضغط أو السكري أو الإصابة أو الحمل أو ألم الصدر أو عند أدنى شك.",
+  "Arrête l'exercice en cas de douleur vive, de vertige, de malaise ou d'essoufflement anormal, et demande un avis médical.": "أوقف التمرين عند ألم حاد أو دوار أو وعكة أو ضيق تنفس غير عادي، واطلب رأيًا طبيًا.",
+  "Les calories et les repas sont des estimations. Ils ne tiennent pas compte des allergies, des intolérances ni des régimes médicaux.": "السعرات والوجبات تقديرات. لا تراعي الحساسية ولا عدم التحمل ولا الأنظمة الطبية.",
+  "Tu es responsable de ta pratique. Les résultats varient d'une personne à l'autre et ne sont pas garantis.": "أنت مسؤول عن ممارستك. تختلف النتائج من شخص لآخر وليست مضمونة.",
+  "Application réservée aux personnes de 18 ans et plus.": "التطبيق مخصص لمن بلغ 18 سنة فأكثر.",
+  "Politique de confidentialité": "سياسة الخصوصية",
+  "Responsable :": "المسؤول:",
+  "Contact :": "للتواصل:",
+  "[à compléter avant la publication]": "[يُستكمل قبل النشر]",
+  "Tes données : poids, mensurations, repas, sommeil, séances, profil. Elles restent sur ton téléphone. Aucun serveur ne les reçoit, et l'application n'utilise ni compte, ni publicité, ni outil de mesure.": "بياناتك: الوزن والقياسات والوجبات والنوم والحصص والملف الشخصي. تبقى على هاتفك. لا يستقبلها أي خادم، ولا يستعمل التطبيق حسابًا ولا إعلانات ولا أدوات تتبع.",
+  "Ce qui peut quitter ton téléphone : uniquement ce que tu choisis d'envoyer, à savoir un avis (chiffré), une sauvegarde que tu exportes, ou le lien de partage.": "ما قد يغادر هاتفك: فقط ما تختار إرساله، أي رأي (مشفّر) أو نسخة احتياطية تصدّرها أو رابط المشاركة.",
+  "Boîte à avis : si tu écris ton nom et ton e-mail, ils sont chiffrés avec ton message. Seul l'éditeur peut les lire, pour te répondre et améliorer l'application. Conservation : 12 mois. Pour les consulter ou les effacer, écris au contact ci-dessus.": "صندوق الآراء: إذا كتبت اسمك وبريدك الإلكتروني فإنهما يُشفَّران مع رسالتك. لا يستطيع قراءتهما إلا الناشر، للرد عليك وتحسين التطبيق. مدة الحفظ: 12 شهرًا. للاطلاع عليهما أو حذفهما راسل جهة الاتصال أعلاه.",
+  "Tes droits : accès, correction, suppression. Pour tes données locales, tu les effaces toi-même dans Réglages > Données.": "حقوقك: الاطلاع والتصحيح والحذف. أما بياناتك المحلية فتمسحها بنفسك من الإعدادات > البيانات.",
+  "Sécurité : tes données locales ne sont pas chiffrées. Protège ton téléphone avec un verrouillage d'écran.": "الأمان: بياناتك المحلية غير مشفّرة. احمِ هاتفك بقفل للشاشة.",
+  "Ce texte peut évoluer. La date de version est indiquée dans Réglages > Données.": "قد يتغير هذا النص. يظهر تاريخ الإصدار في الإعدادات > البيانات.",
+  "Conditions d'utilisation": "شروط الاستخدام",
+  "L'application est fournie telle quelle, sans garantie de résultat. Elle ne remplace ni un médecin, ni un coach, ni un diététicien.": "يُقدَّم التطبيق كما هو دون ضمان للنتائج. لا يغني عن الطبيب أو المدرب أو أخصائي التغذية.",
+  "L'éditeur n'est pas responsable des blessures ou dommages liés à une mauvaise utilisation, dans les limites permises par la loi.": "لا يتحمل الناشر مسؤولية الإصابات أو الأضرار الناتجة عن سوء الاستخدام، ضمن الحدود التي يسمح بها القانون.",
+  "Le code, le nom, le logo et les textes sont protégés : © KVES, tous droits réservés.": "الشفرة والاسم والشعار والنصوص محمية: © KVES، جميع الحقوق محفوظة.",
+  "Droit applicable : droit marocain.": "القانون المطبّق: القانون المغربي.",
+  "J'ai lu l'avertissement santé (Plus > Légal), j'ai 18 ans ou plus, et je comprends que l'application ne remplace pas un médecin.": "قرأت التنبيه الصحي (المزيد > القانوني)، عمري 18 سنة فأكثر، وأفهم أن التطبيق لا يغني عن الطبيب.",
+  "Coche la case pour confirmer l'avertissement santé.": "ضع علامة في المربع لتأكيد التنبيه الصحي.",
+  "Ouvrir Légal": "فتح القانوني"
+ },
+ "ma": {
+  "Légal": "Légal",
+  "Avertissement santé, confidentialité et conditions d'utilisation.": "Tanbih sa7i, l-khososiya w chourout l-istikhdam.",
+  "Lire": "9ra",
+  "Avertissement santé": "Tanbih sa7i",
+  "Coach-Mass-KVES donne des repères généraux de sport et d'alimentation pour un adulte en bonne santé. Ce n'est ni un avis médical, ni un diagnostic, ni un traitement.": "Coach-Mass-KVES kay3ti marji3at 3amma f r-riyada w l-akl l-kbir sa7i. Machi nsi7a tibbiya, la tachkhis, la 3ilaj.",
+  "Consulte un médecin avant de commencer, surtout en cas de maladie cardiaque, de tension élevée, de diabète, de blessure, de grossesse, de douleur au thorax, ou au moindre doute.": "Chouf tbib qbel ma tbda, khassatan ila kan 3andek merd l-qalb, d-dght l-3ali, s-soukkar, jar7, 7mal, alam f s-sder, wla ay chekk.",
+  "Arrête l'exercice en cas de douleur vive, de vertige, de malaise ou d'essoufflement anormal, et demande un avis médical.": "Wa99ef t-tmrin ila kan alam 9wi, dawkha, malaise wla d-dyq n-nafas ghir 3adi, w sqsi tbib.",
+  "Les calories et les repas sont des estimations. Ils ne tiennent pas compte des allergies, des intolérances ni des régimes médicaux.": "L-calories w l-wajabat hiya t9diryat. Ma kat7sebch l-7assasiya, l-intolérances wla r-régimes tibbiya.",
+  "Tu es responsable de ta pratique. Les résultats varient d'une personne à l'autre et ne sont pas garantis.": "Nta mas2oul 3la mumarasatek. N-nata2ij kat khtalef mn wa7ed l wa7ed w ma d-manach.",
+  "Application réservée aux personnes de 18 ans et plus.": "L-application l-nass li 3mrhom 18 3am wla ktar.",
+  "Politique de confidentialité": "Siyasat l-khososiya",
+  "Responsable :": "Mas2oul:",
+  "Contact :": "Tawasol:",
+  "[à compléter avant la publication]": "[khass tkemmel qbel n-nachr]",
+  "Tes données : poids, mensurations, repas, sommeil, séances, profil. Elles restent sur ton téléphone. Aucun serveur ne les reçoit, et l'application n'utilise ni compte, ni publicité, ni outil de mesure.": "L-ma3lomat dyalek: l-wazn, l-9yasat, l-wajabat, nnoum, s-seances, l-profil. Kay b9aw f t-tilifon dyalek. Ma kayn 7ta serveur kay tsslemhom, w l-application ma kat-st3mel la compte, la ichhar, la outil d t-tatabo3.",
+  "Ce qui peut quitter ton téléphone : uniquement ce que tu choisis d'envoyer, à savoir un avis (chiffré), une sauvegarde que tu exportes, ou le lien de partage.": "Li y9der yekhrej mn t-tilifon: ghir li katkhtar tsifto, ya3ni ray (mcheffer), sauvegarde li katsdder, wla r-rabit d l-partage.",
+  "Boîte à avis : si tu écris ton nom et ton e-mail, ils sont chiffrés avec ton message. Seul l'éditeur peut les lire, pour te répondre et améliorer l'application. Conservation : 12 mois. Pour les consulter ou les effacer, écris au contact ci-dessus.": "Sandouq d l-ara2: ila ktebti smitek w e-mail dyalek, kay t-cheffrou m3a r-risala. Ghir n-nachir y9der y9rahom, bach yjawbek w y7essen l-application. L-7ifd: 12 chhar. Bach tchoufhom wla tmse7hom, kteb l j-jiha li foq.",
+  "Tes droits : accès, correction, suppression. Pour tes données locales, tu les effaces toi-même dans Réglages > Données.": "7qouqek: l-wousoul, t-tas7i7, l-7ad. L-ma3lomat l-ma7aliya, nta li katmse7ha f Reglages > L-ma3lomat.",
+  "Sécurité : tes données locales ne sont pas chiffrées. Protège ton téléphone avec un verrouillage d'écran.": "L-aman: l-ma3lomat l-ma7aliya ma mcheffrinach. 7mi t-tilifon dyalek b verrouillage d l-ecran.",
+  "Ce texte peut évoluer. La date de version est indiquée dans Réglages > Données.": "Had n-nass y9der ytbddel. Tarikh l-version kayban f Reglages > L-ma3lomat.",
+  "Conditions d'utilisation": "Chourout l-istikhdam",
+  "L'application est fournie telle quelle, sans garantie de résultat. Elle ne remplace ni un médecin, ni un coach, ni un diététicien.": "L-application m9ddma kifma hiya, bla damane d n-nata2ij. Ma kay3awedch tbib, ma coach, ma diététicien.",
+  "L'éditeur n'est pas responsable des blessures ou dommages liés à une mauvaise utilisation, dans les limites permises par la loi.": "N-nachir ma mas2oulch 3la l-jar7 wla l-adrar li jaw mn sou2 l-istikhdam, f l-7doud li kay semme7 bihom l-qanoun.",
+  "Le code, le nom, le logo et les textes sont protégés : © KVES, tous droits réservés.": "L-code, l-ism, l-logo w n-nousous m7mmiyin: © KVES, koll l-7oqouq m7fouda.",
+  "Droit applicable : droit marocain.": "L-qanoun l-matbba9: l-qanoun l-maghribi.",
+  "J'ai lu l'avertissement santé (Plus > Légal), j'ai 18 ans ou plus, et je comprends que l'application ne remplace pas un médecin.": "9rit t-tanbih s-sa7i (Ktar > Légal), 3mri 18 3am wla ktar, w fhemt bli l-application ma kay3awedch tbib.",
+  "Coche la case pour confirmer l'avertissement santé.": "3lem 3la l-mrba3 bach t2akked t-tanbih s-sa7i.",
+  "Ouvrir Légal": "Fta7 Légal"
+ }
+};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
 /* © KVES · Coach-Mass-KVES */
