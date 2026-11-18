@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '13.7';
+var VERSION = '13.8';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Contrôles automatiques renforcés : tests de comportement, traductions et restauration.', 'Page Avis traduite. Aucun changement visible ailleurs.'];
+var NOTES = ['Réglages en sections repliables : touche un titre pour l\'ouvrir ou le fermer.', 'La section Jours de séance reste ouverte au départ.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -964,7 +964,7 @@ function viewHistory() {
 function tog(key, label, hint) {
   return '<label class="meal"><input type="checkbox" data-set="' + key + '"' + (P[key] ? ' checked' : '') + '><span><b>' + label + '</b>' + (hint ? '<br><span class="small">' + hint + '</span>' : '') + '</span></label>';
 }
-function viewSettings() {
+function settingsRaw() {
   var h = '<button class="btn alt sm back" data-act="tab" data-v="more">← Plus</button><h1>Réglages</h1><div class="card"><h2>Jours de séance</h2><div class="seg">' +
     [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<button data-act="day" data-d="' + d + '" class="' + (isTrainDay(d) ? 'on' : '') + '">' + JOURS[d] + '</button>'; }).join('') + '</div></div>';
   h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle en français dans tes écouteurs') + tog('vib', 'Vibrations') + '<label class="f">Intensité des vibrations</label><div class="seg" role="group">' + [[1, 'Normale'], [2, 'Forte'], [3, 'Très forte']].map(function (x) { return '<button data-act="vibpow" data-v="' + x[0] + '" class="' + ((P.vibLevel || 2) === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
@@ -989,6 +989,22 @@ function viewSettings() {
   return h;
 }
 var resetArmed = false;
+/* 13.8 : chaque carte de Réglages devient une section repliable (état gardé pendant la session) */
+var SEC = { 'Jours de séance': true };
+function viewSettings() {
+  var raw = settingsRaw(), out = '', depth = 0, start = -1, re = /<div\b|<\/div>/g, m, i, last = 0;
+  while ((m = re.exec(raw))) {
+    if (m[0] === '</div>') { depth--; if (depth === 0 && start >= 0) { out += secWrap(raw.slice(start, m.index + 6)); start = -1; last = m.index + 6; } }
+    else { if (depth === 0) { if (start < 0) { out += raw.slice(last, m.index); } start = m.index; } depth++; }
+  }
+  return out + raw.slice(last);
+}
+function secWrap(card) {
+  var m = card.match(/^<div class="card"><h2>([^<]*)<\/h2>([\s\S]*)<\/div>$/);
+  if (!m) return card;
+  return '<details class="card" data-sec="' + m[1].replace(/"/g, '') + '"' + (SEC[m[1]] ? ' open' : '') + '><summary><h2>' + m[1] + '</h2></summary>' + m[2] + '</details>';
+}
+document.addEventListener('toggle', function (ev) { var d = ev.target; if (d && d.getAttribute && d.hasAttribute('data-sec')) SEC[d.getAttribute('data-sec')] = d.open; }, true);
 
 function render() {
   $('#weekTag').textContent = 'Semaine ' + wkNo() + ' · ' + fmt(currentWeight()) + ' kg → ' + P.goal;
