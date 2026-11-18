@@ -134,6 +134,8 @@ function snaps(pg) {
   await pg.click('[data-act=mclear]'); plV = await pg.textContent('#view');
   t('lecteur : liste vidée', plV.includes('Aucun morceau choisi.') && !plV.includes('morceau-un'));
   await pg.click('[data-act=tab][data-v=more]');
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=legal]'); var lgFr = await pg.textContent('#view');
+  t('légal : avertissement, confidentialité et conditions', lgFr.includes('Avertissement santé') && lgFr.includes('Politique de confidentialité') && lgFr.includes("Conditions d'utilisation") && lgFr.includes('18 ans'));
   t('langue : retour au français', (await pg.textContent('#nav')).includes('Suivi'));
   await pg.click('#nav [data-v=meals]');
   t('régime : sans œufs, courses sans œufs', !(await pg.textContent('.shop')).includes('Œufs') && (await pg.textContent('#view')).includes('Sans œufs'));
@@ -172,7 +174,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '13.8' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '13.9' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -277,6 +279,10 @@ function snaps(pg) {
   pg = await newPage(br, { onb: true }); await pg.goto(url); await pg.waitForTimeout(700);
   t('première installation : écran de profil', await pg.isVisible('#modal') && (await pg.textContent('#modal')).includes('Ton profil'));
   await pg.click('[data-act=obg][data-v=f]'); await pg.click('[data-act=obo][data-v=perte]');
+  await pg.fill('#ob_age', '30'); await pg.fill('#ob_h', '175'); await pg.fill('#ob_w', '70'); await pg.fill('#ob_goal', '75');
+  await pg.click('[data-act=obsave]'); await pg.waitForTimeout(150);
+  t('inscription : la case avertissement santé est obligatoire', (await pg.textContent('#obErr')).includes('Coche la case') && !!(await pg.$('.onb')));
+  await pg.check('#ob_legal');
   await pg.fill('#ob_age', '17'); await pg.fill('#ob_h', '160'); await pg.fill('#ob_w', '50'); await pg.fill('#ob_goal', '48');
   await pg.click('[data-act=obsave]');
   t('moins de 18 ans refusé', (await pg.textContent('#obErr')).includes('18 ans') && await pg.isVisible('#modal'));
@@ -416,7 +422,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
     async function scan() { (await pg.evaluate(function () { var o = [], w = document.createTreeWalker(document.querySelector('main, #view') || document.body, NodeFilter.SHOW_TEXT), n; while ((n = w.nextNode())) { var x = n.nodeValue.trim(); if (x) o.push(x); } return o; })).forEach(function (x) { seen.add(x); }); }
     for (var tb of ['today', 'train', 'meals', 'track', 'history', 'more']) { await pg.click('#nav [data-v=' + tb + ']'); await scan(); }
     await pg.click('#nav [data-v=more]');
-    for (var sub of ['settings', 'sources', 'player', 'avis']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
+    for (var sub of ['settings', 'sources', 'player', 'avis', 'legal']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
     var leftFr = Array.from(seen).filter(function (x) { return FRW.test(x) && x !== 'Français'; });
     t('langue ' + L + ' : aucune phrase française restante (écrans principaux)', leftFr.length === 0, leftFr);
     await pg.context().close();
