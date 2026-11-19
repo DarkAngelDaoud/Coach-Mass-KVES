@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '13.9' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.0' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,21 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.0 : accessibilité */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  t('a11y : main sans aria-live', (await pg.getAttribute('#view', 'aria-live')) === null);
+  await pg.click('#nav [data-v=meals]');
+  t('a11y : onglet actif annoncé (aria-current)', (await pg.getAttribute('#nav [data-v=meals]', 'aria-current')) === 'page' && (await pg.getAttribute('#nav [data-v=today]', 'aria-current')) === null);
+  t('a11y : le titre reçoit le focus au changement d\'onglet', await pg.evaluate(function () { return document.activeElement && document.activeElement.tagName === 'H1'; }));
+  await pg.evaluate(function () { window.__coach.setTab('sante'); });
+  await pg.evaluate(function () { document.querySelector('#modal').hidden = true; });
+  await pg.context().close();
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=more]'); await pg.evaluate(function () { document.querySelector('#modal').innerHTML = '<div class="mbox"><button data-act="modalclose">x</button></div>'; document.querySelector('#modal').hidden = false; });
+  await pg.keyboard.press('Escape');
+  t('a11y : Échap ferme une fenêtre fermable', await pg.evaluate(function () { return document.querySelector('#modal').hidden; }));
   await pg.context().close();
 
   /* 13.9 : pages légales */
