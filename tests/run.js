@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.3' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.4' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,23 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.4 : heures des repas */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
+  t('heures : valeurs par défaut', (await pg.inputValue('[data-mt="0"]')) === '09:30' && (await pg.inputValue('[data-mt="4"]')) === '21:30');
+  await pg.fill('[data-mt="0"]', '08:00'); await pg.dispatchEvent('[data-mt="0"]', 'change');
+  d = await dataOf(pg); t('heures : repas 1 modifié', d.profile.mt1 === '08:00', d.profile.mt1);
+  await pg.fill('[data-mt="1"]', '08:30'); await pg.dispatchEvent('[data-mt="1"]', 'change');
+  d = await dataOf(pg); t('heures : écart < 2 h refusé', d.profile.mt2 !== '08:30', d.profile.mt2);
+  await pg.fill('[data-mt="4"]', '22:30'); await pg.dispatchEvent('[data-mt="4"]', 'change');
+  t('heures : conseil dîner tardif', (await pg.textContent('#view')).includes('après 21 h 30'));
+  await pg.click('#nav [data-v=meals]');
+  t('heures : affichées dans Repas', (await pg.textContent('#view')).includes('8 h'));
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]'); await pg.click('[data-act=mtreset]');
+  d = await dataOf(pg); t('heures : remises par défaut', !d.profile.mt1 && !d.profile.mt5);
+  t('aucune erreur (14.4)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
   /* 14.3 : page Comment le programme s'adapte */
