@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.0' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.1' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,26 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.1 : questionnaire de santé et garde-fou du poids */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  t('questionnaire : carte sur Aujourd\'hui', (await pg.textContent('#view')).includes('Questionnaire de santé'));
+  await pg.click('[data-act=parqopen]'); await pg.click('[data-act=parqsave]'); await pg.waitForTimeout(200);
+  d = await dataOf(pg); t('questionnaire : aucune case = ok', d.profile.parq === 'ok' && !(await pg.textContent('#view')).includes('Avis médical conseillé'), d.profile.parq);
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]'); await pg.click('[data-act=parqopen]');
+  await pg.check('[data-parq="1"]'); await pg.click('[data-act=parqsave]'); await pg.waitForTimeout(200);
+  t('questionnaire : une case = avis médical', (await pg.textContent('#modal')).includes('Parle à un médecin'));
+  await pg.click('[data-act=modalclose]'); await pg.click('#nav [data-v=today]');
+  t('questionnaire : carte avis médical', (await pg.textContent('#view')).includes('Avis médical conseillé'));
+  await pg.click('[data-act=parqdone]'); d = await dataOf(pg); t('questionnaire : consulté', d.profile.parq === 'consulte');
+  await pg.evaluate(function () { var d = JSON.parse(localStorage.getItem('coach-masse-v1')); d.profile.height = 179; d.profile.obj = 'masse'; d.profile.w0 = 75; d.profile.goal = 80; localStorage.setItem('coach-masse-v1', JSON.stringify(d)); });
+  await pg.reload(); await pg.waitForSelector('#nav'); await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
+  await pg.fill('[data-set=goal]', '95'); await pg.dispatchEvent('[data-set=goal]', 'change');
+  d = await dataOf(pg); t('poids visé : 95 kg refusé (écart > 15 %)', d.profile.goal === 80, d.profile.goal);
+  await pg.fill('[data-set=goal]', '82'); await pg.dispatchEvent('[data-set=goal]', 'change');
+  d = await dataOf(pg); t('poids visé : 82 kg accepté', d.profile.goal === 82, d.profile.goal);
+  t('aucune erreur (14.1)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
   /* 14.0 : accessibilité */
