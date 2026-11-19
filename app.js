@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '13.9';
+var VERSION = '14.0';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Nouvelle carte Légal dans Plus : avertissement santé, confidentialité, conditions d\'utilisation.', 'À la création du profil, une case confirme la lecture de l\'avertissement santé.'];
+var NOTES = ['Accessibilité : meilleure lecture avec TalkBack (le titre de la page est annoncé quand tu changes d\'onglet), fenêtres fermables avec Échap, focus plus visible.', 'Animations coupées si ton téléphone demande moins de mouvement. Vert un peu plus foncé en thème clair pour mieux le lire.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1010,6 +1010,9 @@ function render() {
   $('#weekTag').textContent = 'Semaine ' + wkNo() + ' · ' + fmt(currentWeight()) + ' kg → ' + P.goal;
   var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, history: viewHistory, settings: viewSettings, more: viewMore, avis: viewAvis, owner: viewOwner, sources: viewSources, player: viewPlayer, sante: viewSante, confid: viewConfid, cond: viewCond };
   view.innerHTML = map[tab]();
+  if (render._tab !== undefined && render._tab !== tab) { var h1 = view.querySelector('h1'); if (h1) { h1.setAttribute('tabindex', '-1'); try { h1.focus({ preventScroll: true }); } catch (e) {} } }
+  render._tab = tab;
+  document.querySelectorAll('#nav button').forEach(function (b) { if (b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', sante: 'more', confid: 'more', cond: 'more' })[tab] || tab)) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', sante: 'more', confid: 'more', cond: 'more' })[tab] || tab)); });
   document.body.setAttribute('data-tab', ({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', sante: 'more', confid: 'more', cond: 'more' })[tab] || tab);
 }
@@ -2264,10 +2267,12 @@ document.addEventListener('change', function (ev) {
 /* ====================== mise à jour : popup « nouveautés » et « version prête » ====================== */
 function modal(h) {
   var m = $('#modal');
+  if (m.hidden) modal._prev = document.activeElement;
   m.innerHTML = '<div class="mbox" role="document">' + h + '</div>'; m.hidden = false;
   var b = m.querySelector('button'); if (b) b.focus();
 }
-function closeModal() { $('#modal').hidden = true; }
+function closeModal() { $('#modal').hidden = true; var p = modal._prev; modal._prev = null; if (p && p.focus && document.contains(p)) { try { p.focus({ preventScroll: true }); } catch (e) {} } }
+document.addEventListener('keydown', function (ev) { var m = $('#modal'); if (ev.key === 'Escape' && m && !m.hidden && m.querySelector('[data-act=modalclose]')) closeModal(); });
 function whatsNew() {
   modal('<h2>Mise à jour installée</h2><p class="small">' + esc(NOM) + ' · version ' + esc(VERSION) + '</p><ul class="list">' + NOTES.map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('') + '</ul><button class="btn" data-act="modalclose">Compris</button>');
 }

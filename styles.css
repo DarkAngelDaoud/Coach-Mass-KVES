@@ -8,7 +8,7 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]):not([data-theme="light"]) {
     --bg: #F2F4F3; --surface: #FFFFFF; --surface2: #E8EDEF; --fg: #12202B; --muted: #55666F; --line: #D3DADE;
-    --accent: #1E55D4; --accent-ink: #FFFFFF; --ok: #1E8F5C; --warn: #9A6A00; --bad: #B93A26;
+    --accent: #1E55D4; --accent-ink: #FFFFFF; --ok: #197A4E; --warn: #9A6A00; --bad: #B93A26;
     --fig: #12202B; --prop: #1E55D4; --c-today: #1E55D4; --c-train: #C2570C; --c-meals: #12805B; --c-track: #6B3FD0; --c-history: #0A7F96; color-scheme: light;
   }
 }
@@ -165,7 +165,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   h1 { font-size: 1.4rem; }
   .card > svg[role="img"] { max-height: 70vh; }
 }
-@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; } }
+summary:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, .chip:focus-visible, .seg button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1:focus { outline: none; }
 .seg button { min-width: 0; padding: 0 2px; font-size: clamp(0.78rem, 3.4vw, 1rem); }
 
 /* boîte à avis */
@@ -183,7 +185,7 @@ details summary { cursor: pointer; margin: 8px 0; color: var(--muted); font-size
 
 :root[data-theme="light"] {
   --bg: #F2F4F3; --surface: #FFFFFF; --surface2: #E8EDEF; --fg: #12202B; --muted: #55666F; --line: #D3DADE;
-  --accent: #1E55D4; --accent-ink: #FFFFFF; --ok: #1E8F5C; --warn: #9A6A00; --bad: #B93A26;
+  --accent: #1E55D4; --accent-ink: #FFFFFF; --ok: #197A4E; --warn: #9A6A00; --bad: #B93A26;
   --fig: #12202B; --prop: #1E55D4; --c-today: #1E55D4; --c-train: #C2570C; --c-meals: #12805B; --c-track: #6B3FD0; --c-history: #0A7F96; color-scheme: light;
 }
 input[type="time"] { font: inherit; font-size: 1.05rem; color: var(--fg); background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-height: 46px; }
