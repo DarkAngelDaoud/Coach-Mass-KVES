@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.2' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.3' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -408,6 +408,13 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 14.3 : page Comment le programme s'adapte */
+  pg = await newPage(br); await pg.goto(url); await pg.click('#nav [data-v=more]');
+  await pg.click('[data-act=tab][data-v=adapt]'); var at = await pg.textContent('#view');
+  t('page adaptation', at.includes('Ce qui s\'adapte automatiquement') && at.includes('Ce qui reste fixe') && at.includes('menu de prise de masse'));
+  t('aucune erreur (14.3)', pg.errs.length === 0, pg.errs);
+  await pg.context().close();
+
   /* 14.2 : effort ressenti et semaine d'allègement */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.evaluate(function () {
@@ -486,7 +493,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
     async function scan() { (await pg.evaluate(function () { var o = [], w = document.createTreeWalker(document.querySelector('main, #view') || document.body, NodeFilter.SHOW_TEXT), n; while ((n = w.nextNode())) { var x = n.nodeValue.trim(); if (x) o.push(x); } return o; })).forEach(function (x) { seen.add(x); }); }
     for (var tb of ['today', 'train', 'meals', 'track', 'history', 'more']) { await pg.click('#nav [data-v=' + tb + ']'); await scan(); }
     await pg.click('#nav [data-v=more]');
-    for (var sub of ['settings', 'sources', 'player', 'avis', 'sante', 'confid', 'cond']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
+    for (var sub of ['settings', 'sources', 'player', 'avis', 'sante', 'confid', 'cond', 'adapt']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
     var leftFr = Array.from(seen).filter(function (x) { return FRW.test(x) && x !== 'Français'; });
     t('langue ' + L + ' : aucune phrase française restante (écrans principaux)', leftFr.length === 0, leftFr);
     await pg.context().close();
