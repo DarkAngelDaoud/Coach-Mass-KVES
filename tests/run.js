@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,28 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.2 : effort ressenti et semaine d'allègement */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.evaluate(function () {
+    var d = JSON.parse(localStorage.getItem('coach-masse-v1')), n = new Date(), f = function (k) { var x = new Date(n); x.setDate(x.getDate() - k); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+    d.profile.start = f(40); d.profile.parq = 'ok';
+    d.sessions = [1, 2, 3].map(function (k) { return { date: f(k), min: 40, sets: 12, partial: false, light: false, week: 6, rpe: 5, logs: [] }; });
+    localStorage.setItem('coach-masse-v1', JSON.stringify(d));
+  });
+  await pg.reload(); await pg.waitForSelector('#nav');
+  t('allègement : proposé après plusieurs semaines', (await pg.textContent('#view')).includes('Semaine d\'allègement conseillée'));
+  await pg.click('[data-act=deloadon]'); d = await dataOf(pg);
+  t('allègement : activé pour la semaine', d.profile.deloadOn !== '' && (await pg.textContent('#view')).includes('Semaine d\'allègement en cours'), d.profile.deloadOn);
+  await pg.click('#nav [data-v=train]'); t('allègement : séance allégée', (await pg.textContent('#view')).includes('(allégée)'));
+  await pg.click('#nav [data-v=today]');
+  await pg.click('[data-act=deloadstop]'); d = await dataOf(pg);
+  t('allègement : arrêté', d.profile.deloadOn === '');
+  await pg.click('#nav [data-v=track]');
+  var tt = await pg.textContent('#view');
+  t('effort ressenti : moyenne dans le bilan', tt.includes('effort moy.') && tt.includes('5,0/5') && tt.includes('très dures'), tt.slice(0, 80));
+  t('aucune erreur (14.2)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
   /* 14.1 : questionnaire de santé et garde-fou du poids */
