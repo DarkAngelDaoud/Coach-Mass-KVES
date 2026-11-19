@@ -1,11 +1,11 @@
-Signature KVES · Coach-Mass-KVES · version 14.1
+Signature KVES · Coach-Mass-KVES · version 14.2
 Empreintes SHA-256 des fichiers publiés. Pour vérifier un fichier : sha256sum <fichier>. Une empreinte différente = fichier modifié.
 
 ef6d1fb044d85234af31b901484d9020813c0166ac8437ba17d7f5f0b9468866  index.html
-a565221264a5bc48d4465ecb3961246918860b42c205cbb9f45bd12ceeb2847e  app.js
+1f89beb99b7ae9801af98ab8291a5dfbea41a3f208599b3c7c6afafdd7a24a72  app.js
 31c12b6e670c43f715019a7d983f61b53fa9c92153380c05d53903e5892437b5  theme-init.js
 a52f2d35199cfaca8be0b1517b0d6da70295142f97da590136af012f0029f719  styles.css
-665bc52e7ee7d09265dba9c551dbb1d906dd3a5133cfa8fc29904d8b761e97a7  sw.js
+389ff7134195ce0361a39045127ab3abbe3e3677da901d456d99f589447a572e  sw.js
 176258eba1e608517837e3be609bc34ba89755410e3440d88200c2a0ae3ba4f1  manifest.webmanifest
 93daf825dd0cc5fdbac2b384e69a0f6e423fa15fa8457cc67f2e2afc725ab4f2  banner.jpg
 6865e45b506404a556bd60ce24636818a9aca9d88ebbe4239c6f4cd050eb7e30  share.jpg

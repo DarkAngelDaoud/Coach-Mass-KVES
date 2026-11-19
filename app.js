@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '14.1';
+var VERSION = '14.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Nouveau : questionnaire de santé en 7 questions (carte sur Aujourd\'hui et dans Réglages > Profil et objectif).', 'Garde-fou du poids visé : refusé si l\'IMC visé dépasse 27 en prise de masse ou si l\'écart dépasse 15 % du poids actuel.'];
+var NOTES = ['Effort ressenti : à la fin de chaque séance, note de 1 (très facile) à 5 (très dur). Il apparaît dans le bilan de la semaine.', 'Semaine d\'allègement : proposée après 4 semaines d\'effort, ou si tes dernières séances sont très dures. Séances allégées jusqu\'à dimanche.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -254,7 +254,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
 }
@@ -310,7 +310,7 @@ function normalize(o) {
   var sessions = [];
   (Array.isArray(o.sessions) ? o.sessions : []).slice(0, 5000).forEach(function (s) {
     if (!s || typeof s !== 'object' || !DATE_RE.test(s.date)) return;
-    r = cleanV(s, 1); r.date = s.date; r.min = numOr(s.min, 0); r.sets = numOr(s.sets, 0); sessions.push(r);
+    r = cleanV(s, 1); r.date = s.date; r.min = numOr(s.min, 0); r.sets = numOr(s.sets, 0); r.rpe = Math.max(0, Math.min(5, Math.round(numOr(s.rpe, 0)))); sessions.push(r);
   });
   var levels = {}, lv0 = o.levels && typeof o.levels === 'object' && !Array.isArray(o.levels) ? o.levels : {};
   Object.keys(lv0).slice(0, 200).forEach(function (id) { if (KEY_RE.test(id) && id !== '__proto__' && lv0[id] && typeof lv0[id] === 'object') levels[id] = { level: numOr(lv0[id].level, 0), off: numOr(lv0[id].off, 0) }; });
@@ -337,7 +337,23 @@ function levelsFor(e) { return e.id === 'tirage' && P.hasBar ? e.levels.concat([
 function wkNo() { return Math.max(1, Math.floor((dnum(today()) - dnum(P.start)) / 7) + 1); }
 function isTrainDay(dow) { return P.days.indexOf(dow) >= 0; }
 function doneToday() { return D.sessions.some(function (s) { return s.date === today() && !s.partial; }); }
-function isLight() { var l = D.logs[today()] || {}; return (l.sleep && +l.sleep < 6) || (l.energy && +l.energy <= 2); }
+function deloadActive() { return !!P.deloadOn && P.deloadOn === weekStartStr(); }
+function rpeLast3() {
+  var a = D.sessions.filter(function (x) { return !x.partial && !x.free && +x.rpe > 0; }).slice(-3);
+  return a.length === 3 ? (a[0].rpe + a[1].rpe + a[2].rpe) / 3 : null;
+}
+function deloadDue() {
+  if (!P.onboarded || deloadActive()) return false;
+  var wk = wkNo(), r = rpeLast3();
+  if (P.deloadSkip === wk) return false;
+  return (wk >= 5 && wk - P.deloadLast >= 5) || (r !== null && r >= 4.5 && wk - P.deloadLast >= 2);
+}
+function deloadCard() {
+  if (deloadActive()) return '<div class="card coach"><h2>Semaine d\'allègement en cours</h2><p class="small">Les séances sont allégées jusqu\'à dimanche.</p><button class="btn alt sm" data-act="deloadstop">Arrêter l\'allègement</button></div>';
+  if (deloadDue()) return '<div class="card"><h2>Semaine d\'allègement conseillée</h2><p class="small">Après plusieurs semaines d\'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.</p><button class="btn alt" data-act="deloadon">Activer cette semaine</button><button class="btn alt sm" data-act="deloadskip">Pas maintenant</button></div>';
+  return '';
+}
+function isLight() { var l = D.logs[today()] || {}; return deloadActive() || (l.sleep && +l.sleep < 6) || (l.energy && +l.energy <= 2); }
 function weekStartStr() { var d = new Date(); var off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off); return dstr(d); }
 function sessionsThisWeek() { var w = weekStartStr(); return D.sessions.filter(function (s) { return !s.partial && s.date >= w; }).length; }
 function missedThisWeek() {
@@ -627,6 +643,7 @@ function coachMsg() {
   if (!l.weight && !l.sleep && !l.energy && h < 12) return ['Bilan du matin', pick(['Bilan du jour. Sommeil, énergie, poids si c\'est dimanche. Deux minutes, maintenant.', 'Pas de bilan, pas de progrès. Remplis-le avant ton premier repas.'])];
   if (done) return ['Séance faite', left > 400 ? (obj() === 'masse' ? 'Séance validée. Maintenant tu manges : il te reste environ ' + left + ' kcal. Ne saute rien.' : 'Séance validée. Il te reste environ ' + left + ' kcal à manger aujourd\'hui : ni plus, ni moins.') : 'Séance validée et repas presque complets. Bien. Dors tes 7 heures.'];
   if (train) {
+    if (deloadActive()) return ['Semaine d\'allègement', 'Cette semaine, les séances sont allégées. Fais-les quand même : récupérer fait partie du programme.'];
     if (isLight()) return ['Séance allégée', 'Tu as peu dormi ou peu d\'énergie. Séance allégée aujourd\'hui, mais elle est faite. Une série en moins, pas d\'excuses.'];
     return ['Jour de séance', pick(['Aujourd\'hui, séance. Une heure, pas de négociation. Lance-la quand tu es prêt.', 'C\'est jour de séance. Mange ta collation, mets tes écouteurs et commence.'])];
   }
@@ -654,6 +671,7 @@ function viewToday() {
   var water = +l.water || 0;
   var h = '<div class="card coach"><span class="head">Le coach · ' + m[0] + '</span><p class="msg">' + m[1] + '</p></div>';
   h += bkBanner();
+  h += deloadCard();
   h += parqCard();
   if (isTrainDay(new Date().getDay()) && !doneToday()) h += '<button class="btn go" data-act="start">Lancer la séance' + (isLight() ? ' (allégée)' : '') + '</button>';
   else h += '<p class="small">Prochaine séance : ' + nextTrainLabel() + '. Tu peux en lancer une quand même dans l\'onglet Séance.</p>';
@@ -741,11 +759,13 @@ function weekReview() {
   function avg(a) { return a.length ? a.reduce(function (p, c) { return p + c; }, 0) / a.length : null; }
   r.sleep = avg(r.sl); r.energy = avg(r.en); r.meals = avg(r.mealPct); r.kcal = avg(r.kc);
   r.dw = r.w.length >= 2 ? r.w[r.w.length - 1] - r.w[0] : null;
+  r.rpe = avg(D.sessions.filter(function (q) { return !q.partial && !q.free && +q.rpe > 0 && q.date >= days[0].s; }).map(function (q) { return +q.rpe; }));
   r.advice = weekAdvice(r);
   return r;
 }
 function weekAdvice(r) {
   var o = obj();
+  if (r.rpe !== null && r.rpe >= 4.5) return 'Tes séances sont ressenties très dures : allège ou prévois une semaine d\'allègement.';
   if (r.planned && r.done < r.planned) return 'Il manque ' + (r.planned - r.done) + ' séance(s). Cette semaine : place-les à l\'avance dans ton agenda, même en version légère.';
   if (r.sleep !== null && r.sleep < 6.5) return 'Ton sommeil moyen est court. Gagne une heure de coucher avant de chercher plus de charge : c\'est là que le muscle se construit.';
   if (r.meals !== null && r.meals < 70) return 'Tu as coché moins de 70 % de tes repas. Prépare tes repas du lendemain la veille.';
@@ -753,6 +773,7 @@ function weekAdvice(r) {
     if (o === 'masse' && r.dw < -0.3) return 'Ton poids baisse alors que tu veux prendre de la masse : ajoute un repas ou une collation.';
     if (o === 'perte' && r.dw > 0.3) return 'Ton poids monte alors que tu veux perdre : surveille le riz, le pain et l\'huile.';
   }
+  if (r.rpe !== null && r.rpe <= 2 && r.planned && r.done === r.planned) return 'Tes séances te paraissent faciles : ajoute une répétition par série ou passe à la variante suivante.';
   if (r.planned && r.done === r.planned) return 'Semaine complète. Tiens le même rythme et vise une répétition de plus par série.';
   return 'Continue : coche tes repas, pèse-toi chaque dimanche et note ton sommeil.';
 }
@@ -767,6 +788,7 @@ function weekCard() {
   return '<div class="card"><h2>Bilan de la semaine</h2><p class="small">Les 7 derniers jours.</p><div class="stats">' +
     st(r.done + '/' + r.planned, 'séances') + st(r.meals === null ? '—' : Math.round(r.meals) + ' %', 'repas cochés') + st(r.sleep === null ? '—' : fmt(r.sleep) + ' h', 'sommeil moy.') + '</div><div class="stats">' +
     st(r.energy === null ? '—' : fmt(r.energy) + '/5', 'énergie moy.') + st(r.kcal === null ? '—' : Math.round(r.kcal / 10) * 10, 'kcal/jour (cochés)') + st(r.dw === null ? '—' : (r.dw > 0 ? '+' : '') + fmt(r.dw), 'kg') + '</div>' +
+    (r.rpe === null ? '' : '<div class="stats">' + st(fmt(r.rpe) + '/5', 'effort moy.') + '</div>') +
     '<p><b>Conseil du coach :</b> ' + esc(r.advice) + '</p><button class="btn alt sm" data-act="weekcopy">Copier le bilan</button></div>';
 }
 /* © KVES · Coach-Mass-KVES */
@@ -1105,7 +1127,7 @@ function startSession(opts) {
   var steps = [];
   if (!solo) WARM.forEach(function (x) { steps.push({ k: 'warm', label: x.l, sec: x.s, fig: x.fig, period: x.period }); });
   plan.forEach(function (p, i) { for (var s = 1; s <= p.sets; s++) steps.push({ k: 'set', pi: i, sn: s }); });
-  R = { plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, solo: !!solo, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
+  R = { sess: null, plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, solo: !!solo, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
   runner.hidden = false; document.body.style.overflow = 'hidden';
   unlockAudio();
   wake();
@@ -1216,7 +1238,7 @@ function finish(partial) {
     if (!fs) { fs = { date: today(), min: 0, sets: 0, partial: true, free: true, light: false, week: wkNo(), logs: [] }; D.sessions.push(fs); }
     R.logs.forEach(function (l) { fs.logs.push(l); });
     fs.sets = fs.logs.length; fs.min += min;
-  } else if (R.logs.length) D.sessions.push({ date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, week: wkNo(), logs: R.logs });
+  } else if (R.logs.length) { R.sess = { date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, week: wkNo(), logs: R.logs }; D.sessions.push(R.sess); }
   save();
   R.phase = 'done'; R.ups = ups; R.min = min; R.partial = partial;
   unwake(); drawDone();
@@ -1282,6 +1304,7 @@ function drawDone() {
   h += '<div class="rbody"><div class="rl"><p class="title">' + (R.solo ? 'Enregistré dans l\'historique (libre)' : R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
   if (R.ups && R.ups.length) h += '<div class="card"><h2>Tu passes au niveau supérieur</h2><ul class="list">' + R.ups.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.solo ? 'Bien joué. Une série de plus chaque semaine, c\'est comme ça qu\'on progresse.' : R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
+  if (R.sess && !R.partial && !R.solo) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
   h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
   runner.innerHTML = h;
 }
@@ -2492,7 +2515,11 @@ document.addEventListener('click', function (ev) {
   var t = ev.target.closest('[data-act]');
   if (!t) return;
   var a = t.getAttribute('data-act');
-  if (a === 'parqopen') showParq();
+  if (a === 'rpe') { if (R && R.sess) { R.sess.rpe = +t.getAttribute('data-n'); save(); drawDone(); } }
+  else if (a === 'deloadon') { P.deloadOn = weekStartStr(); P.deloadLast = wkNo(); save(); render(); }
+  else if (a === 'deloadskip') { P.deloadSkip = wkNo(); save(); render(); }
+  else if (a === 'deloadstop') { P.deloadOn = ''; save(); render(); }
+  else if (a === 'parqopen') showParq();
   else if (a === 'parqdone') { P.parq = 'consulte'; save(); render(); }
   else if (a === 'parqsave') {
     var n = document.querySelectorAll('#modal [data-parq]:checked').length;
@@ -3834,6 +3861,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Questionnaire de santé": "Health questionnaire", "7 questions, 1 minute, pour savoir si tu dois voir un médecin avant de commencer.": "7 questions, 1 minute, to know whether you should see a doctor before starting.", "Faire le questionnaire": "Take the questionnaire", "Avis médical conseillé": "Medical advice recommended", "Tes réponses indiquent qu'un avis médical est conseillé avant de t'entraîner.": "Your answers suggest medical advice is recommended before you train.", "J'ai consulté un médecin": "I have seen a doctor", "Refaire le questionnaire": "Redo the questionnaire", "Coche ce qui te concerne. Si tu ne coches rien, tu peux commencer.": "Tick what applies to you. If you tick nothing, you can start.", "Valider mes réponses": "Confirm my answers", "Plus tard": "Later", "Parle à un médecin avant de commencer": "Talk to a doctor before starting", "Au moins une réponse demande un avis médical. Montre ces réponses à ton médecin avant de t'entraîner ou de changer ton alimentation. Ce questionnaire ne remplace pas une consultation.": "At least one answer calls for medical advice. Show these answers to your doctor before training or changing your diet. This questionnaire does not replace a consultation.", "Questionnaire enregistré : aucune alerte.": "Questionnaire saved: no alert.", "Ce poids visé est trop élevé pour ta taille (IMC au-dessus de 27). Choisis un objectif plus bas ou parle à un médecin.": "This target weight is too high for your height (BMI above 27). Choose a lower goal or talk to a doctor.", "Objectif trop éloigné (plus de 15 % de ton poids actuel). Fixe une première étape plus proche : tu pourras la relever ensuite.": "Goal too far (more than 15% of your current weight). Set a closer first step: you can raise it later.", "Un médecin t'a-t-il déjà parlé d'un problème de cœur ou de tension trop élevée ?": "Have you ever been told by a doctor that you have a heart problem or high blood pressure?", "Ressens-tu une douleur dans la poitrine, au repos ou à l'effort ?": "Do you feel chest pain, at rest or during effort?", "As-tu des vertiges, des pertes d'équilibre ou des malaises ?": "Do you have dizziness, loss of balance or fainting spells?", "As-tu un problème d'os, d'articulations ou de dos qui peut s'aggraver avec l'exercice ?": "Do you have a bone, joint or back problem that exercise could make worse?", "Prends-tu un médicament pour le cœur, la tension ou le diabète ?": "Do you take medication for the heart, blood pressure or diabetes?", "Es-tu enceinte ou as-tu accouché récemment ?": "Are you pregnant or have you recently given birth?", "Connais-tu une autre raison pour laquelle tu ne devrais pas faire d'effort physique ?": "Do you know of any other reason why you should not do physical effort?"}, "ar": {"Questionnaire de santé": "استبيان صحي", "7 questions, 1 minute, pour savoir si tu dois voir un médecin avant de commencer.": "7 أسئلة، دقيقة واحدة، لمعرفة هل يجب أن ترى طبيبا قبل البدء.", "Faire le questionnaire": "أجب عن الاستبيان", "Avis médical conseillé": "يُنصح باستشارة طبية", "Tes réponses indiquent qu'un avis médical est conseillé avant de t'entraîner.": "تشير إجاباتك إلى أن استشارة طبية مستحسنة قبل التمرين.", "J'ai consulté un médecin": "استشرت طبيبا", "Refaire le questionnaire": "أعد الاستبيان", "Coche ce qui te concerne. Si tu ne coches rien, tu peux commencer.": "ضع علامة على ما ينطبق عليك. إن لم تضع شيئا يمكنك البدء.", "Valider mes réponses": "تأكيد إجاباتي", "Plus tard": "لاحقا", "Parle à un médecin avant de commencer": "تحدث إلى طبيب قبل البدء", "Au moins une réponse demande un avis médical. Montre ces réponses à ton médecin avant de t'entraîner ou de changer ton alimentation. Ce questionnaire ne remplace pas une consultation.": "إجابة واحدة على الأقل تتطلب رأيا طبيا. اعرض هذه الإجابات على طبيبك قبل التمرين أو تغيير غذائك. هذا الاستبيان لا يغني عن الاستشارة.", "Questionnaire enregistré : aucune alerte.": "تم حفظ الاستبيان: لا تنبيه.", "Ce poids visé est trop élevé pour ta taille (IMC au-dessus de 27). Choisis un objectif plus bas ou parle à un médecin.": "هذا الوزن المستهدف مرتفع جدا بالنسبة لطولك (مؤشر كتلة الجسم فوق 27). اختر هدفا أقل أو تحدث إلى طبيب.", "Objectif trop éloigné (plus de 15 % de ton poids actuel). Fixe une première étape plus proche : tu pourras la relever ensuite.": "هدف بعيد جدا (أكثر من 15 % من وزنك الحالي). ضع مرحلة أولى أقرب: يمكنك رفعه لاحقا.", "Un médecin t'a-t-il déjà parlé d'un problème de cœur ou de tension trop élevée ?": "هل أخبرك طبيب يوما بأن لديك مشكلة في القلب أو ارتفاعا في الضغط؟", "Ressens-tu une douleur dans la poitrine, au repos ou à l'effort ?": "هل تشعر بألم في الصدر، أثناء الراحة أو الجهد؟", "As-tu des vertiges, des pertes d'équilibre ou des malaises ?": "هل تعاني من دوار أو فقدان توازن أو إغماء؟", "As-tu un problème d'os, d'articulations ou de dos qui peut s'aggraver avec l'exercice ?": "هل لديك مشكلة في العظام أو المفاصل أو الظهر قد يزيدها التمرين سوءا؟", "Prends-tu un médicament pour le cœur, la tension ou le diabète ?": "هل تتناول دواء للقلب أو الضغط أو السكري؟", "Es-tu enceinte ou as-tu accouché récemment ?": "هل أنت حامل أو وضعت مؤخرا؟", "Connais-tu une autre raison pour laquelle tu ne devrais pas faire d'effort physique ?": "هل تعرف سببا آخر يمنعك من بذل مجهود بدني؟"}, "ma": {"Questionnaire de santé": "Questionnaire d s-seha", "7 questions, 1 minute, pour savoir si tu dois voir un médecin avant de commencer.": "7 d s-swal, daqiqa, bach t3ref wach khassek tshuf t-tbib qbel ma tbda.", "Faire le questionnaire": "Dir l-questionnaire", "Avis médical conseillé": "Ra2i tibbi mnasab", "Tes réponses indiquent qu'un avis médical est conseillé avant de t'entraîner.": "L-ajwiba dyalek kat-qul belli mnasab tshuf t-tbib qbel ma tt-tmren.", "J'ai consulté un médecin": "Shft t-tbib", "Refaire le questionnaire": "3awd l-questionnaire", "Coche ce qui te concerne. Si tu ne coches rien, tu peux commencer.": "Dir 3lama 3la li kay-khussek. Ila ma-dirti walo, t-qdr tbda.", "Valider mes réponses": "Akked l-ajwiba dyali", "Plus tard": "Moraha", "Parle à un médecin avant de commencer": "Hder m3a t-tbib qbel ma tbda", "Au moins une réponse demande un avis médical. Montre ces réponses à ton médecin avant de t'entraîner ou de changer ton alimentation. Ce questionnaire ne remplace pas une consultation.": "Jwab wa7ed 3la l-aqell kay-talab ra2i tibbi. Werri had l-ajwiba l-t-tbib dyalek qbel ma tt-tmren wla tbddel l-akl. Had l-questionnaire ma-kay-3awwed-sh l-konsultasyon.", "Questionnaire enregistré : aucune alerte.": "Questionnaire t-sjjel: ma-kayn ta tanbih.", "Ce poids visé est trop élevé pour ta taille (IMC au-dessus de 27). Choisis un objectif plus bas ou parle à un médecin.": "Had l-wzn l-mustahdaf 3ali bzzaf 3la tulek (IMC fuq 27). Khtar hadaf aqell wla hder m3a t-tbib.", "Objectif trop éloigné (plus de 15 % de ton poids actuel). Fixe une première étape plus proche : tu pourras la relever ensuite.": "Hadaf b3id bzzaf (aktar mn 15 % mn wzn dyalek daba). 7ett marhala loula qrib: mn ba3d t-qdr t-3elli.", "Un médecin t'a-t-il déjà parlé d'un problème de cœur ou de tension trop élevée ?": "Wach t-tbib qal lik 3emmru belli 3ndek mushkil f-l-qalb wla t-tension 3aliya?", "Ressens-tu une douleur dans la poitrine, au repos ou à l'effort ?": "Wach kat-7ess b-wja3 f s-sder, f-r-raha wla f-l-mjhud?", "As-tu des vertiges, des pertes d'équilibre ou des malaises ?": "Wach kat-3ani mn dwar, ghyab t-twazun wla ghashyan?", "As-tu un problème d'os, d'articulations ou de dos qui peut s'aggraver avec l'exercice ?": "Wach 3ndek mushkil f l-3adm, l-mafasil wla d-dahr li t-tmrin momkin y-zid fih?", "Prends-tu un médicament pour le cœur, la tension ou le diabète ?": "Wach katakhod dwa l-l-qalb, t-tension wla s-skkar?", "Es-tu enceinte ou as-tu accouché récemment ?": "Wach 7amla wla wldti m2akhran?", "Connais-tu une autre raison pour laquelle tu ne devrais pas faire d'effort physique ?": "Wach 3arf shi sabab akhor kay-mna3k mn l-mjhud l-badani?"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Effort ressenti (1 = très facile, 5 = très dur)": "Perceived effort (1 = very easy, 5 = very hard)", "effort moy.": "avg effort", "Tes séances sont ressenties très dures : allège ou prévois une semaine d'allègement.": "Your workouts feel very hard: ease off or plan a lighter week.", "Tes séances te paraissent faciles : ajoute une répétition par série ou passe à la variante suivante.": "Your workouts feel easy: add one rep per set or move to the next variant.", "Semaine d'allègement en cours": "Light week in progress", "Les séances sont allégées jusqu'à dimanche.": "Workouts are lighter until Sunday.", "Arrêter l'allègement": "Stop the light week", "Semaine d'allègement conseillée": "Light week recommended", "Après plusieurs semaines d'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.": "After several weeks of effort, or if your workouts are very hard, a lighter week helps you recover and progress afterwards.", "Activer cette semaine": "Turn on for this week", "Pas maintenant": "Not now", "Semaine d'allègement": "Light week", "Cette semaine, les séances sont allégées. Fais-les quand même : récupérer fait partie du programme.": "This week, workouts are lighter. Do them anyway: recovery is part of the programme."}, "ar": {"Effort ressenti (1 = très facile, 5 = très dur)": "الجهد المحسوس (1 = سهل جدا، 5 = صعب جدا)", "effort moy.": "متوسط الجهد", "Tes séances sont ressenties très dures : allège ou prévois une semaine d'allègement.": "تمارينك تبدو صعبة جدا: خفّف أو خطط لأسبوع تخفيف.", "Tes séances te paraissent faciles : ajoute une répétition par série ou passe à la variante suivante.": "تمارينك تبدو سهلة: أضف تكرارا في كل سلسلة أو انتقل إلى النسخة التالية.", "Semaine d'allègement en cours": "أسبوع التخفيف جارٍ", "Les séances sont allégées jusqu'à dimanche.": "الحصص مخففة حتى يوم الأحد.", "Arrêter l'allègement": "إيقاف التخفيف", "Semaine d'allègement conseillée": "يُنصح بأسبوع تخفيف", "Après plusieurs semaines d'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.": "بعد عدة أسابيع من الجهد، أو إذا كانت حصصك صعبة جدا، يساعدك أسبوع أخف على التعافي ثم التقدم.", "Activer cette semaine": "فعّل هذا الأسبوع", "Pas maintenant": "ليس الآن", "Semaine d'allègement": "أسبوع التخفيف", "Cette semaine, les séances sont allégées. Fais-les quand même : récupérer fait partie du programme.": "هذا الأسبوع الحصص مخففة. أنجزها مع ذلك: التعافي جزء من البرنامج."}, "ma": {"Effort ressenti (1 = très facile, 5 = très dur)": "L-mjhud li 7ssiti (1 = sahl bzzaf, 5 = s3ib bzzaf)", "effort moy.": "moyenne dyal l-mjhud", "Tes séances sont ressenties très dures : allège ou prévois une semaine d'allègement.": "L-7ssas dyalek 7asshom s3ib bzzaf: khffef wla 7ddd simana khfifa.", "Tes séances te paraissent faciles : ajoute une répétition par série ou passe à la variante suivante.": "L-7ssas dyalek sahlin: zid tkrar wa7ed f kol serie wla douz l-variante li morha.", "Semaine d'allègement en cours": "Simana khfifa jariya", "Les séances sont allégées jusqu'à dimanche.": "L-7ssas khfifin tal nhar l-7ad.", "Arrêter l'allègement": "Wqqef t-takhfif", "Semaine d'allègement conseillée": "Simana khfifa mnasba", "Après plusieurs semaines d'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.": "Mn ba3d bzzaf d s-sbu3 d l-mjhud, wla ila l-7ssas s3abin, simana akhaff kat-3awnek tr-tah u t-tqdm morha.", "Activer cette semaine": "Fa33el had s-simana", "Pas maintenant": "Mashi daba", "Semaine d'allègement": "Simana khfifa", "Cette semaine, les séances sont allégées. Fais-les quand même : récupérer fait partie du programme.": "Had s-simana l-7ssas khfifin. Dirhom 3la kol 7al: r-raha jouz2 mn l-programme."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
