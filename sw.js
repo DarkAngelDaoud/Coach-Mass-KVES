@@ -1,5 +1,5 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v14-2';
+var CACHE = 'coach-masse-v14-3';
 var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'avis-config.js', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {

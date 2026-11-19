@@ -4,7 +4,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 14.2 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 14.3 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -129,6 +129,7 @@ Chaque fichier source porte la marque `© KVES · Coach-Mass-KVES`, qui apparaî
 | 9 | Vibrations plus fortes et réglables, test de vibration, nouveau logo, nom Coach-Mass-KVES, signature KVES |
 | 10 | Garde-fou de la boîte à avis : un message contenant déjà un code d'avis chiffré est refusé |
 | 13.8 | Réglages en sections repliables |
+| 14.3 | Page « Comment le programme s'adapte » |
 | 14.2 | Effort ressenti après la séance, semaine d'allègement |
 | 14.1 | Questionnaire de santé, garde-fou du poids visé |
 | 14.0 | Accessibilité : TalkBack, mouvement réduit, Échap, contrastes |
