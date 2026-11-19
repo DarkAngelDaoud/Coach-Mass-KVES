@@ -134,8 +134,6 @@ function snaps(pg) {
   await pg.click('[data-act=mclear]'); plV = await pg.textContent('#view');
   t('lecteur : liste vidée', plV.includes('Aucun morceau choisi.') && !plV.includes('morceau-un'));
   await pg.click('[data-act=tab][data-v=more]');
-  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=legal]'); var lgFr = await pg.textContent('#view');
-  t('légal : avertissement, confidentialité et conditions', lgFr.includes('Avertissement santé') && lgFr.includes('Politique de confidentialité') && lgFr.includes("Conditions d'utilisation") && lgFr.includes('18 ans'));
   t('langue : retour au français', (await pg.textContent('#nav')).includes('Suivi'));
   await pg.click('#nav [data-v=meals]');
   t('régime : sans œufs, courses sans œufs', !(await pg.textContent('.shop')).includes('Œufs') && (await pg.textContent('#view')).includes('Sans œufs'));
@@ -279,10 +277,6 @@ function snaps(pg) {
   pg = await newPage(br, { onb: true }); await pg.goto(url); await pg.waitForTimeout(700);
   t('première installation : écran de profil', await pg.isVisible('#modal') && (await pg.textContent('#modal')).includes('Ton profil'));
   await pg.click('[data-act=obg][data-v=f]'); await pg.click('[data-act=obo][data-v=perte]');
-  await pg.fill('#ob_age', '30'); await pg.fill('#ob_h', '175'); await pg.fill('#ob_w', '70'); await pg.fill('#ob_goal', '75');
-  await pg.click('[data-act=obsave]'); await pg.waitForTimeout(150);
-  t('inscription : la case avertissement santé est obligatoire', (await pg.textContent('#obErr')).includes('Coche la case') && !!(await pg.$('.onb')));
-  await pg.check('#ob_legal');
   await pg.fill('#ob_age', '17'); await pg.fill('#ob_h', '160'); await pg.fill('#ob_w', '50'); await pg.fill('#ob_goal', '48');
   await pg.click('[data-act=obsave]');
   t('moins de 18 ans refusé', (await pg.textContent('#obErr')).includes('18 ans') && await pg.isVisible('#modal'));
@@ -293,8 +287,10 @@ function snaps(pg) {
   await pg.fill('#ob_goal', '42'); await pg.click('[data-act=obsave]');
   t('IMC trop bas refusé', (await pg.textContent('#obErr')).includes('trop bas') || (await pg.textContent('#obErr')).includes('invalide'), await pg.textContent('#obErr'));
   await pg.fill('#ob_goal', '48'); await pg.click('.onb details summary'); await pg.fill('#ob_m_taille', '70'); await pg.click('[data-act=obsave]');
+  t('profil : case avertissement santé obligatoire', (await pg.textContent('#obErr')).includes('avertissement santé') && await pg.isVisible('#modal'));
+  await pg.check('#ob_health'); await pg.click('[data-act=obsave]');
   d = await dataOf(pg);
-  t('profil enregistré', !(await pg.isVisible('#modal')) && d.profile.gender === 'f' && d.profile.obj === 'perte' && d.profile.age === 60 && d.profile.onboarded === true && d.profile.w0 === 50 && d.measures.length === 1, d.profile);
+  t('profil enregistré', !(await pg.isVisible('#modal')) && d.profile.gender === 'f' && d.profile.obj === 'perte' && d.profile.age === 60 && d.profile.onboarded === true && d.profile.healthOk === true && d.profile.w0 === 50 && d.measures.length === 1, d.profile);
   await pg.click('#nav [data-v=meals]');
   var mt = await pg.textContent('#view');
   t('perte : cible calorique au plancher femme (1200)', mt.includes('Perte de poids') && /cible : environ 1200 kcal/.test(mt), mt.slice(0, 160));
@@ -412,6 +408,17 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 13.9 : pages légales */
+  pg = await newPage(br); await pg.goto(url); await pg.click('#nav [data-v=more]');
+  for (var lg of [['sante', 'Avertissement santé', '15 pour le SAMU'], ['confid', 'Politique de confidentialité', 'loi marocaine 09-08'], ['cond', 'Conditions d\'utilisation', 'Casablanca']]) {
+    await pg.click('[data-act=tab][data-v=' + lg[0] + ']'); var lt = await pg.textContent('#view');
+    t('page légale ' + lg[0], lt.includes(lg[1]) && lt.toLowerCase().includes(lg[2].toLowerCase()) && lt.includes('Dernière mise à jour'));
+    await pg.click('#nav [data-v=more]');
+  }
+  t('page Plus : carte Légal', (await pg.textContent('#view')).includes('Légal'));
+  t('aucune erreur (13.9)', pg.errs.length === 0, pg.errs);
+  await pg.context().close();
+
   /* langues : aucune phrase française ne doit rester visible en anglais ni en arabe (écrans principaux) */
   var FRW = /[éèàêçùô]|\b(le|la|les|des|du|tu|ton|ta|tes|pas|une|dans|avec|pour|séance|séries|répétitions)\b/i;
   for (var L of ['en', 'ar']) {
@@ -422,7 +429,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
     async function scan() { (await pg.evaluate(function () { var o = [], w = document.createTreeWalker(document.querySelector('main, #view') || document.body, NodeFilter.SHOW_TEXT), n; while ((n = w.nextNode())) { var x = n.nodeValue.trim(); if (x) o.push(x); } return o; })).forEach(function (x) { seen.add(x); }); }
     for (var tb of ['today', 'train', 'meals', 'track', 'history', 'more']) { await pg.click('#nav [data-v=' + tb + ']'); await scan(); }
     await pg.click('#nav [data-v=more]');
-    for (var sub of ['settings', 'sources', 'player', 'avis', 'legal']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
+    for (var sub of ['settings', 'sources', 'player', 'avis', 'sante', 'confid', 'cond']) { await pg.click('[data-act=tab][data-v=' + sub + ']'); await scan(); await pg.click('#nav [data-v=more]'); }
     var leftFr = Array.from(seen).filter(function (x) { return FRW.test(x) && x !== 'Français'; });
     t('langue ' + L + ' : aucune phrase française restante (écrans principaux)', leftFr.length === 0, leftFr);
     await pg.context().close();
