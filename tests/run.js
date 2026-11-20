@@ -72,7 +72,7 @@ function snaps(pg) {
   /* 4. courses, minuteur, thème */
   pg = await newPage(br, { colorScheme: 'dark' }); await pg.goto(url);
   await pg.click('#nav [data-v=meals]');
-  t('courses : 15 lignes sur 7 jours', (await pg.$$('.shop .meal')).length === 15);
+  t('courses : 16 lignes sur 7 jours', (await pg.$$('.shop .meal')).length === 16);
   await pg.click('[data-act=shopdays][data-v="14"]'); await pg.click('[data-act=shopm3][data-v=sardines]');
   t('courses : sardines sans poulet', (await pg.textContent('.shop')).includes('Sardines') && !(await pg.textContent('.shop')).includes('Poulet'));
   await pg.click('[data-act=diet][data-k=noEgg]');
@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.4' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.5' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,13 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.5 : fruits */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=meals]');
+  t('fruits : dans les repas du jour', (await pg.textContent('#view')).includes('1 orange') && (await pg.textContent('#view')).includes('fruit de saison'));
+  t('aucune erreur (14.5)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
   /* 14.4 : heures des repas */
