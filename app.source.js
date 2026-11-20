@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '14.9';
+var VERSION = '15.0';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Plus : la carte Légal est maintenant une liste simple (avertissement santé, confidentialité, conditions), placée en bas, sous À propos.', 'Plus propre, sans texte qui se superpose.'];
+var NOTES = ['Eau : ton objectif est maintenant calculé pour toi (30 ml par kg, plus 500 ml les jours de séance) au lieu de 2,5 L pour tout le monde.', 'Le coach te dit si tu es en retard dans la journée.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -716,6 +716,16 @@ function nextTrainLabel() {
   return '—';
 }
 
+function waterTarget() {
+  var ml = 30 * currentWeight() + (isTrainDay(new Date().getDay()) ? 500 : 0);
+  return Math.round(Math.max(2000, Math.min(3500, ml)) / 50) * 50;
+}
+function waterNote(water, target) {
+  var h = new Date().getHours() + new Date().getMinutes() / 60, exp = target * Math.max(0, Math.min(1, (h - 8) / 13));
+  if (water >= target) return 'Objectif atteint, bravo.';
+  if (h >= 11 && water < exp - 500) return 'En retard sur ton objectif : bois un verre maintenant.';
+  return 'Tu es dans le rythme.';
+}
 function viewToday() {
   var l = log(), m = coachMsg(), sug = suggestion();
   var energy = [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="energy" data-n="' + n + '" class="' + (+l.energy === n ? 'on' : '') + '">' + n + '</button>'; }).join('');
@@ -732,7 +742,8 @@ function viewToday() {
     '<label class="f">Pas (montre ou téléphone)<input type="number" inputmode="numeric" data-log="steps" value="' + (l.steps || '') + '" placeholder="6000"></label>' +
     (P.cigs ? '<label class="f">Cigarettes fumées<input type="number" inputmode="numeric" data-log="cigs" value="' + (l.cigs === undefined ? '' : l.cigs) + '" placeholder="20"></label>' : '<span></span>') +
     '</div><label class="f">Énergie (1 = à plat, 5 = au top)</label><div class="seg">' + energy + '</div></div>';
-  h += '<div class="card"><div class="row"><h2 class="grow">Eau</h2><b>' + fmt(water / 1000, 2) + ' / 2,5 L</b></div><div class="bar"><i class="' + (water >= 2500 ? 'ok' : '') + '" style="width:' + Math.min(100, water / 25) + '%"></i></div>' +
+  var wt = waterTarget();
+  h += '<div class="card"><div class="row"><h2 class="grow">Eau</h2><b>' + fmt(water / 1000, 2) + ' / ' + fmt(wt / 1000, 2) + ' L</b></div><div class="bar"><i class="' + (water >= wt ? 'ok' : '') + '" style="width:' + Math.min(100, water * 100 / wt) + '%"></i></div><p class="small">' + waterNote(water, wt) + ' Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.</p>' +
     '<div class="row"><button class="btn alt sm grow" data-act="water" data-n="250">+ 250 ml</button><button class="btn alt sm" data-act="water" data-n="-250">− 250</button></div></div>';
   var eaten = eatenKcal(), tg = kcalTarget();
   h += '<div class="card"><div class="row"><h2 class="grow">Repas validés</h2><b>' + eaten + ' / ' + tg + ' kcal</b></div><div class="bar"><i class="' + (eaten >= tg * 0.95 ? 'ok' : '') + '" style="width:' + Math.min(100, eaten / tg * 100) + '%"></i></div></div>';
@@ -3947,6 +3958,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Dernier repas avant 20 h 30": "Last meal before 8:30 pm", "Le dernier repas est ramené à 20 h 30 au plus tard ; les repas précédents se décalent si besoin (2 h d'écart minimum).": "The last meal is moved to 8:30 pm at the latest; earlier meals shift if needed (at least 2 h apart).", "Avec le dîner": "With dinner", "Horaires des repas : tu les choisis dans Réglages > Heures des repas, avec l'option « dernier repas avant 20 h 30 ».": "Meal times: you choose them in Settings > Meal times, with the \"last meal before 8:30 pm\" option."}, "ar": {"Dernier repas avant 20 h 30": "آخر وجبة قبل 20:30", "Le dernier repas est ramené à 20 h 30 au plus tard ; les repas précédents se décalent si besoin (2 h d'écart minimum).": "تُنقل الوجبة الأخيرة إلى 20:30 على أبعد تقدير، وتُزاح الوجبات السابقة عند الحاجة (بفارق ساعتين على الأقل).", "Avec le dîner": "مع العشاء", "Horaires des repas : tu les choisis dans Réglages > Heures des repas, avec l'option « dernier repas avant 20 h 30 ».": "مواعيد الوجبات: تختارها في الإعدادات > مواعيد الوجبات، مع خيار «آخر وجبة قبل 20:30»."}, "ma": {"Dernier repas avant 20 h 30": "Akhir wajba qbel 20:30", "Le dernier repas est ramené à 20 h 30 au plus tard ; les repas précédents se décalent si besoin (2 h d'écart minimum).": "Akhir wajba kat-t-qddem l-20:30 f akther t-tqdir; l-wajabat li qbelha kat-t7errek ila khassha (sa3tin 3la l-aqell).", "Avec le dîner": "M3a l-3sha", "Horaires des repas : tu les choisis dans Réglages > Heures des repas, avec l'option « dernier repas avant 20 h 30 ».": "W9at l-wajabat: nta li kat-khtarhom f Réglages > W9at l-wajabat, m3a l-khiyar \"akhir wajba qbel 20:30\"."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Objectif atteint, bravo.": "Goal reached, well done.", "En retard sur ton objectif : bois un verre maintenant.": "Behind your goal: drink a glass now.", "Tu es dans le rythme.": "You are on track.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "Target calculated: 30 ml per kg, plus 500 ml on workout days."}, "ar": {"Objectif atteint, bravo.": "تم بلوغ الهدف، أحسنت.", "En retard sur ton objectif : bois un verre maintenant.": "متأخر عن هدفك: اشرب كأسا الآن.", "Tu es dans le rythme.": "أنت في الوتيرة المطلوبة.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "الهدف محسوب: 30 مل لكل كيلوغرام، زائد 500 مل في أيام التمرين."}, "ma": {"Objectif atteint, bravo.": "Wslti l-hadaf, bravo.", "En retard sur ton objectif : bois un verre maintenant.": "Mt2khkher 3la l-hadaf dyalek: shreb kas daba.", "Tu es dans le rythme.": "Nta f r-rytm.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "L-hadaf m7sub: 30 ml l-kol kilo, zayd 500 ml f iyyam t-tmrin."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
