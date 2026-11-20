@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '14.8';
+var VERSION = '14.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['L\'application est maintenant minifiée : fichier plus léger (environ 15 % de moins), même fonctionnement.', 'Aucun changement visible : si quelque chose te semble différent, dis-le-moi.'];
+var NOTES = ['Plus : la carte Légal est maintenant une liste simple (avertissement santé, confidentialité, conditions), placée en bas, sous À propos.', 'Plus propre, sans texte qui se superpose.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1603,10 +1603,10 @@ function viewMore() {
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
-    '<div class="card"><h2>Légal</h2><p class="small">Avertissement santé, confidentialité et conditions d\'utilisation.</p><button class="btn alt" data-act="tab" data-v="sante">Avertissement santé</button><button class="btn alt" data-act="tab" data-v="confid">Politique de confidentialité</button><button class="btn alt" data-act="tab" data-v="cond">Conditions d\'utilisation</button></div>' +
     '<div class="card"><h2>Comment le programme s\'adapte</h2><p class="small">Ce qui change selon ton objectif, et ce qui reste fixe.</p><button class="btn alt" data-act="tab" data-v="adapt">Lire</button></div>' +
     shareCard() +
-    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>';
+    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>' +
+    '<div class="card"><h2>Légal</h2><div class="links"><button class="linkrow" data-act="tab" data-v="sante">Avertissement santé</button><button class="linkrow" data-act="tab" data-v="confid">Politique de confidentialité</button><button class="linkrow" data-act="tab" data-v="cond">Conditions d\'utilisation</button></div></div>';
 }
 function avItem(it, i) {
   var share = navigator.share ? '<button class="btn sm grow" data-act="avshare" data-i="' + i + '" data-via="share">Partager</button>' : '';

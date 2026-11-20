@@ -275,3 +275,10 @@ details.card > summary::-webkit-details-marker { display: none; }
 details.card > summary::after { content: '▾'; color: var(--muted); font-size: 1.1rem; }
 details.card[open] > summary::after { content: '▴'; }
 details.card:not([open]) { padding-top: 10px; padding-bottom: 10px; }
+
+.links { display: flex; flex-direction: column; margin-top: 4px; }
+.linkrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; padding: 10px 2px; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); font: inherit; text-align: start; cursor: pointer; }
+.linkrow:last-child { border-bottom: 0; }
+.linkrow::after { content: '\203A'; font-size: 1.4em; color: var(--muted); line-height: 1; }
+[dir=rtl] .linkrow::after { content: '\2039'; }
+.linkrow:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
