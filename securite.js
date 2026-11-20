@@ -5,6 +5,8 @@ var root = __dirname, fails = [], warns = [], okn = 0;
 function rd(f) { return fs.readFileSync(path.join(root, f), 'utf8'); }
 function ok(c, msg, warn) { if (c) okn++; else (warn ? warns : fails).push(msg); }
 var PUB = ['index.html', 'app.js', 'theme-init.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'avis-config.js'];
+var HAS_SRC = fs.existsSync(path.join(root, 'app.source.js')); /* app.js est minifié depuis app.source.js (lisible) */
+if (HAS_SRC) PUB.push('app.source.js');
 var code = PUB.map(function (f) { return [f, rd(f)]; });
 
 /* 1. aucune dépendance : pas de package.json avec dépendances d'exécution, pas de node_modules publié */
@@ -24,7 +26,7 @@ ok(!/<script[^>]+src=["']https?:/i.test(rd('index.html')) && !/<link[^>]+href=["
 
 /* 3. motifs dangereux */
 var BAD = [[/\beval\s*\(/, 'eval()'], [/new\s+Function\s*\(/, 'new Function()'], [/document\.write\s*\(/, 'document.write()'], [/importScripts\s*\(/, 'importScripts()'], [/\.outerHTML\s*=/, 'outerHTML ='], [/insertAdjacentHTML/, 'insertAdjacentHTML'], [/javascript:/i, 'adresse javascript:']];
-code.forEach(function (c) { if (c[0] === 'index.html' || c[0] === 'app.js' || c[0] === 'theme-init.js' || c[0] === 'sw.js') BAD.forEach(function (b) { ok(!b[0].test(c[1]), c[0] + ' : motif dangereux ' + b[1]); }); });
+code.forEach(function (c) { if (c[0] === 'index.html' || c[0] === 'app.js' || c[0] === 'app.source.js' || c[0] === 'theme-init.js' || c[0] === 'sw.js') BAD.forEach(function (b) { ok(!b[0].test(c[1]), c[0] + ' : motif dangereux ' + b[1]); }); });
 ok(!/\son(click|load|error|change|input|submit)\s*=/i.test(rd('index.html')), 'index.html : gestionnaire d\'événement en ligne (onclick, onload...).');
 var inner = (rd('app.js').match(/\.innerHTML\s*=/g) || []).length;
 ok(inner <= 4, 'app.js : ' + inner + ' affectations innerHTML (4 connues et contrôlées) : vérifie que les nouvelles données sont passées par esc().');
@@ -58,7 +60,8 @@ fs.readdirSync(root).filter(function (f) { return /\.(js|html|json|webmanifest|m
   var html = rd('index.html');
   (html.match(/(?:src|href)="(?!https?:|#|data:)([^"]+)"/g) || []).forEach(function (m) { var f = m.replace(/^[a-z]+="/, '').replace(/"$/, '').split('?')[0]; ok(fs.existsSync(path.join(root, f)), 'index.html référence un fichier absent : ' + f); });
   var sw = rd('sw.js'); (sw.match(/'[A-Za-z0-9._-]+\.(?:js|css|html|png|jpg|webmanifest)'/g) || []).forEach(function (q) { var f = q.slice(1, -1); ok(fs.existsSync(path.join(root, f)), 'sw.js liste un fichier absent : ' + f); });
-  var vApp = (rd('app.js').match(/var VERSION = '([^']+)'/) || [])[1], vSw = (sw.match(/coach-masse-v([0-9-]+)/) || [])[1];
+  var vApp = (rd(HAS_SRC ? 'app.source.js' : 'app.js').match(/var VERSION = '([^']+)'/) || [])[1], vSw = (sw.match(/coach-masse-v([0-9-]+)/) || [])[1];
+  if (HAS_SRC) ok(rd('app.js').indexOf('"' + vApp + '"') >= 0 && rd('app.js').length < rd('app.source.js').length, 'app.js (minifié) ne correspond pas à app.source.js : relance la minification.');
   ok(vApp && vSw && vSw === vApp.replace(/\./g, '-'), 'Version incohérente entre app.js (' + vApp + ') et sw.js (' + vSw + ') : fichiers de versions différentes ?');
 })();
 
