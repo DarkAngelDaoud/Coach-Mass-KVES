@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.3' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.4' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,27 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 15.4 : photos de progression */
+  var phc = await br.newContext({ viewport: { width: 390, height: 800 } }), ph = await phc.newPage(); ph.errs = []; ph.on('pageerror', function (e) { ph.errs.push(e.message); });
+  await ph.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75 }, logs: {}, sessions: [] })); });
+  await ph.goto(url); await ph.waitForSelector('#nav');
+  await ph.click('#nav [data-v=track]');
+  t('photos : carte présente', await ph.isVisible('#phcard'));
+  var png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await ph.setInputFiles('[data-ph=add]', { name: 'a.png', mimeType: 'image/png', buffer: png }); await ph.waitForTimeout(600);
+  await ph.setInputFiles('[data-ph=add]', { name: 'b.png', mimeType: 'image/png', buffer: png }); await ph.waitForTimeout(600);
+  t('photos : 2 miniatures', (await ph.$$('.phth')).length === 2);
+  var phb = await ph.evaluate(function () { return JSON.stringify(localStorage); });
+  t('photos : rien dans le stockage des données', phb.indexOf('blob') < 0 && phb.indexOf('image/jpeg') < 0);
+  await ph.click('.phth >> nth=0'); await ph.click('.phth >> nth=1');
+  t('photos : comparaison Avant / Après', (await ph.textContent('.phcmp')).includes('Avant') && (await ph.textContent('.phcmp')).includes('Après'));
+  await ph.reload(); await ph.waitForSelector('#nav'); await ph.click('#nav [data-v=track]'); await ph.waitForTimeout(500);
+  t('photos : conservées après rechargement', (await ph.$$('.phth')).length === 2);
+  await ph.click('.phth >> nth=0'); await ph.click('[data-act=phdel]'); await ph.click('[data-act=phdel]'); await ph.waitForTimeout(500);
+  t('photos : suppression', (await ph.$$('.phth')).length === 1);
+  t('aucune erreur (15.4)', ph.errs.length === 0, ph.errs);
+  await phc.close();
 
   /* 15.3 : séance express */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
