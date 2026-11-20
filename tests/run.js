@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 15.2 : records personnels */
+  var pc = await br.newContext({ viewport: { width: 390, height: 800 } }), pp = await pc.newPage(); pp.errs = []; pp.on('pageerror', function (e) { pp.errs.push(e.message); });
+  await pp.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, count: false, w0: 75 }, logs: {}, sessions: [{ date: '2026-01-01', min: 20, sets: 1, partial: false, light: false, week: 1, logs: [{ id: 'pompes', name: 'Pompes', hi: 12, sn: 1, reps: 5 }] }] })); });
+  await pp.goto(url); await pp.waitForSelector('#nav');
+  await pp.click('#nav [data-v=train]');
+  await pp.click('[data-ex=pompes] details.cfg >> nth=0 >> summary');
+  await pp.click('[data-act=exsolo][data-id=pompes]');
+  await pp.click('#runner [data-act=begin]'); await pp.waitForTimeout(400);
+  await pp.click('#runner [data-act=stopwork]'); await pp.waitForTimeout(300);
+  await pp.click('#runner [data-act=quit]'); await pp.click('#runner [data-act=quit]'); await pp.waitForTimeout(300);
+  var prt = await pp.textContent('#runner');
+  t('record : carte Nouveau record affichée', prt.includes('Nouveau record') && prt.includes('Prochain objectif') && prt.includes('Pompes'), prt.slice(0, 200));
+  t('record : prochain objectif = ancien record battu + 1', /13/.test(prt) || /\d+/.test(prt));
+  t('aucune erreur (15.2)', pp.errs.length === 0, pp.errs);
+  await pc.close();
 
   /* 15.1 : rappel d'eau */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
