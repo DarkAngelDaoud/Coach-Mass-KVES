@@ -1,5 +1,5 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v15-0';
+var CACHE = 'coach-masse-v15-1';
 var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'avis-config.js', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
@@ -45,6 +45,9 @@ self.addEventListener('periodicsync', function (e) {
       var jobs = [];
       if (mins(o.w) !== null && n >= mins(o.w) && o.wd !== t && o.lw !== t) { o.lw = t; jobs.push(self.registration.showNotification('Coach-Mass-KVES', { body: 'Pèse-toi à jeun et note ton poids.', tag: 'cm-w', icon: 'icon-192.png', badge: 'icon-192.png' })); }
       if (mins(o.m) !== null && n >= mins(o.m) && o.md !== t && o.lm !== t) { o.lm = t; jobs.push(self.registration.showNotification('Coach-Mass-KVES', { body: 'Valide tes repas du jour.', tag: 'cm-m', icon: 'icon-192.png', badge: 'icon-192.png' })); }
+      var hh = d.getHours() + d.getMinutes() / 60, sl = -1;
+      [10, 12, 14, 16, 18].forEach(function (x) { if (hh >= x && hh < 20.5) sl = x; });
+      if (o.we && sl > 0 && o.le !== t + '#' + sl && (+o.ww || 0) < (+o.wt || 2500) * Math.max(0, Math.min(1, (sl - 8) / 13))) { o.le = t + '#' + sl; jobs.push(self.registration.showNotification('Coach-Mass-KVES', { body: 'Pense à boire : un verre d\'eau maintenant.', tag: 'cm-e', icon: 'icon-192.png', badge: 'icon-192.png' })); }
       return Promise.all(jobs).then(function () { return c.put('remind.json', new Response(JSON.stringify(o))); });
     });
   }));

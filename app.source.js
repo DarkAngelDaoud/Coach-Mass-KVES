@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.0';
+var VERSION = '15.1';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Eau : ton objectif est maintenant calculé pour toi (30 ml par kg, plus 500 ml les jours de séance) au lieu de 2,5 L pour tout le monde.', 'Le coach te dit si tu es en retard dans la journée.'];
+var NOTES = ['Rappel d\'eau : Réglages > Rappels. Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.', 'Comme les autres rappels : application ouverte ou, selon Android, application fermée.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -272,7 +272,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 function defaults() {
   return {
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
-      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
+      count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
 }
@@ -1857,18 +1857,21 @@ function shopText() {
 /* rappels */
 function hm(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
 function mealsAllDone() { var c = (D.logs[today()] || {}).meals || []; return mealsList().every(function (_, i) { return c[i]; }); }
+function waterSlot(d) { var h = d.getHours() + d.getMinutes() / 60, r = -1; [10, 12, 14, 16, 18].forEach(function (x) { if (h >= x && h < 20.5) r = x; }); return r; }
 function rmDue() {
   var out = [];
   if (!P.rmOn) return out;
   var d = new Date(), n = d.getHours() * 60 + d.getMinutes(), w = hm(P.rmW), m = hm(P.rmM), l = D.logs[today()] || {};
   if (w !== null && n >= w && !l.weight && P.rmLw !== today()) out.push('w');
   if (m !== null && n >= m && !mealsAllDone() && P.rmLm !== today()) out.push('m');
+  var sl = waterSlot(d);
+  if (P.rmWater && sl > 0 && P.rmLe !== today() + '#' + sl && (+l.water || 0) < waterTarget() * Math.max(0, Math.min(1, (sl - 8) / 13))) out.push('e');
   return out;
 }
 function syncRemind() {
   if (!window.caches || !P.rmOn) return;
   var l = D.logs[today()] || {};
-  var o = { on: !!P.rmOn, w: P.rmW, m: P.rmM, wd: l.weight ? today() : '', md: mealsAllDone() ? today() : '', lw: P.rmLw || '', lm: P.rmLm || '' };
+  var o = { on: !!P.rmOn, w: P.rmW, m: P.rmM, wd: l.weight ? today() : '', md: mealsAllDone() ? today() : '', lw: P.rmLw || '', lm: P.rmLm || '', we: !!P.rmWater, ww: +l.water || 0, wt: waterTarget(), le: P.rmLe || '' };
   caches.open('coach-masse-remind').then(function (c) { return c.put('remind.json', new Response(JSON.stringify(o))); }).catch(function () {});
 }
 function sysNotify(txt, tag) {
@@ -1877,8 +1880,8 @@ function sysNotify(txt, tag) {
   return true;
 }
 function rmNotify(kind) {
-  var txt = kind === 'w' ? 'Pèse-toi à jeun et note ton poids.' : 'Valide tes repas du jour.';
-  if (kind === 'w') P.rmLw = today(); else P.rmLm = today();
+  var txt = kind === 'w' ? 'Pèse-toi à jeun et note ton poids.' : kind === 'e' ? 'Pense à boire : un verre d\'eau maintenant.' : 'Valide tes repas du jour.';
+  if (kind === 'w') P.rmLw = today(); else if (kind === 'e') P.rmLe = today() + '#' + waterSlot(new Date()); else P.rmLm = today();
   save();
   if (document.visibilityState === 'visible') { toast('Rappel : ' + txt); vib([200, 100, 200]); } else sysNotify(txt, 'cm-' + kind);
 }
@@ -1912,6 +1915,7 @@ function rmCard() {
   var np = 'Notification' in window ? Notification.permission : 'none';
   return '<div class="card"><h2>Rappels</h2><label class="meal"><input type="checkbox" data-rm="on"' + (P.rmOn ? ' checked' : '') + '><span><b>Rappels quotidiens</b><br><span class="small">Poids le matin, validation des repas le soir. Rien n\'est envoyé si c\'est déjà fait.</span></span></label>' +
     '<div class="grid2"><label class="f">Poids à<input type="time" data-rm="w" value="' + esc(P.rmW) + '"></label><label class="f">Repas à<input type="time" data-rm="m" value="' + esc(P.rmM) + '"></label></div>' +
+    '<label class="meal"><input type="checkbox" data-rm="water"' + (P.rmWater ? ' checked' : '') + '><span><b>Rappel d\'eau</b><br><span class="small">Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.</span></span></label>' +
     '<p class="small">' + (np === 'granted' ? 'Notifications autorisées. ' : np === 'denied' ? 'Notifications bloquées : autorise-les dans les réglages Android de Chrome. ' : np === 'none' ? 'Notifications non disponibles ici. ' : '') +
     'Application fermée, Android peut retarder ou ignorer le rappel. Pour être sûr de l\'heure, ajoute-les aussi à ton calendrier.</p>' +
     '<div class="row"><button class="btn alt sm" data-act="rmtest">Tester</button><button class="btn alt sm grow" data-act="rmics">Ajouter au calendrier</button></div>' +
@@ -2023,6 +2027,7 @@ document.addEventListener('change', function (ev) {
   k = t.getAttribute('data-rm');
   if (!k) return;
   if (k === 'on') { if (t.checked) rmEnable(); else { P.rmOn = false; save(); render(); } return; }
+  if (k === 'water') { P.rmWater = !!t.checked; save(); if (t.checked && !P.rmOn) rmEnable(); else { render(); rmCheck(); } return; }
   if (hm(t.value) !== null) { if (k === 'w') P.rmW = t.value; else P.rmM = t.value; save(); render(); rmCheck(); }
 });
 setInterval(rmCheck, 30000);
@@ -2247,7 +2252,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'tab') { tab = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); return; }
   if (a === 'start') { startSession(); return; }
   if (a === 'energy') { log().energy = +t.getAttribute('data-n'); save(); render(); return; }
-  if (a === 'water') { var l = log(); l.water = Math.max(0, (+l.water || 0) + +t.getAttribute('data-n')); save(); render(); return; }
+  if (a === 'water') { var l = log(); l.water = Math.max(0, (+l.water || 0) + +t.getAttribute('data-n')); save(); render(); syncRemind(); return; }
   if (a === 'meal') { var lg = log(); lg.meals = lg.meals || []; lg.meals[+t.getAttribute('data-i')] = t.checked; save(); return; }
   if (a === 'adj') { P.kcalAdj += +t.getAttribute('data-v'); P.lastAdj = today(); save(); render(); return; }
   if (a === 'adjno') { P.lastAdj = today(); save(); render(); return; }
@@ -3963,6 +3968,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Objectif atteint, bravo.": "Goal reached, well done.", "En retard sur ton objectif : bois un verre maintenant.": "Behind your goal: drink a glass now.", "Tu es dans le rythme.": "You are on track.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "Target calculated: 30 ml per kg, plus 500 ml on workout days."}, "ar": {"Objectif atteint, bravo.": "تم بلوغ الهدف، أحسنت.", "En retard sur ton objectif : bois un verre maintenant.": "متأخر عن هدفك: اشرب كأسا الآن.", "Tu es dans le rythme.": "أنت في الوتيرة المطلوبة.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "الهدف محسوب: 30 مل لكل كيلوغرام، زائد 500 مل في أيام التمرين."}, "ma": {"Objectif atteint, bravo.": "Wslti l-hadaf, bravo.", "En retard sur ton objectif : bois un verre maintenant.": "Mt2khkher 3la l-hadaf dyalek: shreb kas daba.", "Tu es dans le rythme.": "Nta f r-rytm.", "Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.": "L-hadaf m7sub: 30 ml l-kol kilo, zayd 500 ml f iyyam t-tmrin."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Rappel d'eau": "Water reminder", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "Every 2 h between 10 am and 6 pm, only if you are behind your goal.", "Pense à boire : un verre d'eau maintenant.": "Remember to drink: a glass of water now.", "Rappel : Pense à boire : un verre d'eau maintenant.": "Reminder: Remember to drink: a glass of water now."}, "ar": {"Rappel d'eau": "تذكير بالماء", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "كل ساعتين بين 10 صباحا و6 مساء، فقط إذا كنت متأخرا عن هدفك.", "Pense à boire : un verre d'eau maintenant.": "تذكّر أن تشرب: كأس ماء الآن.", "Rappel : Pense à boire : un verre d'eau maintenant.": "تذكير: تذكّر أن تشرب: كأس ماء الآن."}, "ma": {"Rappel d'eau": "Tadkir d l-ma", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "Kol sa3tin bin 10 u 18, ghir ila knti mt2khkher 3la l-hadaf dyalek.", "Pense à boire : un verre d'eau maintenant.": "Tfekker tshreb: kas d l-ma daba.", "Rappel : Pense à boire : un verre d'eau maintenant.": "Tadkir: Tfekker tshreb: kas d l-ma daba."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
