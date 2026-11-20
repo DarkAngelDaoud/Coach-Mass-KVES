@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.3';
+var VERSION = '15.4';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Séance express : un bouton dans l\'onglet Séance lance une séance d\'environ 15 minutes (échauffement court, 2 séries par exercice). Pour les jours où tu manques de temps.'];
+var NOTES = ['Photos de progression : onglet Suivi, carte « Photos de progression ». Tes photos restent sur le téléphone, jamais envoyées.', 'Touche deux photos pour voir Avant et Après.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1001,7 +1001,7 @@ function viewTrack() {
     }).join('') + '</ul><p class="small">Dernière mesure : ' + z.date + '</p>';
     h += '<div class="chips">' + MKEYS.map(function (k) { return '<button class="chip' + (CH.mk === k ? ' on' : '') + '" data-act="mksel" data-v="' + k + '">' + MLAB[k] + '</button>'; }).join('') + '</div>' + measChart(CH.mk);
   }
-  h += '</div><div class="card"><h2>Sauvegarde</h2><p class="small">Tes données restent sur ce téléphone. Exporte-les de temps en temps.</p><div class="row"><button class="btn alt sm grow" data-act="export">Exporter</button><button class="btn alt sm grow" data-act="import">Importer</button></div></div>';
+  h += '</div>' + phCard() + '<div class="card"><h2>Sauvegarde</h2><p class="small">Tes données restent sur ce téléphone. Exporte-les de temps en temps.</p><div class="row"><button class="btn alt sm grow" data-act="export">Exporter</button><button class="btn alt sm grow" data-act="import">Importer</button></div></div>';
   return h;
 }
 
@@ -1391,6 +1391,100 @@ function drawDone() {
   runner.innerHTML = h;
 }
 
+/* © KVES · Coach-Mass-KVES */
+/* ====================== photos de progression (locales) ====================== */
+/* Stockées dans IndexedDB (base « coach-masse-ph ») sur l'appareil, jamais envoyées, hors sauvegarde. */
+var PH = { list: null, urls: {}, sel: [], armed: '', db: null };
+function phDb() {
+  if (!PH.db) PH.db = new Promise(function (res, rej) {
+    try {
+      var q = indexedDB.open('coach-masse-ph', 1);
+      q.onupgradeneeded = function () { q.result.createObjectStore('p', { keyPath: 'id' }); };
+      q.onsuccess = function () { res(q.result); };
+      q.onerror = function () { rej(q.error); };
+    } catch (e) { rej(e); }
+  });
+  return PH.db;
+}
+function phTx(mode, fn) {
+  return phDb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction('p', mode), out = fn(tx.objectStore('p'));
+      tx.oncomplete = function () { res(out && out.result !== undefined ? out.result : undefined); };
+      tx.onerror = tx.onabort = function () { rej(tx.error); };
+    });
+  });
+}
+function phLoad() {
+  if (PH.list) return;
+  PH.list = [];
+  phTx('readonly', function (st) { return st.getAll(); }).then(function (a) {
+    PH.list = (a || []).sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : (x.id < y.id ? -1 : 1); });
+    if (PH.list.length && tab === 'track') render();
+  }).catch(function () {});
+}
+function phUrl(it) { if (!PH.urls[it.id]) PH.urls[it.id] = URL.createObjectURL(it.blob); return PH.urls[it.id]; }
+function phResize(file, cb) {
+  var img = new Image(), u = URL.createObjectURL(file);
+  img.onload = function () {
+    var k = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(u);
+    c.toBlob(function (b) { cb(b); }, 'image/jpeg', 0.8);
+  };
+  img.onerror = function () { URL.revokeObjectURL(u); cb(null); };
+  img.src = u;
+}
+function phDel(ids) {
+  return Promise.all(ids.map(function (id) { return phTx('readwrite', function (st) { return st.delete(id); }); })).then(function () {
+    ids.forEach(function (id) { if (PH.urls[id]) { URL.revokeObjectURL(PH.urls[id]); delete PH.urls[id]; } });
+    PH.list = (PH.list || []).filter(function (x) { return ids.indexOf(x.id) < 0; });
+    PH.sel = PH.sel.filter(function (x) { return ids.indexOf(x) < 0; }); PH.armed = '';
+    render();
+  }).catch(function () {});
+}
+function phCard() {
+  phLoad();
+  var L = PH.list || [], h = '<div class="card" id="phcard"><h2>Photos de progression</h2><p class="small">Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.</p>';
+  h += '<label class="btn alt sm">Ajouter une photo<input type="file" accept="image/*" data-ph="add" hidden></label>';
+  if (!L.length) return h + '<p class="small">Aucune photo pour l\'instant.</p></div>';
+  h += '<p class="small">Touche deux photos pour les comparer.</p><div class="phgrid">' + L.map(function (it) {
+    return '<button class="phth' + (PH.sel.indexOf(it.id) >= 0 ? ' on' : '') + '" data-act="phsel" data-id="' + esc(it.id) + '" aria-pressed="' + (PH.sel.indexOf(it.id) >= 0) + '"><img src="' + phUrl(it) + '" alt=""><span>' + esc(sdate(it.date)) + '</span></button>';
+  }).join('') + '</div>';
+  if (PH.sel.length === 2) {
+    var a = L.filter(function (x) { return PH.sel.indexOf(x.id) >= 0; });
+    h += '<div class="phcmp">' + a.map(function (it, i) { return '<figure><img src="' + phUrl(it) + '" alt=""><figcaption><span>' + (i ? 'Après' : 'Avant') + '</span> · ' + esc(sdate(it.date)) + '</figcaption></figure>'; }).join('') + '</div>';
+  }
+  if (PH.sel.length) h += '<button class="btn bad sm" data-act="phdel">' + (PH.armed ? 'Confirmer : supprimer' : 'Supprimer') + '</button>';
+  return h + '</div>';
+}
+document.addEventListener('change', function (ev) {
+  var t = ev.target;
+  if (!t || !t.getAttribute || t.getAttribute('data-ph') !== 'add') return;
+  var f = t.files && t.files[0]; t.value = '';
+  if (!f) return;
+  phResize(f, function (b) {
+    if (!b) { toast('Photo illisible'); return; }
+    var it = { id: Date.now() + '-' + Math.floor(Math.random() * 1e6), date: today(), blob: b };
+    phTx('readwrite', function (st) { return st.put(it); }).then(function () {
+      PH.list = (PH.list || []).concat([it]); PH.armed = ''; render();
+    }).catch(function () { toast('Photo illisible'); });
+  });
+});
+document.addEventListener('click', function (ev) {
+  var t = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+  if (!t) return;
+  var a = t.getAttribute('data-act');
+  if (a === 'phsel') {
+    var id = t.getAttribute('data-id'), i = PH.sel.indexOf(id);
+    if (i >= 0) PH.sel.splice(i, 1); else { PH.sel.push(id); if (PH.sel.length > 2) PH.sel.shift(); }
+    PH.armed = ''; render();
+  } else if (a === 'phdel') {
+    if (!PH.armed) { PH.armed = '1'; render(); return; }
+    phDel(PH.sel.slice());
+  }
+});
 /* © KVES · Coach-Mass-KVES */
 /* ====================== boîte à avis (chiffrée de bout en bout) ====================== */
 /* Principe : l'avis est chiffré sur le téléphone de l'utilisateur avec la clé PUBLIQUE du propriétaire
@@ -2320,7 +2414,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'import') { $('#importFile').click(); return; }
   if (a === 'reset') {
     if (!resetArmed) { resetArmed = true; render(); return; }
-    bkSnap('avant', 'avant-reset-' + Date.now()); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
+    bkSnap('avant', 'avant-reset-' + Date.now()); phDel((PH.list || []).map(function (x) { return x.id; })); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
   }
   /* séance */
   if (!R) return;
@@ -4003,6 +4097,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Séance express": "Express session", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "About 15 minutes: short warm-up, 2 sets per exercise. No level-up with this version."}, "ar": {"Séance express": "حصة سريعة", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "حوالي 15 دقيقة: إحماء قصير، سلسلتان لكل تمرين. لا ترقية في المستوى بهذه النسخة."}, "ma": {"Séance express": "Seance express", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "Taqriban 15 d l-d9ayi9: skhana qsira, 2 d series f kol tmrin. Ma kayn ta tla9i f l-mustawa b had nsskha."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Photos de progression": "Progress photos", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "Your photos stay only on this phone and are never sent. They are not in the backup.", "Ajouter une photo": "Add a photo", "Touche deux photos pour les comparer.": "Tap two photos to compare them.", "Aucune photo pour l'instant.": "No photos yet.", "Après": "After", "Avant": "Before", "Supprimer": "Delete", "Confirmer : supprimer": "Confirm: delete", "Photo illisible": "Unreadable photo"}, "ar": {"Photos de progression": "صور التقدم", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "تبقى صورك على هذا الهاتف فقط ولا تُرسل أبدا. وهي غير مشمولة في النسخة الاحتياطية.", "Ajouter une photo": "أضف صورة", "Touche deux photos pour les comparer.": "المس صورتين لمقارنتهما.", "Aucune photo pour l'instant.": "لا توجد صور بعد.", "Après": "بعد", "Avant": "قبل", "Supprimer": "حذف", "Confirmer : supprimer": "تأكيد: حذف", "Photo illisible": "صورة غير قابلة للقراءة"}, "ma": {"Photos de progression": "Suwar d t-tqddum", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "Suwar dyalk kay-bqaw ghir f had t-telifoun, ma kaytsiftu ta mra. Ma kaynin-ch f l-copie d sauvegarde.", "Ajouter une photo": "Zid tswira", "Touche deux photos pour les comparer.": "Touchi joj suwar bach tqarenhom.", "Aucune photo pour l'instant.": "Ma kayn ta tswira daba.", "Après": "Mn b3d", "Avant": "9bl", "Supprimer": "Mseh", "Confirmer : supprimer": "Akked: mseh", "Photo illisible": "Tswira ma tqrat-ch"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
