@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.5' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.6' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -408,6 +408,21 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 14.6 : menus par objectif */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=meals]'); var mm = await pg.textContent('#view');
+  t('menus : prise de masse garde ses menus riches', mm.includes('lait au chocolat') && !mm.includes('grande portion de légumes'));
+  for (var ob of ['perte', 'tonif', 'maintien']) {
+    await pg.evaluate(function (o) { var d = JSON.parse(localStorage.getItem('coach-masse-v1')); d.profile.obj = o; d.profile.height = 179; d.profile.w0 = 75; d.profile.goal = 75; d.profile.age = 41; d.profile.gender = 'h'; localStorage.setItem('coach-masse-v1', JSON.stringify(d)); }, ob);
+    await pg.reload(); await pg.waitForSelector('#nav'); await pg.click('#nav [data-v=meals]'); mm = await pg.textContent('#view');
+    t('menus : ' + ob + ' plus léger', mm.includes('légumes') && !mm.includes('lait au chocolat'), mm.slice(0, 120));
+  }
+  await pg.evaluate(function () { var d = JSON.parse(localStorage.getItem('coach-masse-v1')); d.profile.obj = 'perte'; d.profile.noEgg = true; d.profile.noMilk = true; d.profile.noGluten = true; d.profile.noNuts = true; d.profile.veg = true; localStorage.setItem('coach-masse-v1', JSON.stringify(d)); });
+  await pg.reload(); await pg.waitForSelector('#nav'); await pg.click('#nav [data-v=meals]'); mm = await pg.textContent('#view');
+  t('menus : régime strict (sans œuf, lait, gluten, noix, viande) reste complet', mm.includes('lentilles') && !mm.includes('2 œufs') && !mm.includes('Omelette') && !mm.includes('150 g de poulet') && !mm.includes('yaourt nature'), mm.slice(0, 160));
+  t('aucune erreur (14.6)', pg.errs.length === 0, pg.errs);
+  await pg.context().close();
+
   /* 14.5 : fruits */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.click('#nav [data-v=meals]');
@@ -435,7 +450,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   /* 14.3 : page Comment le programme s'adapte */
   pg = await newPage(br); await pg.goto(url); await pg.click('#nav [data-v=more]');
   await pg.click('[data-act=tab][data-v=adapt]'); var at = await pg.textContent('#view');
-  t('page adaptation', at.includes('Ce qui s\'adapte automatiquement') && at.includes('Ce qui reste fixe') && at.includes('menu de prise de masse'));
+  t('page adaptation', at.includes('Ce qui s\'adapte automatiquement') && at.includes('Ce qui reste fixe') && at.includes('Menus : plus légers'));
   t('aucune erreur (14.3)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
