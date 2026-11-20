@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.2' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.3' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 15.3 : séance express */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=train]');
+  t('express : bouton présent', await pg.isVisible('[data-act=quick]'));
+  await pg.click('[data-act=quick]');
+  async function warmSkips() { var n = 0; while (n < 12 && /Échauffement/.test(await pg.textContent('#runner'))) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(150); n++; } return { n: n, txt: await pg.textContent('#runner') }; }
+  async function closeAll() { for (var q3 = 0; q3 < 6 && await pg.isVisible('#runner'); q3++) { await pg.click('#runner [data-act=quit], #runner [data-act=closerun]'); await pg.waitForTimeout(250); } }
+  var qw = await warmSkips();
+  var qm = qw.txt.match(/Exercice 1\/(\d+)/);
+  t('express : arrive aux exercices', !!qm && +qm[1] >= 1, qw.txt.slice(0, 100));
+  await closeAll();
+  await pg.click('[data-act=start]'); var fw = await warmSkips(), fm = fw.txt.match(/Exercice 1\/(\d+)/);
+  t('express : échauffement plus court et pas plus d\'exercices', !!fm && !!qm && qw.n < fw.n && +qm[1] <= +fm[1], [qw.n, fw.n, qm && qm[1], fm && fm[1]]);
+  await closeAll();
   await pg.context().close();
 
   /* 15.2 : records personnels */
