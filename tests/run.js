@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '14.6' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '14.7' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,20 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 14.7 : dernier repas avant 20 h 30 */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=meals]'); var e0 = await pg.textContent('#view');
+  t('dernier repas : 21 h 30 par défaut', e0.includes('21 h 30') && !e0.includes('20 h 30'));
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]'); await pg.check('[data-early="1"]');
+  d = await dataOf(pg); t('dernier repas : option enregistrée', d.profile.early === true);
+  await pg.click('#nav [data-v=meals]'); e0 = await pg.textContent('#view');
+  t('dernier repas : ramené à 20 h 30', e0.includes('20 h 30') && !e0.includes('21 h 30'));
+  await pg.evaluate(function () { var d = JSON.parse(localStorage.getItem('coach-masse-v1')); d.profile.mt4 = '19:00'; d.profile.mt5 = '22:30'; localStorage.setItem('coach-masse-v1', JSON.stringify(d)); });
+  await pg.reload(); await pg.waitForSelector('#nav'); await pg.click('#nav [data-v=meals]'); e0 = await pg.textContent('#view');
+  t('dernier repas : décale le précédent (2 h d\'écart)', e0.includes('18 h 30') && e0.includes('20 h 30'), e0.slice(0, 200));
+  t('aucune erreur (14.7)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
   /* 14.6 : menus par objectif */
