@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.1';
+var VERSION = '15.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Rappel d\'eau : Réglages > Rappels. Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.', 'Comme les autres rappels : application ouverte ou, selon Android, application fermée.'];
+var NOTES = ['Records personnels : à la fin d\'une séance, le coach te signale chaque exercice où tu bats ton record, et te donne le prochain objectif.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1290,8 +1290,19 @@ function finishSet(reps) {
   }, function () { play(nx.sn === 1 ? 'newex' : 'go'); vib([100, 60, 100]); flash(); advance(); });
 }
 
+function findPrs(logs) {
+  var prev = {}, cur = {}, out = [];
+  D.sessions.forEach(function (x) { (x.logs || []).forEach(function (l) { if (+l.reps > (prev[l.id] || 0)) prev[l.id] = +l.reps; }); });
+  logs.forEach(function (l) { if (+l.reps > (cur[l.id] ? cur[l.id].v : 0)) cur[l.id] = { v: +l.reps, name: l.name }; });
+  Object.keys(cur).forEach(function (id) {
+    var e = EX.filter(function (x) { return x.id === id; })[0];
+    if (prev[id] > 0 && cur[id].v > prev[id]) out.push({ name: cur[id].name, v: cur[id].v, old: prev[id], nx: cur[id].v + (e && e.timed ? 5 : 1), timed: !!(e && e.timed) });
+  });
+  return out;
+}
 function finish(partial) {
   clearTimer();
+  R.prs = findPrs(R.logs);
   var min = Math.max(1, Math.round((Date.now() - R.t0) / 60000));
   var ups = [];
   if (!partial && !R.solo) ups = applyProgress(R.logs);
@@ -1366,6 +1377,7 @@ function drawDone() {
   var h = '<div class="rtop"><span class="small">' + (R.partial ? (R.solo ? 'Exercice interrompu' : 'Séance interrompue') : (R.solo ? 'Exercice terminé' : 'Séance terminée')) + '</span></div>';
   h += '<div class="rbody"><div class="rl"><p class="title">' + (R.solo ? 'Enregistré dans l\'historique (libre)' : R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
   if (R.ups && R.ups.length) h += '<div class="card"><h2>Tu passes au niveau supérieur</h2><ul class="list">' + R.ups.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
+  if (R.prs && R.prs.length) h += '<div class="card"><h2>Nouveau record</h2><ul class="list">' + R.prs.map(function (r) { var u = r.timed ? ' s' : ''; return '<li><b>' + esc(r.name) + '</b> : <span>' + r.v + u + '</span> <span class="small">(<span>' + r.old + u + '</span>)</span><br><span class="small">Prochain objectif</span> <span>' + r.nx + u + '</span></li>'; }).join('') + '</ul></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.solo ? 'Bien joué. Une série de plus chaque semaine, c\'est comme ça qu\'on progresse.' : R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
   if (R.sess && !R.partial && !R.solo) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
   h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
@@ -3973,6 +3985,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Rappel d'eau": "Water reminder", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "Every 2 h between 10 am and 6 pm, only if you are behind your goal.", "Pense à boire : un verre d'eau maintenant.": "Remember to drink: a glass of water now.", "Rappel : Pense à boire : un verre d'eau maintenant.": "Reminder: Remember to drink: a glass of water now."}, "ar": {"Rappel d'eau": "تذكير بالماء", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "كل ساعتين بين 10 صباحا و6 مساء، فقط إذا كنت متأخرا عن هدفك.", "Pense à boire : un verre d'eau maintenant.": "تذكّر أن تشرب: كأس ماء الآن.", "Rappel : Pense à boire : un verre d'eau maintenant.": "تذكير: تذكّر أن تشرب: كأس ماء الآن."}, "ma": {"Rappel d'eau": "Tadkir d l-ma", "Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.": "Kol sa3tin bin 10 u 18, ghir ila knti mt2khkher 3la l-hadaf dyalek.", "Pense à boire : un verre d'eau maintenant.": "Tfekker tshreb: kas d l-ma daba.", "Rappel : Pense à boire : un verre d'eau maintenant.": "Tadkir: Tfekker tshreb: kas d l-ma daba."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Nouveau record": "New record", "Prochain objectif": "Next goal"}, "ar": {"Nouveau record": "رقم قياسي جديد", "Prochain objectif": "الهدف التالي"}, "ma": {"Nouveau record": "Record jdid", "Prochain objectif": "L-hadaf lli jay"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
