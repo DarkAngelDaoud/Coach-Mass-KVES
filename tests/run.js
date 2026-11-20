@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.4' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.5' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,29 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 15.5 : voix multilingue */
+  async function voiceRun(lg, vfr) {
+    var vc = await br.newContext({ viewport: { width: 390, height: 800 } }), vp = await vc.newPage(); vp.errs = []; vp.on('pageerror', function (e) { vp.errs.push(e.message); });
+    await vp.addInitScript(function (a) {
+      window.__sp = [];
+      window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+      Object.defineProperty(window, 'speechSynthesis', { value: { speak: function (u) { window.__sp.push([u.lang, u.text]); }, cancel: function () {}, getVoices: function () { return []; } }, configurable: true });
+      if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75, lang: a.lg, voice: true, voiceFr: a.vfr }, logs: {}, sessions: [] }));
+    }, { lg: lg, vfr: vfr });
+    await vp.goto(url); await vp.waitForSelector('#nav');
+    await vp.click('#nav [data-v=train]'); await vp.click('[data-act=start]'); await vp.waitForTimeout(300);
+    await vp.waitForTimeout(600);
+    for (var z = 0; z < 8 && !(await vp.evaluate(function () { return window.__sp.length; })); z++) { await vp.click('#runner [data-act=skip]').catch(function () {}); await vp.waitForTimeout(400); }
+    var sp = await vp.evaluate(function () { return window.__sp; });
+    var er = vp.errs.slice(); await vc.close(); return { sp: sp, er: er };
+  }
+  var v0 = await voiceRun('fr', false), v1 = await voiceRun('en', false), v2 = await voiceRun('ar', false), v3 = await voiceRun('en', true);
+  t('voix : français inchangé', v0.sp.length > 0 && v0.sp.every(function (x) { return x[0] === 'fr-FR'; }), v0.sp.slice(0, 3));
+  t('voix : anglais quand l\'appli est en anglais', v1.sp.some(function (x) { return x[0] === 'en-US'; }), v1.sp.slice(0, 3));
+  t('voix : arabe quand l\'appli est en arabe', v2.sp.some(function (x) { return x[0] === 'ar-SA'; }), v2.sp.slice(0, 3));
+  t('voix : toujours en français si demandé', v3.sp.length > 0 && v3.sp.every(function (x) { return x[0] === 'fr-FR'; }), v3.sp.slice(0, 3));
+  t('aucune erreur (15.5)', !v0.er.length && !v1.er.length && !v2.er.length && !v3.er.length, v1.er);
 
   /* 15.4 : photos de progression */
   var phc = await br.newContext({ viewport: { width: 390, height: 800 } }), ph = await phc.newPage(); ph.errs = []; ph.on('pageerror', function (e) { ph.errs.push(e.message); });
