@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.0' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.1' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 15.1 : rappel d'eau */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
+  t('rappel eau : case présente', await pg.isVisible('[data-rm=water]'));
+  var rc = await br.newContext({ viewport: { width: 390, height: 800 } }), rp = await rc.newPage(); rp.errs = []; rp.on('pageerror', function (e) { rp.errs.push(e.message); });
+  await rp.clock.install({ time: new Date(2026, 10, 20, 14, 5, 0) });
+  await rp.addInitScript(function () { localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, rmOn: true, rmWater: true, w0: 75 }, logs: {} })); });
+  await rp.goto(url); await rp.clock.runFor(3000);
+  var rtoast = await rp.textContent('body');
+  t('rappel eau : prévenu à 14 h si en retard', rtoast.includes('Pense à boire'), rtoast.slice(0, 60));
+  d = await dataOf(rp); t('rappel eau : un seul rappel par créneau', /#14$/.test(d.profile.rmLe || ''), d.profile.rmLe);
+  await rp.clock.runFor(35000); d = await dataOf(rp); t('rappel eau : pas de répétition', /#14$/.test(d.profile.rmLe || ''));
+  t('aucune erreur (15.1)', rp.errs.length === 0 && pg.errs.length === 0, rp.errs.concat(pg.errs));
+  await rc.close();
   await pg.context().close();
 
   /* 15.0 : eau personnalisée */
