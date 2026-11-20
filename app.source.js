@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.2';
+var VERSION = '15.3';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Records personnels : à la fin d\'une séance, le coach te signale chaque exercice où tu bats ton record, et te donne le prochain objectif.'];
+var NOTES = ['Séance express : un bouton dans l\'onglet Séance lance une séance d\'environ 15 minutes (échauffement court, 2 séries par exercice). Pour les jours où tu manques de temps.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -771,6 +771,7 @@ function viewTrain() {
   var n = EX.filter(inSession).length;
   var h = '<h1>Séance</h1><p class="small">Semaine ' + wkNo() + ' · ' + (wkNo() <= 2 ? '3 séries' : '4 séries') + ' sur les exercices principaux · ' + n + ' exercices dans la séance complète. Jours prévus : ' + P.days.slice().sort().map(function (d) { return JOURS[d]; }).join(', ') + '.</p>';
   h += '<button class="btn go" data-act="start">Lancer la séance' + (isLight() ? ' (allégée)' : '') + '</button>';
+  h += '<button class="btn" data-act="quick">Séance express</button><p class="small">Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.</p>';
   ZONES.forEach(function (z) {
     var list = EX.filter(function (e) { return e.zone === z.id; });
     if (!list.length) return;
@@ -1179,18 +1180,24 @@ function startSession(opts) {
   var solo = opts && opts.only ? opts.only : null;
   var light = !solo && !!isLight(), w = wkNo();
   var list = solo ? EX.filter(function (e) { return e.id === solo; }) : EX.filter(inSession);
+  var quick = !solo && !!(opts && opts.quick);
   if (!list.length) return;
+  if (quick) {
+    var tot = 1.5, keep = [];
+    list.forEach(function (e) { var c = (P.exCfg && P.exCfg[e.id]) || {}, est = 2 * (40 + (c.rest || exDef(e).rest)) / 60; if (tot + est <= 15.5) { keep.push(e); tot += est; } });
+    list = keep.length ? keep : list.slice(0, 1);
+  }
   var plan = list.map(function (e) {
     var L = lv(e.id), names = levelsFor(e), li = Math.min(L.level, names.length - 1), c = (P.exCfg && P.exCfg[e.id]) || {}, d = exDef(e);
     var base = (w <= 2 || !e.grow) ? 3 : 4;
     var step = e.timed ? 5 : 1;
     var hi = solo && c.reps ? c.reps : e.hi + L.off;
-    return { e: e, name: names[li], sets: solo ? (c.sets || d.sets) : Math.max(2, base - (light ? 1 : 0)), lo: Math.min(e.lo + L.off, hi), hi: hi, rest: c.rest || d.rest, step: step };
+    return { e: e, name: names[li], sets: solo ? (c.sets || d.sets) : quick ? 2 : Math.max(2, base - (light ? 1 : 0)), lo: Math.min(e.lo + L.off, hi), hi: hi, rest: c.rest || d.rest, step: step };
   });
   var steps = [];
-  if (!solo) WARM.forEach(function (x) { steps.push({ k: 'warm', label: x.l, sec: x.s, fig: x.fig, period: x.period }); });
+  if (!solo) WARM.slice(0, quick ? 2 : WARM.length).forEach(function (x) { steps.push({ k: 'warm', label: x.l, sec: x.s, fig: x.fig, period: x.period }); });
   plan.forEach(function (p, i) { for (var s = 1; s <= p.sets; s++) steps.push({ k: 'set', pi: i, sn: s }); });
-  R = { sess: null, plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, solo: !!solo, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
+  R = { sess: null, plan: plan, steps: steps, i: -1, phase: 'intro', t0: Date.now(), logs: [], light: light, quick: quick, solo: !!solo, paused: false, timer: null, endAt: 0, remain: 0, last: -1, count: 0, reps: 0, quit: false };
   runner.hidden = false; document.body.style.overflow = 'hidden';
   unlockAudio();
   wake();
@@ -1305,14 +1312,14 @@ function finish(partial) {
   R.prs = findPrs(R.logs);
   var min = Math.max(1, Math.round((Date.now() - R.t0) / 60000));
   var ups = [];
-  if (!partial && !R.solo) ups = applyProgress(R.logs);
+  if (!partial && !R.solo && !R.quick) ups = applyProgress(R.logs);
   if (R.logs.length && R.solo) {
     var fs = null;
     D.sessions.forEach(function (x) { if (x.free && x.date === today()) fs = x; });
     if (!fs) { fs = { date: today(), min: 0, sets: 0, partial: true, free: true, light: false, week: wkNo(), logs: [] }; D.sessions.push(fs); }
     R.logs.forEach(function (l) { fs.logs.push(l); });
     fs.sets = fs.logs.length; fs.min += min;
-  } else if (R.logs.length) { R.sess = { date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, week: wkNo(), logs: R.logs }; D.sessions.push(R.sess); }
+  } else if (R.logs.length) { R.sess = { date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, quick: !!R.quick, week: wkNo(), logs: R.logs }; D.sessions.push(R.sess); }
   save();
   R.phase = 'done'; R.ups = ups; R.min = min; R.partial = partial;
   unwake(); drawDone();
@@ -2263,6 +2270,7 @@ document.addEventListener('click', function (ev) {
   if (a !== 'delsession') delArmed = -1;
   if (a === 'tab') { tab = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); return; }
   if (a === 'start') { startSession(); return; }
+  if (a === 'quick') { startSession({ quick: true }); return; }
   if (a === 'energy') { log().energy = +t.getAttribute('data-n'); save(); render(); return; }
   if (a === 'water') { var l = log(); l.water = Math.max(0, (+l.water || 0) + +t.getAttribute('data-n')); save(); render(); syncRemind(); return; }
   if (a === 'meal') { var lg = log(); lg.meals = lg.meals || []; lg.meals[+t.getAttribute('data-i')] = t.checked; save(); return; }
@@ -3990,6 +3998,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Nouveau record": "New record", "Prochain objectif": "Next goal"}, "ar": {"Nouveau record": "رقم قياسي جديد", "Prochain objectif": "الهدف التالي"}, "ma": {"Nouveau record": "Record jdid", "Prochain objectif": "L-hadaf lli jay"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Séance express": "Express session", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "About 15 minutes: short warm-up, 2 sets per exercise. No level-up with this version."}, "ar": {"Séance express": "حصة سريعة", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "حوالي 15 دقيقة: إحماء قصير، سلسلتان لكل تمرين. لا ترقية في المستوى بهذه النسخة."}, "ma": {"Séance express": "Seance express", "Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.": "Taqriban 15 d l-d9ayi9: skhana qsira, 2 d series f kol tmrin. Ma kayn ta tla9i f l-mustawa b had nsskha."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();

@@ -4,7 +4,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 15.2 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 15.3 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -131,6 +131,7 @@ Chaque fichier source porte la marque `© KVES · Coach-Mass-KVES`, qui apparaî
 | 13.8 | Réglages en sections repliables |
 | 15.1 | Rappel d'eau |
 | 15.2 | Records personnels et prochain objectif |
+| 15.3 | Séance express de 15 minutes |
 | 15.0 | Eau : objectif personnalisé et rappel du coach |
 | 14.9 | Carte Légal en liste, sous À propos |
 | 14.8 | Application minifiée (app.js) ; code lisible dans app.source.js |
