@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.4';
+var VERSION = '15.5';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Photos de progression : onglet Suivi, carte « Photos de progression ». Tes photos restent sur le téléphone, jamais envoyées.', 'Touche deux photos pour voir Avant et Après.'];
+var NOTES = ['Voix du coach multilingue : elle suit la langue de l\'application (anglais, arabe). Réglages > Coach : « Voix toujours en français » pour garder le français.', 'Si ton téléphone n\'a pas la voix de la langue, installe-la dans les réglages Android (synthèse vocale).'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -271,7 +271,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -1053,7 +1053,7 @@ function tog(key, label, hint) {
 function settingsRaw() {
   var h = '<button class="btn alt sm back" data-act="tab" data-v="more">← Plus</button><h1>Réglages</h1><div class="card"><h2>Jours de séance</h2><div class="seg">' +
     [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<button data-act="day" data-d="' + d + '" class="' + (isTrainDay(d) ? 'on' : '') + '">' + JOURS[d] + '</button>'; }).join('') + '</div></div>';
-  h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle en français dans tes écouteurs') + tog('vib', 'Vibrations') + '<label class="f">Intensité des vibrations</label><div class="seg" role="group">' + [[1, 'Normale'], [2, 'Forte'], [3, 'Très forte']].map(function (x) { return '<button data-act="vibpow" data-v="' + x[0] + '" class="' + ((P.vibLevel || 2) === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
+  h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle dans tes écouteurs') + tog('voiceFr', 'Voix toujours en français', 'Même si l\'application est dans une autre langue') + tog('vib', 'Vibrations') + '<label class="f">Intensité des vibrations</label><div class="seg" role="group">' + [[1, 'Normale'], [2, 'Forte'], [3, 'Très forte']].map(function (x) { return '<button data-act="vibpow" data-v="' + x[0] + '" class="' + ((P.vibLevel || 2) === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
     '<div class="grid2"><label class="f">Secondes par répétition<input type="number" inputmode="numeric" min="2" max="6" data-set="tempo" value="' + P.tempo + '"></label>' +
     '<label class="f">Repos en plus (secondes)<input type="number" inputmode="numeric" min="0" max="60" step="5" data-set="restBonus" value="' + P.restBonus + '"></label></div>' +
     '<div class="row"><button class="btn alt sm" data-act="testvoice">Tester la voix</button><button class="btn alt sm" data-act="testvib">Tester la vibration</button></div></div>';
@@ -1148,12 +1148,21 @@ function beep(f, ms) { tone(f || 880, (ms || 120) / 1000, 0, 'sine', 1); }
 function flash() {
   try { runner.classList.add('flash'); setTimeout(function () { runner.classList.remove('flash'); }, 450); } catch (e) {}
 }
+/* Voix : suit la langue de l'appli (EN -> anglais, AR et darija -> arabe). Si la phrase n'a pas de traduction connue, le coach parle français. */
+function voiceFor(t) {
+  var L = lang(), o = P.lang;
+  if (P.voiceFr || L === 'fr') return { t: t, l: 'fr-FR' };
+  var code = L === 'en' ? 'en' : 'ar', out = t;
+  try { P.lang = code; out = trText(t); } catch (e) { out = t; } finally { P.lang = o; }
+  if (out === t) return { t: t, l: 'fr-FR' };
+  return { t: out, l: code === 'en' ? 'en-US' : 'ar-SA' };
+}
 function say(t) {
   if (!P.voice) return;
   try {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-    var u = new SpeechSynthesisUtterance(t); u.lang = 'fr-FR'; u.rate = 1.05;
+    var vl = voiceFor(t), u = new SpeechSynthesisUtterance(vl.t); u.lang = vl.l; u.rate = 1.05;
     mDuckSay(u);
     window.speechSynthesis.speak(u);
   } catch (e) {}
@@ -4102,6 +4111,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Photos de progression": "Progress photos", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "Your photos stay only on this phone and are never sent. They are not in the backup.", "Ajouter une photo": "Add a photo", "Touche deux photos pour les comparer.": "Tap two photos to compare them.", "Aucune photo pour l'instant.": "No photos yet.", "Après": "After", "Avant": "Before", "Supprimer": "Delete", "Confirmer : supprimer": "Confirm: delete", "Photo illisible": "Unreadable photo"}, "ar": {"Photos de progression": "صور التقدم", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "تبقى صورك على هذا الهاتف فقط ولا تُرسل أبدا. وهي غير مشمولة في النسخة الاحتياطية.", "Ajouter une photo": "أضف صورة", "Touche deux photos pour les comparer.": "المس صورتين لمقارنتهما.", "Aucune photo pour l'instant.": "لا توجد صور بعد.", "Après": "بعد", "Avant": "قبل", "Supprimer": "حذف", "Confirmer : supprimer": "تأكيد: حذف", "Photo illisible": "صورة غير قابلة للقراءة"}, "ma": {"Photos de progression": "Suwar d t-tqddum", "Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.": "Suwar dyalk kay-bqaw ghir f had t-telifoun, ma kaytsiftu ta mra. Ma kaynin-ch f l-copie d sauvegarde.", "Ajouter une photo": "Zid tswira", "Touche deux photos pour les comparer.": "Touchi joj suwar bach tqarenhom.", "Aucune photo pour l'instant.": "Ma kayn ta tswira daba.", "Après": "Mn b3d", "Avant": "9bl", "Supprimer": "Mseh", "Confirmer : supprimer": "Akked: mseh", "Photo illisible": "Tswira ma tqrat-ch"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Parle dans tes écouteurs": "Speaks through your headphones", "Voix toujours en français": "Voice always in French", "Même si l'application est dans une autre langue": "Even if the app is in another language"}, "ar": {"Parle dans tes écouteurs": "يتحدث في سماعاتك", "Voix toujours en français": "الصوت دائما بالفرنسية", "Même si l'application est dans une autre langue": "حتى لو كان التطبيق بلغة أخرى"}, "ma": {"Parle dans tes écouteurs": "Kay-hder f l-écouteurs dyalk", "Voix toujours en français": "Ṣ-ṣout dima b l-fransawiya", "Même si l'application est dans une autre langue": "Hta ila l-application b logha khra"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
