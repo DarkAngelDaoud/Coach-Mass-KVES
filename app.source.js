@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.5';
+var VERSION = '16.6';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Records plus justes : comparés à la même variante de l\'exercice, et seulement si les répétitions ont été comptées ou corrigées par toi.'];
+var NOTES = ['Rappel des repas : la validation n\'est jamais envoyée avant 30 minutes après ton dernier repas (heures modifiables dans Repas).', 'Le champ s\'appelle maintenant « Validation repas à ».'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -2145,10 +2145,16 @@ function shopText() {
 function hm(s) { var m = /^(\d{1,2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
 function mealsAllDone() { var c = (D.logs[today()] || {}).meals || []; return mealsList().every(function (_, i) { return c[i]; }); }
 function waterSlot(d) { var h = d.getHours() + d.getMinutes() / 60, r = -1; [10, 12, 14, 16, 18].forEach(function (x) { if (h >= x && h < 20.5) r = x; }); return r; }
+function rmMealHM() {
+  var m = hm(P.rmM); if (m === null) return null;
+  var last = mealEff(Math.max(0, planSlots().length - 1));
+  return Math.max(m, last + 30);
+}
+function rmMealStr() { var n = rmMealHM(); if (n === null) return P.rmM; n = Math.min(n, 23 * 60 + 59); return pad(Math.floor(n / 60)) + ':' + pad(n % 60); }
 function rmDue() {
   var out = [];
   if (!P.rmOn) return out;
-  var d = new Date(), n = d.getHours() * 60 + d.getMinutes(), w = hm(P.rmW), m = hm(P.rmM), l = D.logs[today()] || {};
+  var d = new Date(), n = d.getHours() * 60 + d.getMinutes(), w = hm(P.rmW), m = rmMealHM(), l = D.logs[today()] || {};
   if (w !== null && n >= w && !l.weight && P.rmLw !== today()) out.push('w');
   if (m !== null && n >= m && !mealsAllDone() && P.rmLm !== today()) out.push('m');
   var sl = waterSlot(d);
@@ -2158,7 +2164,7 @@ function rmDue() {
 function syncRemind() {
   if (!window.caches || !P.rmOn) return;
   var l = D.logs[today()] || {};
-  var o = { on: !!P.rmOn, w: P.rmW, m: P.rmM, wd: l.weight ? today() : '', md: mealsAllDone() ? today() : '', lw: P.rmLw || '', lm: P.rmLm || '', we: !!P.rmWater, ww: +l.water || 0, wt: waterTarget(), le: P.rmLe || '' };
+  var o = { on: !!P.rmOn, w: P.rmW, m: rmMealStr(), wd: l.weight ? today() : '', md: mealsAllDone() ? today() : '', lw: P.rmLw || '', lm: P.rmLm || '', we: !!P.rmWater, ww: +l.water || 0, wt: waterTarget(), le: P.rmLe || '' };
   caches.open('coach-masse-remind').then(function (c) { return c.put('remind.json', new Response(JSON.stringify(o))); }).catch(function () {});
 }
 function sysNotify(txt, tag) {
@@ -2195,13 +2201,14 @@ function icsText() {
   }
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//KVES//Coach-Mass-KVES//FR', 'CALSCALE:GREGORIAN']
     .concat(ev('poids', P.rmW, 'Coach-Mass-KVES : note ton poids', 'Pese-toi a jeun puis note ton poids dans l application.'))
-    .concat(ev('repas', P.rmM, 'Coach-Mass-KVES : valide tes repas', 'Valide les repas du jour dans l application.'))
+    .concat(ev('repas', rmMealStr(), 'Coach-Mass-KVES : valide tes repas', 'Valide les repas du jour dans l application.'))
     .concat(['END:VCALENDAR']).join('\r\n') + '\r\n';
 }
 function rmCard() {
   var np = 'Notification' in window ? Notification.permission : 'none';
   return '<div class="card"><h2>Rappels</h2><label class="meal"><input type="checkbox" data-rm="on"' + (P.rmOn ? ' checked' : '') + '><span><b>Rappels quotidiens</b><br><span class="small">Poids le matin, validation des repas le soir. Rien n\'est envoyé si c\'est déjà fait.</span></span></label>' +
-    '<div class="grid2"><label class="f">Poids à<input type="time" data-rm="w" value="' + esc(P.rmW) + '"></label><label class="f">Repas à<input type="time" data-rm="m" value="' + esc(P.rmM) + '"></label></div>' +
+    '<p class="small">La validation des repas n\'est jamais envoyée avant 30 minutes après ton dernier repas.</p>' +
+    '<div class="grid2"><label class="f">Poids à<input type="time" data-rm="w" value="' + esc(P.rmW) + '"></label><label class="f">Validation repas à<input type="time" data-rm="m" value="' + esc(P.rmM) + '"></label></div>' +
     '<label class="meal"><input type="checkbox" data-rm="water"' + (P.rmWater ? ' checked' : '') + '><span><b>Rappel d\'eau</b><br><span class="small">Toutes les 2 h entre 10 h et 18 h, seulement si tu es en retard sur ton objectif.</span></span></label>' +
     '<p class="small">' + (np === 'granted' ? 'Notifications autorisées. ' : np === 'denied' ? 'Notifications bloquées : autorise-les dans les réglages Android de Chrome. ' : np === 'none' ? 'Notifications non disponibles ici. ' : '') +
     'Application fermée, Android peut retarder ou ignorer le rappel. Pour être sûr de l\'heure, ajoute-les aussi à ton calendrier.</p>' +
@@ -4346,6 +4353,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Un jour passé sans saisie compte pour 0 cigarette.": "A past day with no entry counts as 0 cigarettes."}, "ar": {"Un jour passé sans saisie compte pour 0 cigarette.": "اليوم الماضي بدون تسجيل يُحتسب 0 سيجارة."}, "ma": {"Un jour passé sans saisie compte pour 0 cigarette.": "Nhar fat bla tsjil kayt7seb 0 cigarette."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Validation repas à": "Meal check at", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "The meal check reminder is never sent earlier than 30 minutes after your last meal."}, "ar": {"Validation repas à": "التحقق من الوجبات عند", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "لا يُرسل تذكير التحقق من الوجبات قبل 30 دقيقة من آخر وجبة."}, "ma": {"Validation repas à": "Tsjil l-wajabat f", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "Tadkir d tsjil l-wajabat ma kaytsifet 9bl 30 d l-d9ayi9 mn akhir wajba."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
