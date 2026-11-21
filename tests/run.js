@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.2' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.3' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,18 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 16.3 : alerte d'échec d'enregistrement */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  t('enregistrement : pas de bandeau au départ', !(await pg.$('#savefail')));
+  await pg.evaluate(function () { window.__setItem = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new DOMException('full', 'QuotaExceededError'); }; });
+  await pg.click('[data-act=water][data-n="250"]'); await pg.waitForTimeout(200);
+  t('enregistrement : bandeau d\'alerte si le stockage échoue', await pg.isVisible('#savefail'));
+  t('enregistrement : bouton de sauvegarde proposé', await pg.isVisible('#savefail [data-act=bkexport]'));
+  await pg.evaluate(function () { Storage.prototype.setItem = window.__setItem; });
+  await pg.click('[data-act=water][data-n="250"]'); await pg.waitForTimeout(200);
+  t('enregistrement : bandeau retiré dès que ça réussit', !(await pg.$('#savefail')));
   await pg.context().close();
 
   /* 16.2 : effacement total et photos */
