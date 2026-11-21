@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.5' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.6' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,19 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.6 : rappel des repas et heures de repas */
+  var mc = await br.newContext({ viewport: { width: 390, height: 800 } }), mp = await mc.newPage(); mp.errs = []; mp.on('pageerror', function (e) { mp.errs.push(e.message); });
+  await mp.clock.install({ time: new Date(2026, 10, 21, 19, 0, 0) });
+  await mp.addInitScript(function () { localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75, rmOn: true, rmW: '07:00', rmM: '18:00', mt1: '07:30', mt2: '10:30', mt3: '13:00', mt4: '16:30', mt5: '20:00' }, logs: { '2026-11-21': { weight: 75 } }, sessions: [] })); });
+  await mp.goto(url); await mp.clock.runFor(3000);
+  var m1 = await dataOf(mp);
+  t('repas : pas de rappel à 19 h (dernier repas à 20 h)', m1.profile.rmLm !== '2026-11-21', m1.profile.rmLm);
+  await mp.clock.fastForward(95 * 60 * 1000); await mp.clock.runFor(35000);
+  var m2 = await dataOf(mp);
+  t('repas : rappel envoyé après 20 h 30', m2.profile.rmLm === '2026-11-21', m2.profile.rmLm);
+  t('aucune erreur (16.6)', mp.errs.length === 0, mp.errs);
+  await mc.close();
 
   /* 16.5 : records justes */
   async function recRun(prevName, fix) {
