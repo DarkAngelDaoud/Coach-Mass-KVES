@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.7';
+var VERSION = '15.8';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Bouton « J\'ai mal » pendant la séance : il met en pause, te laisse passer l\'exercice ou finir la séance, et note la douleur.', 'Si une douleur est signalée, un rappel apparaît dans l\'onglet Séance pendant 7 jours.'];
+var NOTES = ['Reprise après une pause : si tu n\'as pas fait de séance depuis 10 jours ou plus, le coach te propose une semaine allégée avant de reprendre normalement.', 'Tu peux aussi choisir de reprendre normalement.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -271,7 +271,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -366,7 +366,17 @@ function deloadDue() {
   if (P.deloadSkip === wk) return false;
   return (wk >= 5 && wk - P.deloadLast >= 5) || (r !== null && r >= 4.5 && wk - P.deloadLast >= 2);
 }
+function lastSessDate() { var m = ''; D.sessions.forEach(function (x) { if (x.date > m) m = x.date; }); return m; }
+function absenceDays() {
+  var l = lastSessDate(); if (!l) return 0;
+  return Math.floor((new Date(today() + 'T00:00:00') - new Date(l + 'T00:00:00')) / 86400000);
+}
+function absenceDue() { return !!P.onboarded && !deloadActive() && absenceDays() >= 10 && P.absSkip !== lastSessDate(); }
+function absenceCard() {
+  return '<div class="card coach"><h2>Content de te revoir</h2><p class="small"><span>Dernière séance il y a</span> <b>' + absenceDays() + '</b> <span>jours</span></p><p class="small">Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.</p><button class="btn go" data-act="absgo">Reprendre en douceur</button><button class="btn alt" data-act="absskip">Reprendre normalement</button></div>';
+}
 function deloadCard() {
+  if (absenceDue()) return absenceCard();
   if (deloadActive()) return '<div class="card coach"><h2>Semaine d\'allègement en cours</h2><p class="small">Les séances sont allégées jusqu\'à dimanche.</p><button class="btn alt sm" data-act="deloadstop">Arrêter l\'allègement</button></div>';
   if (deloadDue()) return '<div class="card"><h2>Semaine d\'allègement conseillée</h2><p class="small">Après plusieurs semaines d\'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.</p><button class="btn alt" data-act="deloadon">Activer cette semaine</button><button class="btn alt sm" data-act="deloadskip">Pas maintenant</button></div>';
   return '';
@@ -2768,6 +2778,8 @@ document.addEventListener('click', function (ev) {
   var a = t.getAttribute('data-act');
   if (a === 'rpe') { if (R && R.sess) { R.sess.rpe = +t.getAttribute('data-n'); save(); drawDone(); } }
   else if (a === 'deloadon') { P.deloadOn = weekStartStr(); P.deloadLast = wkNo(); save(); render(); }
+  else if (a === 'absgo') { P.deloadOn = weekStartStr(); P.deloadLast = wkNo(); save(); render(); }
+  else if (a === 'absskip') { P.absSkip = lastSessDate(); save(); render(); }
   else if (a === 'deloadskip') { P.deloadSkip = wkNo(); save(); render(); }
   else if (a === 'deloadstop') { P.deloadOn = ''; save(); render(); }
   else if (a === 'parqopen') showParq();
@@ -4182,6 +4194,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Douleur": "Pain", "J'ai mal": "I'm in pain", "Arrête et respire": "Stop and breathe", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "Do not push through pain. If it is sharp, sudden or lasting, see a doctor or a physiotherapist.", "Passer cet exercice": "Skip this exercise", "Terminer la séance": "End the session", "Douleur signalée": "Pain reported", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "Rest. If the pain comes back or lasts, see a doctor or a physiotherapist.", "Douleur signalée récemment": "Pain reported recently", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "Go gently on this exercise, or skip it if it hurts.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "It came back several times: talk to a doctor or a physiotherapist."}, "ar": {"Douleur": "ألم", "J'ai mal": "أشعر بألم", "Arrête et respire": "توقف وتنفس", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "لا تواصل رغم الألم. إذا كان حادا أو مفاجئا أو مستمرا، استشر طبيبا أو أخصائي علاج طبيعي.", "Passer cet exercice": "تخطَّ هذا التمرين", "Terminer la séance": "أنهِ الحصة", "Douleur signalée": "ألم مُبلَّغ عنه", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "ارتح. إذا عاد الألم أو استمر، استشر طبيبا أو أخصائي علاج طبيعي.", "Douleur signalée récemment": "ألم مُبلَّغ عنه مؤخرا", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "خفف على هذا التمرين، أو تخطَّه إذا كان مؤلما.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "عاد عدة مرات: تحدث مع طبيب أو أخصائي علاج طبيعي."}, "ma": {"Douleur": "Wja3", "J'ai mal": "3ndi l-wja3", "Arrête et respire": "Wqef w tnefes", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "Ma tkemmelsh m3a l-wja3. Ila kan 9wi, mfaj2 wla dayem, shuf tbib wla kinesitirapist.", "Passer cet exercice": "Douz had tmrin", "Terminer la séance": "Sali l-seance", "Douleur signalée": "Wja3 msjjel", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "Rtah. Ila rj3 l-wja3 wla dam, shuf tbib wla kinesitirapist.", "Douleur signalée récemment": "Wja3 msjjel mukhkharan", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "Mshi b shwiya f had tmrin, wla douzu ila kan kay-weja3.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "Rja3 bzzaf d l-mrat: hder m3a tbib wla kinesitirapist."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Content de te revoir": "Good to see you again", "Dernière séance il y a": "Last session", "jours": "days", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "Ease back in: one lighter week, then back to the normal program. Your body will thank you.", "Reprendre en douceur": "Ease back in", "Reprendre normalement": "Resume normally"}, "ar": {"Content de te revoir": "سعيد برؤيتك مجددا", "Dernière séance il y a": "آخر حصة قبل", "jours": "أيام", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "استأنف بلطف: أسبوع خفيف، ثم العودة إلى البرنامج العادي. جسمك سيشكرك.", "Reprendre en douceur": "استأنف بلطف", "Reprendre normalement": "استأنف بشكل عادي"}, "ma": {"Content de te revoir": "Ferhan b shufetek mn jdid", "Dernière séance il y a": "Akhir seance men", "jours": "iyam", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "Rje3 b shwiya: simana khfifa, mn b3d rje3 l-programme l3adi. Jesmek ghadi yshkerek.", "Reprendre en douceur": "Rje3 b shwiya", "Reprendre normalement": "Rje3 b tari9a 3adiya"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
