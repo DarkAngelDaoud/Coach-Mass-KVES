@@ -173,7 +173,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.9' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.0' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,17 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 17.0 : politique de confidentialité alignée */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=confid]');
+  var cf = await pg.textContent('#view');
+  t('confidentialité : QR = adresse seulement', cf.includes('seulement l\'adresse de l\'application') && !cf.includes('contient les informations que tu choisis de partager'));
+  t('confidentialité : tabac, douleurs et photos mentionnés', cf.includes('suivi du tabac') && cf.includes('douleurs') && cf.includes('photos de progression'));
+  t('confidentialité : export des photos et image du bilan', cf.includes('Export des photos') && cf.includes('Image du bilan de la semaine'));
+  t('confidentialité : voix du coach', cf.includes('Voix du coach') && cf.includes('synthèse vocale'));
+  t('confidentialité : effacement total des photos', cf.includes('supprime aussi les photos de progression'));
   await pg.context().close();
 
   /* 16.9 : J'ai mal partout, accessibilité des photos */
