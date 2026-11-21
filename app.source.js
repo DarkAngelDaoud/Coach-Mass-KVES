@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.5';
+var VERSION = '15.6';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Voix du coach multilingue : elle suit la langue de l\'application (anglais, arabe). Réglages > Coach : « Voix toujours en français » pour garder le français.', 'Si ton téléphone n\'a pas la voix de la langue, installe-la dans les réglages Android (synthèse vocale).'];
+var NOTES = ['Suivi du tabac (facultatif) : Réglages > Tabac. Un compteur simple dans Aujourd\'hui, sans jugement.', 'Désactivé par défaut. Données uniquement sur ton téléphone.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -271,7 +271,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -726,6 +726,19 @@ function waterNote(water, target) {
   if (h >= 11 && water < exp - 500) return 'En retard sur ton objectif : bois un verre maintenant.';
   return 'Tu es dans le rythme.';
 }
+function cigAvg(from, n) {
+  var tot = 0, c = 0, i, d, v;
+  for (i = from; i < from + n; i++) { d = new Date(); d.setDate(d.getDate() - i); v = (D.logs[dstr(d)] || {}).cig; if (v !== undefined && v !== null && !isNaN(+v)) { tot += +v; c++; } }
+  return c ? tot / c : null;
+}
+function tabacCard() {
+  if (!P.tabac) return '';
+  var l = D.logs[today()] || {}, a = cigAvg(0, 7), b = cigAvg(7, 7);
+  var h = '<div class="card"><div class="row"><h2 class="grow">Tabac</h2><b>' + (+l.cig || 0) + '</b></div>' +
+    '<div class="row"><button class="btn alt sm grow" data-act="cig" data-n="1">+ 1 cigarette</button><button class="btn alt sm" data-act="cig" data-n="-1">− 1</button></div>';
+  if (a !== null) h += '<div class="stats"><div class="stat"><b>' + fmt(a, 1) + '</b><span>par jour, 7 derniers jours</span></div>' + (b !== null ? '<div class="stat"><b>' + fmt(b, 1) + '</b><span>par jour, 7 jours d\'avant</span></div>' : '') + '</div>';
+  return h + '<p class="small">Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.</p></div>';
+}
 function viewToday() {
   var l = log(), m = coachMsg(), sug = suggestion();
   var energy = [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="energy" data-n="' + n + '" class="' + (+l.energy === n ? 'on' : '') + '">' + n + '</button>'; }).join('');
@@ -744,7 +757,7 @@ function viewToday() {
     '</div><label class="f">Énergie (1 = à plat, 5 = au top)</label><div class="seg">' + energy + '</div></div>';
   var wt = waterTarget();
   h += '<div class="card"><div class="row"><h2 class="grow">Eau</h2><b>' + fmt(water / 1000, 2) + ' / ' + fmt(wt / 1000, 2) + ' L</b></div><div class="bar"><i class="' + (water >= wt ? 'ok' : '') + '" style="width:' + Math.min(100, water * 100 / wt) + '%"></i></div><p class="small">' + waterNote(water, wt) + ' Objectif calculé : 30 ml par kg, plus 500 ml les jours de séance.</p>' +
-    '<div class="row"><button class="btn alt sm grow" data-act="water" data-n="250">+ 250 ml</button><button class="btn alt sm" data-act="water" data-n="-250">− 250</button></div></div>';
+    '<div class="row"><button class="btn alt sm grow" data-act="water" data-n="250">+ 250 ml</button><button class="btn alt sm" data-act="water" data-n="-250">− 250</button></div></div>' + tabacCard();
   var eaten = eatenKcal(), tg = kcalTarget();
   h += '<div class="card"><div class="row"><h2 class="grow">Repas validés</h2><b>' + eaten + ' / ' + tg + ' kcal</b></div><div class="bar"><i class="' + (eaten >= tg * 0.95 ? 'ok' : '') + '" style="width:' + Math.min(100, eaten / tg * 100) + '%"></i></div></div>';
   if (sug) {
@@ -1053,6 +1066,7 @@ function tog(key, label, hint) {
 function settingsRaw() {
   var h = '<button class="btn alt sm back" data-act="tab" data-v="more">← Plus</button><h1>Réglages</h1><div class="card"><h2>Jours de séance</h2><div class="seg">' +
     [1, 2, 3, 4, 5, 6, 0].map(function (d) { return '<button data-act="day" data-d="' + d + '" class="' + (isTrainDay(d) ? 'on' : '') + '">' + JOURS[d] + '</button>'; }).join('') + '</div></div>';
+  h += '<div class="card"><h2>Tabac</h2>' + tog('tabac', 'Suivre ma consommation de tabac', 'Facultatif, privé, sans jugement : un simple compteur par jour') + '</div>';
   h += '<div class="card"><h2>Coach</h2>' + tog('voice', 'Voix du coach', 'Parle dans tes écouteurs') + tog('voiceFr', 'Voix toujours en français', 'Même si l\'application est dans une autre langue') + tog('vib', 'Vibrations') + '<label class="f">Intensité des vibrations</label><div class="seg" role="group">' + [[1, 'Normale'], [2, 'Forte'], [3, 'Très forte']].map(function (x) { return '<button data-act="vibpow" data-v="' + x[0] + '" class="' + ((P.vibLevel || 2) === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' + tog('count', 'Compter les répétitions à voix haute', 'Le coach donne le rythme') + tog('auto', 'Enchaînement automatique', 'Mains libres : le coach relance après le repos') +
     '<div class="grid2"><label class="f">Secondes par répétition<input type="number" inputmode="numeric" min="2" max="6" data-set="tempo" value="' + P.tempo + '"></label>' +
     '<label class="f">Repos en plus (secondes)<input type="number" inputmode="numeric" min="0" max="60" step="5" data-set="restBonus" value="' + P.restBonus + '"></label></div>' +
@@ -2375,6 +2389,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'start') { startSession(); return; }
   if (a === 'quick') { startSession({ quick: true }); return; }
   if (a === 'energy') { log().energy = +t.getAttribute('data-n'); save(); render(); return; }
+  if (a === 'cig') { var lc = log(); lc.cig = Math.max(0, (+lc.cig || 0) + +t.getAttribute('data-n')); save(); render(); return; }
   if (a === 'water') { var l = log(); l.water = Math.max(0, (+l.water || 0) + +t.getAttribute('data-n')); save(); render(); syncRemind(); return; }
   if (a === 'meal') { var lg = log(); lg.meals = lg.meals || []; lg.meals[+t.getAttribute('data-i')] = t.checked; save(); return; }
   if (a === 'adj') { P.kcalAdj += +t.getAttribute('data-v'); P.lastAdj = today(); save(); render(); return; }
@@ -4116,6 +4131,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Parle dans tes écouteurs": "Speaks through your headphones", "Voix toujours en français": "Voice always in French", "Même si l'application est dans une autre langue": "Even if the app is in another language"}, "ar": {"Parle dans tes écouteurs": "يتحدث في سماعاتك", "Voix toujours en français": "الصوت دائما بالفرنسية", "Même si l'application est dans une autre langue": "حتى لو كان التطبيق بلغة أخرى"}, "ma": {"Parle dans tes écouteurs": "Kay-hder f l-écouteurs dyalk", "Voix toujours en français": "Ṣ-ṣout dima b l-fransawiya", "Même si l'application est dans une autre langue": "Hta ila l-application b logha khra"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Tabac": "Tobacco", "Suivre ma consommation de tabac": "Track my tobacco use", "Facultatif, privé, sans jugement : un simple compteur par jour": "Optional, private, no judgment: a simple daily counter", "+ 1 cigarette": "+ 1 cigarette", "par jour, 7 derniers jours": "per day, last 7 days", "par jour, 7 jours d'avant": "per day, the 7 days before", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "Note it without judging yourself. Every day counts. To get help quitting, talk to a doctor or a pharmacist."}, "ar": {"Tabac": "التبغ", "Suivre ma consommation de tabac": "تتبع استهلاكي للتبغ", "Facultatif, privé, sans jugement : un simple compteur par jour": "اختياري وخاص وبدون أحكام: عداد يومي بسيط", "+ 1 cigarette": "+ 1 سيجارة", "par jour, 7 derniers jours": "في اليوم، آخر 7 أيام", "par jour, 7 jours d'avant": "في اليوم، الأيام السبعة قبلها", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "سجّل دون أن تحكم على نفسك. كل يوم مهم. للحصول على مساعدة للإقلاع، تحدث مع طبيب أو صيدلي."}, "ma": {"Tabac": "Tbgha", "Suivre ma consommation de tabac": "Tbe3 l-istihlak dyali d tbgha", "Facultatif, privé, sans jugement : un simple compteur par jour": "Ikhtiyari, khass, bla7 7ok9: 3dad bsit f nhar", "+ 1 cigarette": "+ 1 cigarette", "par jour, 7 derniers jours": "f nhar, akhir 7 iyam", "par jour, 7 jours d'avant": "f nhar, 7 iyam lli 9bl", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "Kteb bla ma t7kem 3la rassk. Kol nhar muhim. Bach itsa3dek tw99ef, hder m3a tbib wla saydali."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
