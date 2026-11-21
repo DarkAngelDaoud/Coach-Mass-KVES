@@ -11,9 +11,10 @@ try { chromium = require('playwright').chromium; } catch (e) { chromium = requir
 var root = path.join(__dirname, '..'), fails = 0, ok = 0;
 function t(name, cond, extra) { if (cond) ok++; else { fails++; console.log('ECHEC : ' + name + (extra !== undefined ? ' -> ' + JSON.stringify(extra) : '')); } }
 var types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-var CFGKEY = null;
+var CFGKEY = null, BREAK = null;
 var server = http.createServer(function (q, r) {
   var p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
+  if (BREAK && p === BREAK) { r.writeHead(500); return r.end('boom'); }
   if (p === '/avis-config.js' && CFGKEY) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('window.AVIS_CONFIG=' + JSON.stringify({ publicKey: CFGKEY, email: '', whatsapp: '' }) + ';'); }
   var f = path.join(root, p);
   if (f.indexOf(root) !== 0 || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); }
@@ -172,7 +173,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.7' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.8' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +408,27 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.8 : service worker, installation tout ou rien et erreurs serveur */
+  async function swCtx() { return await br.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: 'allow' }); }
+  async function swReady(pg) { await pg.evaluate(function () { return navigator.serviceWorker.ready.then(function () { return true; }); }); }
+  var sc = await swCtx(), sp = await sc.newPage(); sp.errs = []; sp.on('pageerror', function (e) { sp.errs.push(e.message); });
+  await sp.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75 } })); });
+  await sp.goto(url); await sp.waitForSelector('#nav'); await swReady(sp); await sp.waitForTimeout(800);
+  var keys1 = await sp.evaluate(function () { return caches.keys(); });
+  t('sw : cache créé après installation complète', keys1.some(function (k) { return /^coach-masse-v/.test(k); }), keys1);
+  BREAK = '/app.js'; await sp.reload(); await sp.waitForTimeout(1500);
+  t('sw : une erreur serveur ne casse pas l\'appli (copie en cache utilisée)', (await sp.evaluate(function () { return !!window.__coach; })) && (await sp.textContent('#view')).length > 20, sp.errs);
+  BREAK = null; await sc.close();
+  BREAK = '/styles.css';
+  var sc2 = await swCtx(), sp2 = await sc2.newPage();
+  await sp2.goto(url); await sp2.waitForTimeout(2500);
+  var keys2 = await sp2.evaluate(function () { return caches.keys(); });
+  t('sw : installation refusée si un fichier indispensable manque (pas de cache partiel)', !keys2.some(function (k) { return /^coach-masse-v/.test(k); }), keys2);
+  BREAK = null; await sp2.reload(); await sp2.waitForTimeout(2500);
+  var keys3 = await sp2.evaluate(function () { return caches.keys(); });
+  t('sw : installation réussie dès que les fichiers sont disponibles', keys3.some(function (k) { return /^coach-masse-v/.test(k); }), keys3);
+  await sc2.close();
 
   /* 16.7 : séance express, effets */
   var qc = await br.newContext({ viewport: { width: 390, height: 800 } }), qp = await qc.newPage(); qp.errs = []; qp.on('pageerror', function (e) { qp.errs.push(e.message); });
