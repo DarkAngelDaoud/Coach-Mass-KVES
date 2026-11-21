@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.2';
+var VERSION = '16.3';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Correctif : « Effacer toutes les données » supprime maintenant toutes les photos de progression, même si tu n\'as pas ouvert l\'onglet Suivi.'];
+var NOTES = ['Si ton téléphone ne peut plus enregistrer tes données (stockage plein ou bloqué), un bandeau t\'avertit et te propose de sauvegarder tout de suite.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -354,7 +354,16 @@ function applyRotate() {
     else if (so.unlock) so.unlock();
   } catch (e) {}
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} try { syncRemind(); } catch (e) {} }
+function saveFlag(ok) {
+  var b = document.getElementById('savefail');
+  if (ok) { if (b) b.remove(); return; }
+  if (b) return;
+  b = document.createElement('div'); b.id = 'savefail'; b.className = 'savefail'; b.setAttribute('role', 'alert');
+  var t = document.createElement('p'); t.textContent = trText('Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.');
+  var k = document.createElement('button'); k.className = 'btn sm'; k.setAttribute('data-act', 'bkexport'); k.textContent = trText('Sauvegarder maintenant');
+  b.appendChild(t); b.appendChild(k); document.body.appendChild(b);
+}
+function save() { var ok = true; try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { ok = false; } try { saveFlag(ok); } catch (e) {} try { syncRemind(); } catch (e) {} }
 
 function log(d) { return D.logs[d || today()] || (D.logs[d || today()] = {}); }
 function lv(id) { return D.levels[id] || (D.levels[id] = { level: 0, off: 0 }); }
@@ -4319,6 +4328,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Attention :": "Warning:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "if you clear the site data in Chrome, the photos disappear. Export them from time to time.", "Importer des photos": "Import photos", "Exporter les photos": "Export photos", "Dernier export :": "Last export:", "Jamais exporté": "Never exported", "Fichier non reconnu": "File not recognized", "Aucune nouvelle photo": "No new photos", "Photos importées": "Photos imported"}, "ar": {"Attention :": "تنبيه:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "إذا مسحت بيانات الموقع في كروم، تختفي الصور. صدّرها من حين لآخر.", "Importer des photos": "استيراد الصور", "Exporter les photos": "تصدير الصور", "Dernier export :": "آخر تصدير:", "Jamais exporté": "لم تُصدَّر أبدا", "Fichier non reconnu": "ملف غير معروف", "Aucune nouvelle photo": "لا توجد صور جديدة", "Photos importées": "تم استيراد الصور"}, "ma": {"Attention :": "T3ejjel:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "ila mshti l-ma3lumat d l-site f Chrome, s-suwar katmshi. Sddrhom men w9t l-akhor.", "Importer des photos": "Jib suwar", "Exporter les photos": "Sddr s-suwar", "Dernier export :": "Akhir tsdir:", "Jamais exporté": "Mabqatsh tsddrat", "Fichier non reconnu": "Fichier ma t3rfsh", "Aucune nouvelle photo": "Ma kayn ta tswira jdida", "Photos importées": "Suwar tjabu"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "Saving failed: storage is full or blocked. Back up your data now."}, "ar": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "تعذر الحفظ: التخزين ممتلئ أو محظور. احفظ نسخة احتياطية من بياناتك الآن."}, "ma": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "Ma tsjjelsh: t-takhzin mmtli wla mqfoul. Dir sauvegarde l-ma3lumat dyalk daba."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();

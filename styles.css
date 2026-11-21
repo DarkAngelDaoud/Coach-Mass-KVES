@@ -292,3 +292,6 @@ details.card:not([open]) { padding-top: 10px; padding-bottom: 10px; }
 .phcmp figure{margin:0}
 .phcmp img{width:100%;border-radius:10px;display:block}
 .phcmp figcaption{font-size:13px;text-align:center;padding-top:4px}
+
+.savefail{position:fixed;left:12px;right:12px;bottom:76px;z-index:9999;background:#7a1f1f;color:#fff;border-radius:12px;padding:12px 14px;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+.savefail p{margin:0 0 8px;font-size:14px;line-height:1.35}
