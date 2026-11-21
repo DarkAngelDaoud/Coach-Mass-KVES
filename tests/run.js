@@ -173,7 +173,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.8' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.9' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -408,6 +408,30 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.9 : J'ai mal partout, accessibilité des photos */
+  var xc = await br.newContext({ viewport: { width: 390, height: 800 } }), xp = await xc.newPage(); xp.errs = []; xp.on('pageerror', function (e) { xp.errs.push(e.message); });
+  await xp.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75 }, logs: {}, sessions: [] })); });
+  await xp.goto(url); await xp.waitForSelector('#nav'); await xp.click('#nav [data-v=train]'); await xp.click('[data-act=start]');
+  t('douleur : bouton présent pendant l\'échauffement', /Échauffement/.test(await xp.textContent('#runner')) && await xp.isVisible('#runner [data-act=pain]'));
+  await xp.click('#runner [data-act=pain]');
+  t('douleur : le focus va sur l\'écran d\'arrêt', await xp.evaluate(function () { return document.activeElement && document.activeElement.getAttribute('data-act') === 'painskip'; }));
+  await xp.click('#runner [data-act=painskip]'); await xp.waitForTimeout(250);
+  t('douleur : passer saute seulement ce mouvement d\'échauffement', /Échauffement/.test(await xp.textContent('#runner')) && !(await xp.textContent('#runner')).includes('Arrête et respire'));
+  await xp.click('#runner [data-act=pain]'); await xp.click('#runner [data-act=painend]'); await xp.waitForTimeout(300);
+  var xd = await dataOf(xp);
+  t('douleur : échauffement noté, séance incomplète', xd.sessions.length === 1 && xd.sessions[0].partial === true && xd.sessions[0].pain.length === 2, xd.sessions);
+  await xp.click('#runner [data-act=stretch]'); await xp.waitForTimeout(250);
+  await xp.click('#runner [data-act=pain]'); await xp.click('#runner [data-act=painend]'); await xp.waitForTimeout(300);
+  var xe = await dataOf(xp);
+  t('douleur : pendant les étirements, retour à l\'écran de fin sans nouvelle séance', xe.sessions.length === 1 && xe.sessions[0].pain.length === 3 && await xp.isVisible('#runner [data-act=closerun]'), xe.sessions[0].pain);
+  await xp.click('#runner [data-act=closerun]');
+  await xp.click('#nav [data-v=track]');
+  var pngx = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await xp.setInputFiles('[data-ph=add]', { name: 'a.png', mimeType: 'image/png', buffer: pngx }); await xp.waitForTimeout(600);
+  t('photos : miniature annoncée avec sa date', await xp.evaluate(function () { var b = document.querySelector('.phth'); return !!b && /^Photo du .+/.test(b.getAttribute('aria-label') || ''); }));
+  t('aucune erreur (16.9)', xp.errs.length === 0, xp.errs);
+  await xc.close();
 
   /* 16.8 : service worker, installation tout ou rien et erreurs serveur */
   async function swCtx() { return await br.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: 'allow' }); }
