@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.4';
+var VERSION = '16.5';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Tabac : la moyenne compte maintenant tous les jours écoulés depuis l\'activation. Un jour sans saisie compte pour 0 cigarette.'];
+var NOTES = ['Records plus justes : comparés à la même variante de l\'exercice, et seulement si les répétitions ont été comptées ou corrigées par toi.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -1385,7 +1385,7 @@ function stopWork() {
 function finishSet(reps) {
   var o = setInfo(), p = o.p;
   clearTimer();
-  R.logs.push({ id: p.e.id, name: p.name, hi: p.hi, sn: o.s.sn, reps: reps });
+  R.logs.push({ id: p.e.id, name: p.name, hi: p.hi, sn: o.s.sn, reps: reps, m: !!(p.e.timed || P.count) });
   R.reps = reps;
   if (R.i + 1 >= R.steps.length) return finish(false);
   var nx = R.steps[R.i + 1], np = R.plan[nx.pi];
@@ -1400,12 +1400,15 @@ function finishSet(reps) {
 }
 
 function findPrs(logs) {
+  /* Un record se compare à la même variante de l'exercice (id + nom). Une série n'est comptée que si le nombre de répétitions a été
+     réellement mesuré (compteur, exercice chronométré, ou corrigé à la main) : sans comptage, la valeur n'est que la cible. */
   var prev = {}, cur = {}, out = [];
-  D.sessions.forEach(function (x) { (x.logs || []).forEach(function (l) { if (+l.reps > (prev[l.id] || 0)) prev[l.id] = +l.reps; }); });
-  logs.forEach(function (l) { if (+l.reps > (cur[l.id] ? cur[l.id].v : 0)) cur[l.id] = { v: +l.reps, name: l.name }; });
-  Object.keys(cur).forEach(function (id) {
-    var e = EX.filter(function (x) { return x.id === id; })[0];
-    if (prev[id] > 0 && cur[id].v > prev[id]) out.push({ name: cur[id].name, v: cur[id].v, old: prev[id], nx: cur[id].v + (e && e.timed ? 5 : 1), timed: !!(e && e.timed) });
+  function key(l) { return l.id + '|' + l.name; }
+  D.sessions.forEach(function (x) { (x.logs || []).forEach(function (l) { if (+l.reps > (prev[key(l)] || 0)) prev[key(l)] = +l.reps; }); });
+  logs.forEach(function (l) { if (l.m === true && +l.reps > (cur[key(l)] ? cur[key(l)].v : 0)) cur[key(l)] = { v: +l.reps, name: l.name, id: l.id }; });
+  Object.keys(cur).forEach(function (k) {
+    var c = cur[k], e = EX.filter(function (x) { return x.id === c.id; })[0];
+    if (prev[k] > 0 && c.v > prev[k]) out.push({ name: c.name, v: c.v, old: prev[k], nx: c.v + (e && e.timed ? 5 : 1), timed: !!(e && e.timed) });
   });
   return out;
 }
@@ -2622,7 +2625,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'stopwork') { stopWork(); return; }
   if (a === 'repp' || a === 'repm') {
     var lastLog = R.logs[R.logs.length - 1];
-    if (lastLog) { lastLog.reps = Math.max(0, lastLog.reps + (a === 'repp' ? 1 : -1)); R.reps = lastLog.reps; setTxt('reps', lastLog.reps); }
+    if (lastLog) { lastLog.reps = Math.max(0, lastLog.reps + (a === 'repp' ? 1 : -1)); lastLog.m = true; R.reps = lastLog.reps; setTxt('reps', lastLog.reps); }
     return;
   }
   if (a === 'stretch') { startStretch(); return; }
