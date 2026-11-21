@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.0' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.1' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -545,6 +545,19 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('photos : conservées après rechargement', (await ph.$$('.phth')).length === 2);
   await ph.click('.phth >> nth=0'); await ph.click('[data-act=phdel]'); await ph.click('[data-act=phdel]'); await ph.waitForTimeout(500);
   t('photos : suppression', (await ph.$$('.phth')).length === 1);
+  t('photos : avertissement visible', (await ph.textContent('#phcard')).includes('les photos disparaissent'));
+  var [phd] = await Promise.all([ph.waitForEvent('download', { timeout: 6000 }), ph.click('[data-act=phexp]')]);
+  var phpath = await phd.path(), phj = JSON.parse(require('fs').readFileSync(phpath, 'utf8'));
+  t('photos : export JSON valide', phj.app === 'coach-masse-photos' && phj.items.length === 1 && phj.items[0].data.indexOf('data:image/jpeg;base64,') === 0, [phd.suggestedFilename(), phj.items.length]);
+  t('photos : date du dernier export', !(await ph.textContent('#phcard')).includes('Jamais exporté'));
+  await ph.click('.phth >> nth=0'); await ph.click('[data-act=phdel]'); await ph.click('[data-act=phdel]'); await ph.waitForTimeout(400);
+  t('photos : plus aucune photo avant import', (await ph.$$('.phth')).length === 0);
+  await ph.setInputFiles('[data-ph=imp]', phpath); await ph.waitForTimeout(600);
+  t('photos : import restaure la photo', (await ph.$$('.phth')).length === 1);
+  await ph.setInputFiles('[data-ph=imp]', phpath); await ph.waitForTimeout(500);
+  t('photos : import sans doublon', (await ph.$$('.phth')).length === 1);
+  await ph.setInputFiles('[data-ph=imp]', { name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('{"a":1}') }); await ph.waitForTimeout(300);
+  t('photos : fichier invalide refusé', (await ph.$$('.phth')).length === 1);
   t('aucune erreur (15.4)', ph.errs.length === 0, ph.errs);
   await phc.close();
 
