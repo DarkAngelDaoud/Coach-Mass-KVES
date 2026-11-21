@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.3';
+var VERSION = '16.4';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Si ton téléphone ne peut plus enregistrer tes données (stockage plein ou bloqué), un bandeau t\'avertit et te propose de sauvegarder tout de suite.'];
+var NOTES = ['Tabac : la moyenne compte maintenant tous les jours écoulés depuis l\'activation. Un jour sans saisie compte pour 0 cigarette.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -278,7 +278,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', phExp: '', deloadUntil: '', vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -753,17 +753,22 @@ function waterNote(water, target) {
   return 'Tu es dans le rythme.';
 }
 function cigAvg(from, n) {
-  var tot = 0, c = 0, i, d, v;
-  for (i = from; i < from + n; i++) { d = new Date(); d.setDate(d.getDate() - i); v = (D.logs[dstr(d)] || {}).cig; if (v !== undefined && v !== null && !isNaN(+v)) { tot += +v; c++; } }
+  var tot = 0, c = 0, i, d, k, v, t0 = today();
+  for (i = from; i < from + n; i++) {
+    d = new Date(); d.setDate(d.getDate() - i); k = dstr(d); v = (D.logs[k] || {}).cig;
+    if (v !== undefined && v !== null && !isNaN(+v)) { tot += +v; c++; }
+    else if (k < t0 && P.tabacFrom && k >= P.tabacFrom) { c++; }
+  }
   return c ? tot / c : null;
 }
 function tabacCard() {
   if (!P.tabac) return '';
+  if (!P.tabacFrom) { P.tabacFrom = today(); save(); }
   var l = D.logs[today()] || {}, a = cigAvg(0, 7), b = cigAvg(7, 7);
   var h = '<div class="card"><div class="row"><h2 class="grow">Tabac</h2><b>' + (+l.cig || 0) + '</b></div>' +
     '<div class="row"><button class="btn alt sm grow" data-act="cig" data-n="1">+ 1 cigarette</button><button class="btn alt sm" data-act="cig" data-n="-1">− 1</button></div>';
   if (a !== null) h += '<div class="stats"><div class="stat"><b>' + fmt(a, 1) + '</b><span>par jour, 7 derniers jours</span></div>' + (b !== null ? '<div class="stat"><b>' + fmt(b, 1) + '</b><span>par jour, 7 jours d\'avant</span></div>' : '') + '</div>';
-  return h + '<p class="small">Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.</p></div>';
+  return h + '<p class="small">Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.</p><p class="small">Un jour passé sans saisie compte pour 0 cigarette.</p></div>';
 }
 function viewToday() {
   var l = log(), m = coachMsg(), sug = suggestion();
@@ -4333,6 +4338,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "Saving failed: storage is full or blocked. Back up your data now."}, "ar": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "تعذر الحفظ: التخزين ممتلئ أو محظور. احفظ نسخة احتياطية من بياناتك الآن."}, "ma": {"Enregistrement impossible : stockage plein ou bloqué. Sauvegarde tes données maintenant.": "Ma tsjjelsh: t-takhzin mmtli wla mqfoul. Dir sauvegarde l-ma3lumat dyalk daba."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Un jour passé sans saisie compte pour 0 cigarette.": "A past day with no entry counts as 0 cigarettes."}, "ar": {"Un jour passé sans saisie compte pour 0 cigarette.": "اليوم الماضي بدون تسجيل يُحتسب 0 سيجارة."}, "ma": {"Un jour passé sans saisie compte pour 0 cigarette.": "Nhar fat bla tsjil kayt7seb 0 cigarette."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
