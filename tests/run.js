@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.3' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.4' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.4 : moyenne du tabac */
+  var tc4 = await br.newContext({ viewport: { width: 390, height: 800 } }), tp4 = await tc4.newPage(); tp4.errs = []; tp4.on('pageerror', function (e) { tp4.errs.push(e.message); });
+  await tp4.addInitScript(function () {
+    if (localStorage.getItem('coach-masse-v1')) return;
+    function ds(n) { var d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    var lg = {}; lg[ds(3)] = { cig: 7 };
+    localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75, tabac: true, tabacFrom: ds(10) }, logs: lg, sessions: [] }));
+  });
+  await tp4.goto(url); await tp4.waitForSelector('#nav');
+  var tt4 = await tp4.textContent('#view');
+  t('tabac : jours sans saisie comptés (7 cig sur 6 jours = 1,2)', tt4.includes('1,2') && !tt4.includes('7,0'), tt4.slice(tt4.indexOf('Tabac'), tt4.indexOf('Tabac') + 120));
+  t('tabac : explication affichée', tt4.includes('sans saisie compte pour 0'));
+  t('tabac : date d\'activation enregistrée', !!(await dataOf(tp4)).profile.tabacFrom);
+  t('aucune erreur (16.4)', tp4.errs.length === 0, tp4.errs);
+  await tc4.close();
 
   /* 16.3 : alerte d'échec d'enregistrement */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
