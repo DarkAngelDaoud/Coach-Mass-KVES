@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.6';
+var VERSION = '16.7';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Rappel des repas : la validation n\'est jamais envoyée avant 30 minutes après ton dernier repas (heures modifiables dans Repas).', 'Le champ s\'appelle maintenant « Validation repas à ».'];
+var NOTES = ['Séance express : elle est marquée « express » dans l\'historique, ne compte plus pour l\'effort moyen, et la séance complète reste proposée le même jour.', 'La séance express ne fait toujours pas monter de niveau.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -370,10 +370,11 @@ function lv(id) { return D.levels[id] || (D.levels[id] = { level: 0, off: 0 }); 
 function levelsFor(e) { return e.id === 'tirage' && P.hasBar ? e.levels.concat(['Tractions (barre)']) : e.levels; }
 function wkNo() { return Math.max(1, Math.floor((dnum(today()) - dnum(P.start)) / 7) + 1); }
 function isTrainDay(dow) { return P.days.indexOf(dow) >= 0; }
-function doneToday() { return D.sessions.some(function (s) { return s.date === today() && !s.partial; }); }
+function doneToday() { return D.sessions.some(function (s) { return s.date === today() && !s.partial && !s.quick; }); }
+function quickToday() { return D.sessions.some(function (s) { return s.date === today() && !s.partial && s.quick; }); }
 function deloadActive() { return (!!P.deloadOn && P.deloadOn === weekStartStr()) || (!!P.deloadUntil && today() <= P.deloadUntil); }
 function rpeLast3() {
-  var a = D.sessions.filter(function (x) { return !x.partial && !x.free && +x.rpe > 0; }).slice(-3);
+  var a = D.sessions.filter(function (x) { return !x.partial && !x.free && !x.quick && +x.rpe > 0; }).slice(-3);
   return a.length === 3 ? (a[0].rpe + a[1].rpe + a[2].rpe) / 3 : null;
 }
 function deloadDue() {
@@ -778,6 +779,7 @@ function viewToday() {
   h += bkBanner();
   h += deloadCard();
   h += parqCard();
+  if (isTrainDay(new Date().getDay()) && !doneToday() && quickToday()) h += '<p class="small">Séance express faite aujourd\'hui. Tu peux encore faire la séance complète.</p>';
   if (isTrainDay(new Date().getDay()) && !doneToday()) h += '<button class="btn go" data-act="start">Lancer la séance' + (isLight() ? ' (allégée)' : '') + '</button>';
   else h += '<p class="small">Prochaine séance : ' + nextTrainLabel() + '. Tu peux en lancer une quand même dans l\'onglet Séance.</p>';
   h += '<div class="card"><h2>Bilan du jour</h2><div class="grid2">' +
@@ -1120,7 +1122,7 @@ function viewHistory() {
       rows += '<li><span>' + esc(arr[0].name || e.name) + '</span><span>' + arr.map(function (l) { return l.reps; }).join(' · ') + (e.timed ? ' s' : '') + '</span></li>';
     });
     h += '<details class="card"' + (delArmed === i ? ' open' : '') + '><summary><span class="grow">' + esc(ldate(s.date)) + '</span>' +
-      (s.free ? '<span class="pill">libre</span>' : s.partial ? '<span class="pill">incomplète</span>' : '') + (s.light ? '<span class="pill">allégée</span>' : '') + '</summary>' +
+      (s.free ? '<span class="pill">libre</span>' : s.partial ? '<span class="pill">incomplète</span>' : '') + (s.light ? '<span class="pill">allégée</span>' : '') + (s.quick ? '<span class="pill">express</span>' : '') + '</summary>' +
       '<p class="small">' + s.min + ' min · ' + s.sets + ' séries · ' + tot + ' répétitions · semaine ' + (s.week || '—') + '</p>' +
       '<ul class="list">' + (rows || '<li><span>Aucune série enregistrée</span></li>') + '</ul>' +
       '<button class="btn bad sm" data-act="delsession" data-i="' + i + '">' + (delArmed === i ? 'Confirmer la suppression' : 'Supprimer cette séance') + '</button></details>';
@@ -1516,7 +1518,8 @@ function drawDone() {
   if (R.prs && R.prs.length) h += '<div class="card"><h2>Nouveau record</h2><ul class="list">' + R.prs.map(function (r) { var u = r.timed ? ' s' : ''; return '<li><b>' + esc(r.name) + '</b> : <span>' + r.v + u + '</span> <span class="small">(<span>' + r.old + u + '</span>)</span><br><span class="small">Prochain objectif</span> <span>' + r.nx + u + '</span></li>'; }).join('') + '</ul></div>';
   if (R.pain && R.pain.length) h += '<div class="card"><h2>Douleur signalée</h2><p class="small"><b>' + R.pain.map(esc).join(', ') + '</b></p><p class="small">Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.</p></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.solo ? 'Bien joué. Une série de plus chaque semaine, c\'est comme ça qu\'on progresse.' : R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
-  if (R.sess && !R.partial && !R.solo) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
+  if (R.quick && !R.partial) h += '<div class="card"><h2>Séance express</h2><p class="small">Cette séance ne compte pas pour la montée de niveau ni pour l\'effort moyen. Fais la séance complète pour progresser.</p></div>';
+  if (R.sess && !R.partial && !R.solo && !R.quick) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
   if (!R.stretched) h += '<div class="card"><h2>Étirements</h2><p class="small">3 minutes pour détendre les muscles. Sans forcer, sans rebondir.</p><button class="btn alt" data-act="stretch">Faire les étirements</button></div>';
   h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
   runner.innerHTML = h;
@@ -4358,6 +4361,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Validation repas à": "Meal check at", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "The meal check reminder is never sent earlier than 30 minutes after your last meal."}, "ar": {"Validation repas à": "التحقق من الوجبات عند", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "لا يُرسل تذكير التحقق من الوجبات قبل 30 دقيقة من آخر وجبة."}, "ma": {"Validation repas à": "Tsjil l-wajabat f", "La validation des repas n'est jamais envoyée avant 30 minutes après ton dernier repas.": "Tadkir d tsjil l-wajabat ma kaytsifet 9bl 30 d l-d9ayi9 mn akhir wajba."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"express": "express", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "This session does not count toward level-ups or average effort. Do the full session to progress.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "Express session done today. You can still do the full session."}, "ar": {"express": "سريعة", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "هذه الحصة لا تُحسب في الارتقاء بالمستوى ولا في متوسط الجهد. أنجز الحصة الكاملة لتتقدم.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "تمت الحصة السريعة اليوم. يمكنك ما زال إنجاز الحصة الكاملة."}, "ma": {"express": "express", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "Had s-seance ma kat7seb-ch f t-tla9i f l-mustawa wla f m3addal l-jhd. Dir s-seance kamla bach tt9ddem.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "Seance express tdarat lyum. Mazal imkn lik dir s-seance kamla."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
