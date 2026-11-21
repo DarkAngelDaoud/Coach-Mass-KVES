@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.6' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.7' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,30 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.7 : séance express, effets */
+  var qc = await br.newContext({ viewport: { width: 390, height: 800 } }), qp = await qc.newPage(); qp.errs = []; qp.on('pageerror', function (e) { qp.errs.push(e.message); });
+  await qp.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75, days: [0, 1, 2, 3, 4, 5, 6] }, logs: {}, sessions: [] })); });
+  await qp.goto(url); await qp.waitForSelector('#nav'); await qp.click('#nav [data-v=train]'); await qp.click('[data-act=quick]');
+  for (var zq = 0; zq < 12 && /Échauffement/.test(await qp.textContent('#runner')); zq++) { await qp.click('#runner [data-act=skip]'); await qp.waitForTimeout(120); }
+  await qp.click('#runner [data-act=begin]'); await qp.waitForTimeout(300);
+  await qp.evaluate(function () { var D = JSON.parse(localStorage.getItem('coach-masse-v1')); localStorage.setItem('coach-masse-v1', JSON.stringify(D)); });
+  for (var zr = 0; zr < 40 && !(await qp.isVisible('#runner [data-act=closerun]')); zr++) {
+    if (await qp.isVisible('#runner [data-act=stopwork]')) await qp.click('#runner [data-act=stopwork]');
+    else if (await qp.isVisible('#runner [data-act=skip]')) await qp.click('#runner [data-act=skip]');
+    else if (await qp.isVisible('#runner [data-act=begin]')) await qp.click('#runner [data-act=begin]');
+    await qp.waitForTimeout(120);
+  }
+  var qd = await qp.textContent('#runner');
+  t('express : écran de fin avec explication, sans question d\'effort', qd.includes('ne compte pas pour la montée de niveau') && !qd.includes('Effort ressenti'), qd.slice(0, 160));
+  var qdata = await dataOf(qp);
+  t('express : séance marquée quick et complète', qdata.sessions.length === 1 && qdata.sessions[0].quick === true && qdata.sessions[0].partial === false, qdata.sessions);
+  await qp.click('#runner [data-act=closerun]'); await qp.click('#nav [data-v=today]');
+  t('express : la séance complète reste proposée le même jour', await qp.isVisible('#view [data-act=start]'));
+  await qp.click('#nav [data-v=history]');
+  t('express : pastille dans l\'historique', (await qp.textContent('#view')).includes('express'));
+  t('aucune erreur (16.7)', qp.errs.length === 0, qp.errs);
+  await qc.close();
 
   /* 16.6 : rappel des repas et heures de repas */
   var mc = await br.newContext({ viewport: { width: 390, height: 800 } }), mp = await mc.newPage(); mp.errs = []; mp.on('pageerror', function (e) { mp.errs.push(e.message); });
