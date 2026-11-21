@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.7';
+var VERSION = '16.8';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Séance express : elle est marquée « express » dans l\'historique, ne compte plus pour l\'effort moyen, et la séance complète reste proposée le même jour.', 'La séance express ne fait toujours pas monter de niveau.'];
+var NOTES = ['Mise à jour plus sûre : l\'application ne garde jamais un mélange d\'anciens et de nouveaux fichiers.', 'Une erreur du serveur ne remplace plus la copie qui fonctionne.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },

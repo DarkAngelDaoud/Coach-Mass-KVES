@@ -1,10 +1,14 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v16-7';
-var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'avis-config.js', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+var CACHE = 'coach-masse-v16-8';
+/* Fichiers indispensables : tout est mis en cache ou rien (pas de mélange d'anciens et de nouveaux fichiers). */
+var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+var OPTIONAL = ['avis-config.js'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
-    return Promise.all(FILES.map(function (f) { return c.add(new Request(f, { cache: 'reload' })).catch(function () {}); }));
-  }).then(function () { return self.skipWaiting(); }));
+    return c.addAll(FILES.map(function (f) { return new Request(f, { cache: 'reload' }); })).then(function () {
+      return Promise.all(OPTIONAL.map(function (f) { return c.add(new Request(f, { cache: 'reload' })).catch(function () {}); }));
+    });
+  }).then(function () { return self.skipWaiting(); }).catch(function (err) { return caches.delete(CACHE).then(function () { throw err; }); }));
 });
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (k) { return Promise.all(k.filter(function (n) { return n !== CACHE && n.indexOf('coach-masse-v') === 0; }).map(function (n) { return caches.delete(n); })); }).then(function () { return self.clients.claim(); }));
@@ -18,8 +22,8 @@ self.addEventListener('fetch', function (e) {
     var timer = setTimeout(function () { caches.match(e.request).then(give); }, 3000);
     fetch(e.request).then(function (resp) {
       clearTimeout(timer);
-      if (resp && resp.ok) { var copy = resp.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); }
-      give(resp);
+      if (resp && resp.ok) { var copy = resp.clone(); caches.open(CACHE).then(function (c) { c.put(e.request, copy); }); give(resp); }
+      else caches.match(e.request).then(function (r) { give(r || resp); });
     }).catch(function () {
       clearTimeout(timer);
       caches.match(e.request).then(function (r) { return r || caches.match('index.html'); }).then(function (r) { if (r) give(r); else if (!done) { done = true; res(Response.error()); } });
