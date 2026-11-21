@@ -8,9 +8,16 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.8';
+var VERSION = '15.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Reprise après une pause : si tu n\'as pas fait de séance depuis 10 jours ou plus, le coach te propose une semaine allégée avant de reprendre normalement.', 'Tu peux aussi choisir de reprendre normalement.'];
+var NOTES = ['Étirements de fin de séance : à la fin, un bouton lance 5 étirements guidés (environ 3 minutes), avec chrono et voix.', 'Facultatif : tu peux fermer sans les faire.'];
+var STRETCH = [
+  { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
+  { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
+  { l: 'Étire l\'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer', s: 40 },
+  { l: 'Posture de l\'enfant : assis sur les talons, bras devant, dos détendu', s: 30 },
+  { l: 'Respire lentement : cinq grandes respirations, épaules relâchées', s: 30 }
+];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -1254,10 +1261,20 @@ function setTimer(sec, onTick, onEnd, onFine) {
 function setTxt(id, t) { var n = $('#' + id); if (n) n.textContent = t; }
 
 function cur() { return R.steps[R.i]; }
+function startStretch() {
+  clearTimer();
+  R.stretch = true; R.steps = STRETCH.map(function (x) { return { k: 'warm', label: x.l, sec: x.s }; });
+  R.i = -1; R.paused = false; R.quit = false; R.painOpen = false; R.phase = 'warm';
+  wake(); advance();
+}
+function endStretch() {
+  clearTimer(); R.stretch = false; R.stretched = true; R.phase = 'done'; unwake();
+  play('chime'); drawDone();
+}
 function advance() {
   clearTimer();
   R.i++;
-  if (R.i >= R.steps.length) return finish(false);
+  if (R.i >= R.steps.length) return R.stretch ? endStretch() : finish(false);
   var s = cur();
   if (s.k === 'warm') {
     R.phase = 'warm'; draw();
@@ -1409,11 +1426,11 @@ function painCard() {
 function draw() {
   if (R.painOpen) { drawPain(); return; }
   var s = cur(), h = '', pr = Math.round(R.i / R.steps.length * 100);
-  h += '<div class="rtop"><span class="small">' + (s.k === 'warm' ? 'Échauffement' : 'Exercice ' + (s.pi + 1) + '/' + R.plan.length + ' · série ' + s.sn + '/' + R.plan[s.pi].sets) + '</span>' +
+  h += '<div class="rtop"><span class="small">' + (s.k === 'warm' ? (R.stretch ? 'Étirements' : 'Échauffement') : 'Exercice ' + (s.pi + 1) + '/' + R.plan.length + ' · série ' + s.sn + '/' + R.plan[s.pi].sets) + '</span>' +
     '<span class="row">' + (s.k === 'warm' ? '' : '<button class="btn alt sm" data-act="pain">J\'ai mal</button>') + '<button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
   h += '<div class="bar"><i style="width:' + pr + '%"></i></div>' + mMiniHtml();
   if (s.k === 'warm') {
-    h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p>' + drawBox(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
+    h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p>' + (s.fig ? drawBox(s.fig, R.paused ? 'hold' : 'loop', s.period) : '') + '</div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
   } else {
     var p = R.plan[s.pi], e = p.e, unit = e.timed ? 'secondes' : 'répétitions';
     var ds = R.phase === 'rest' && R.steps[R.i + 1] ? R.plan[R.steps[R.i + 1].pi] : p;
@@ -1446,6 +1463,7 @@ function drawDone() {
   if (R.pain && R.pain.length) h += '<div class="card"><h2>Douleur signalée</h2><p class="small"><b>' + R.pain.map(esc).join(', ') + '</b></p><p class="small">Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.</p></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.solo ? 'Bien joué. Une série de plus chaque semaine, c\'est comme ça qu\'on progresse.' : R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
   if (R.sess && !R.partial && !R.solo) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
+  if (!R.stretched) h += '<div class="card"><h2>Étirements</h2><p class="small">3 minutes pour détendre les muscles. Sans forcer, sans rebondir.</p><button class="btn alt" data-act="stretch">Faire les étirements</button></div>';
   h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
   runner.innerHTML = h;
 }
@@ -2500,6 +2518,7 @@ document.addEventListener('click', function (ev) {
     R.i = ni - 1; advance(); return;
   }
   if (a === 'quit') {
+    if (R.stretch && R.quit) { endStretch(); return; }
     if (!R.quit) { R.quit = true; draw(); setTimeout(function () { if (R && R.phase !== 'done') { R.quit = false; if (R.phase !== 'done') draw(); } }, 4000); return; }
     finish(true); return;
   }
@@ -2512,6 +2531,7 @@ document.addEventListener('click', function (ev) {
     if (lastLog) { lastLog.reps = Math.max(0, lastLog.reps + (a === 'repp' ? 1 : -1)); R.reps = lastLog.reps; setTxt('reps', lastLog.reps); }
     return;
   }
+  if (a === 'stretch') { startStretch(); return; }
   if (a === 'closerun') { closeRunner(); return; }
 });
 document.addEventListener('input', function (ev) {
@@ -4204,6 +4224,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Les séances sont allégées pendant 7 jours.": "Sessions are lighter for 7 days.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Ease back in: 7 lighter days, then back to the normal program. Your body will thank you."}, "ar": {"Les séances sont allégées pendant 7 jours.": "الحصص خفيفة لمدة 7 أيام.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "استأنف بلطف: 7 أيام خفيفة، ثم العودة إلى البرنامج العادي. جسمك سيشكرك."}, "ma": {"Les séances sont allégées pendant 7 jours.": "Sseances khfifin l 7 iyam.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Rje3 b shwiya: 7 iyam khfaf, mn b3d rje3 l-programme l3adi. Jesmek ghadi yshkerek."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Étirements": "Stretching", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 minutes to relax your muscles. Don't force, don't bounce.", "Faire les étirements": "Do the stretches", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "Stretch your chest: forearm against a wall, gently turn your torso", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "Stretch your thighs: standing, heel to buttock, one leg then the other", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "Stretch the back of your thighs: seated, one leg straight, lean forward without forcing", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "Child's pose: sit on your heels, arms forward, back relaxed", "Respire lentement : cinq grandes respirations, épaules relâchées": "Breathe slowly: five deep breaths, shoulders relaxed"}, "ar": {"Étirements": "تمارين الإطالة", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 دقائق لإرخاء العضلات. بدون إجبار وبدون ارتداد.", "Faire les étirements": "قم بتمارين الإطالة", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "مدّد الصدر: الساعد على الحائط، أدر جذعك ببطء", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "مدّد الفخذين: واقفا، الكعب نحو الأرداف، ساقا ثم الأخرى", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "مدّد خلف الفخذين: جالسا، ساق ممدودة، انحنِ دون إجبار", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "وضعية الطفل: الجلوس على الكعبين، الذراعان للأمام، الظهر مسترخٍ", "Respire lentement : cinq grandes respirations, épaules relâchées": "تنفس ببطء: خمسة أنفاس عميقة، الكتفان مرتخيان"}, "ma": {"Étirements": "Tmtit", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 d l-d9ayi9 bach t-rteh l3adlat. Bla ma tkemmel b l9ouwa, bla ma tn9ez.", "Faire les étirements": "3emmer tmtit", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "Mtt s-sder: s-sa3ed 3la l-7it, dewwer jesmek b shwiya", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "Mtt l-fkhad: wqef, l-ka3b l-l-mu7ayyat, rjel w mn b3d rjel khra", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "Mtt l-fkhad mn lor: gles, rjel mmdouda, tla mn ghir ma tkemmel b l9ouwa", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "Wad3iyat t-tfel: gles 3la l-k3ab, dra3in l9dam, d-dher mrteh", "Respire lentement : cinq grandes respirations, épaules relâchées": "Tnefes b shwiya: khamsa d tnefsat 3miqin, l-ktaf mrtehin"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
