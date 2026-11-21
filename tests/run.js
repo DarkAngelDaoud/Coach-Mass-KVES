@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.4' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.5' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -408,6 +408,23 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 16.5 : records justes */
+  async function recRun(prevName, fix) {
+    var rc = await br.newContext({ viewport: { width: 390, height: 800 } }), rp = await rc.newPage(); rp.errs = []; rp.on('pageerror', function (e) { rp.errs.push(e.message); });
+    await rp.addInitScript(function (a) { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, count: false, w0: 75 }, logs: {}, sessions: [{ date: '2026-01-01', min: 20, sets: 1, partial: false, light: false, week: 1, logs: [{ id: 'pompes', name: a.pn, hi: 12, sn: 1, reps: 5 }] }] })); }, { pn: prevName });
+    await rp.goto(url); await rp.waitForSelector('#nav'); await rp.click('#nav [data-v=train]');
+    await rp.click('[data-ex=pompes] details.cfg >> nth=0 >> summary'); await rp.click('[data-act=exsolo][data-id=pompes]');
+    await rp.click('#runner [data-act=begin]'); await rp.waitForTimeout(400);
+    await rp.click('#runner [data-act=stopwork]'); await rp.waitForTimeout(300);
+    if (fix) await rp.click('#runner [data-act=repp]');
+    await rp.click('#runner [data-act=quit]'); await rp.click('#runner [data-act=quit]'); await rp.waitForTimeout(300);
+    var tx = (await rp.textContent('#runner')).replace(/\s+/g, ''); await rc.close(); return tx;
+  }
+  var r1 = await recRun('Pompes', false), r2 = await recRun('Pompes', true), r3 = await recRun('Pompes pieds surélevés (chaise)', true);
+  t('records : sans comptage ni correction, aucun record', !r1.includes('Nouveaurecord'), r1.slice(0, 120));
+  t('records : valeur corrigée à la main = vrai record exact (13, ancien 5, objectif 14)', r2.includes('Nouveaurecord') && r2.includes('Pompes:13(5)Prochainobjectif14'), r2.slice(0, 200));
+  t('records : autre variante = pas de comparaison', !r3.includes('Nouveaurecord'), r3.slice(0, 120));
+
   /* 16.4 : moyenne du tabac */
   var tc4 = await br.newContext({ viewport: { width: 390, height: 800 } }), tp4 = await tc4.newPage(); tp4.errs = []; tp4.on('pageerror', function (e) { tp4.errs.push(e.message); });
   await tp4.addInitScript(function () {
@@ -632,8 +649,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pp.click('#runner [data-act=stopwork]'); await pp.waitForTimeout(300);
   await pp.click('#runner [data-act=quit]'); await pp.click('#runner [data-act=quit]'); await pp.waitForTimeout(300);
   var prt = await pp.textContent('#runner');
-  t('record : carte Nouveau record affichée', prt.includes('Nouveau record') && prt.includes('Prochain objectif') && prt.includes('Pompes'), prt.slice(0, 200));
-  t('record : prochain objectif = ancien record battu + 1', /13/.test(prt) || /\d+/.test(prt));
+  t('record : sans comptage, la cible n\'est pas un record', !prt.includes('Nouveau record'), prt.slice(0, 120));
   t('aucune erreur (15.2)', pp.errs.length === 0, pp.errs);
   await pc.close();
 
