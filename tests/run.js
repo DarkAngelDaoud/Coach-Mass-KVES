@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.6' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.7' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,26 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 15.7 : bouton J'ai mal */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=train]'); await pg.click('[data-act=start]');
+  for (var z7 = 0; z7 < 12 && /Échauffement/.test(await pg.textContent('#runner')); z7++) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(150); }
+  t('douleur : bouton présent hors échauffement', await pg.isVisible('#runner [data-act=pain]'));
+  await pg.click('#runner [data-act=pain]');
+  t('douleur : écran d\'arrêt', (await pg.textContent('#runner')).includes('Arrête et respire'));
+  await pg.click('#runner [data-act=painno]');
+  t('douleur : reprendre revient à la séance', !(await pg.textContent('#runner')).includes('Arrête et respire'));
+  await pg.click('#runner [data-act=pain]'); await pg.click('#runner [data-act=painskip]'); await pg.waitForTimeout(300);
+  t('douleur : passer l\'exercice mène à un autre exercice', /Exercice 2\//.test(await pg.textContent('#runner')), (await pg.textContent('#runner')).slice(0, 80));
+  await pg.click('#runner [data-act=pain]'); await pg.click('#runner [data-act=painend]'); await pg.waitForTimeout(300);
+  var dt = await pg.textContent('#runner');
+  t('douleur : fin de séance avec carte Douleur signalée', dt.includes('Douleur signalée') && dt.includes('Séance incomplète'), dt.slice(0, 160));
+  d = await dataOf(pg);
+  t('douleur : notée dans la séance, séance incomplète', d.sessions.length === 1 && d.sessions[0].partial === true && d.sessions[0].pain.length === 2, d.sessions);
+  await pg.click('#runner [data-act=closerun]'); await pg.click('#nav [data-v=train]');
+  t('douleur : rappel dans l\'onglet Séance', (await pg.textContent('#view')).includes('Douleur signalée récemment'));
   await pg.context().close();
 
   /* 15.6 : suivi du tabac */
