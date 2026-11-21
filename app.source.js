@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.6';
+var VERSION = '15.7';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Suivi du tabac (facultatif) : Réglages > Tabac. Un compteur simple dans Aujourd\'hui, sans jugement.', 'Désactivé par défaut. Données uniquement sur ton téléphone.'];
+var NOTES = ['Bouton « J\'ai mal » pendant la séance : il met en pause, te laisse passer l\'exercice ou finir la séance, et note la douleur.', 'Si une douleur est signalée, un rappel apparaît dans l\'onglet Séance pendant 7 jours.'];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
   { l: 'Rotations des épaules et des hanches', s: 60, fig: 'arms', period: 2.4 },
@@ -783,6 +783,7 @@ function exCard(e) {
 function viewTrain() {
   var n = EX.filter(inSession).length;
   var h = '<h1>Séance</h1><p class="small">Semaine ' + wkNo() + ' · ' + (wkNo() <= 2 ? '3 séries' : '4 séries') + ' sur les exercices principaux · ' + n + ' exercices dans la séance complète. Jours prévus : ' + P.days.slice().sort().map(function (d) { return JOURS[d]; }).join(', ') + '.</p>';
+  h += painCard();
   h += '<button class="btn go" data-act="start">Lancer la séance' + (isLight() ? ' (allégée)' : '') + '</button>';
   h += '<button class="btn" data-act="quick">Séance express</button><p class="small">Environ 15 minutes : échauffement court, 2 séries par exercice. Pas de montée de niveau avec cette version.</p>';
   ZONES.forEach(function (z) {
@@ -1332,17 +1333,20 @@ function findPrs(logs) {
 }
 function finish(partial) {
   clearTimer();
+  if (R.painSkip) partial = true;
   R.prs = findPrs(R.logs);
   var min = Math.max(1, Math.round((Date.now() - R.t0) / 60000));
   var ups = [];
   if (!partial && !R.solo && !R.quick) ups = applyProgress(R.logs);
-  if (R.logs.length && R.solo) {
+  var hasPain = !!(R.pain && R.pain.length);
+  if ((R.logs.length || hasPain) && R.solo) {
     var fs = null;
     D.sessions.forEach(function (x) { if (x.free && x.date === today()) fs = x; });
     if (!fs) { fs = { date: today(), min: 0, sets: 0, partial: true, free: true, light: false, week: wkNo(), logs: [] }; D.sessions.push(fs); }
     R.logs.forEach(function (l) { fs.logs.push(l); });
+    (R.pain || []).forEach(function (n) { fs.pain = fs.pain || []; if (fs.pain.indexOf(n) < 0) fs.pain.push(n); });
     fs.sets = fs.logs.length; fs.min += min;
-  } else if (R.logs.length) { R.sess = { date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, quick: !!R.quick, week: wkNo(), logs: R.logs }; D.sessions.push(R.sess); }
+  } else if (R.logs.length || hasPain) { R.sess = { date: today(), min: min, sets: R.logs.length, partial: !!partial, light: R.light, quick: !!R.quick, week: wkNo(), logs: R.logs }; if (R.pain && R.pain.length) R.sess.pain = R.pain.slice(); ; D.sessions.push(R.sess); }
   save();
   R.phase = 'done'; R.ups = ups; R.min = min; R.partial = partial;
   unwake(); drawDone();
@@ -1372,10 +1376,31 @@ function closeRunner() {
   render();
 }
 
+function drawPain() {
+  var pn = new DOMParser().parseFromString('<div class="rtop"><span class="small">Douleur</span></div><div class="rbody"><div class="rl"><p class="title">Arrête et respire</p><p class="small">Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.</p></div><div class="rr"><button class="btn go" data-act="painskip">Passer cet exercice</button><button class="btn alt" data-act="painend">Terminer la séance</button><button class="btn alt" data-act="painno">Reprendre</button></div></div>', 'text/html');
+  runner.replaceChildren.apply(runner, Array.prototype.slice.call(pn.body.childNodes));
+}
+function painMark() {
+  var s = cur(); if (!s || s.k === 'warm') return;
+  var p = R.plan[s.pi]; R.pain = R.pain || [];
+  if (R.pain.indexOf(p.name) < 0) R.pain.push(p.name);
+}
+function painRecent() {
+  var d30 = new Date(), d7 = new Date(), lim, wk; d30.setDate(d30.getDate() - 30); d7.setDate(d7.getDate() - 7); lim = dstr(d30); wk = dstr(d7);
+  var cnt = {}, rec = {};
+  D.sessions.forEach(function (x) { if (x.date >= lim) (x.pain || []).forEach(function (n) { cnt[n] = (cnt[n] || 0) + 1; if (x.date >= wk) rec[n] = 1; }); });
+  return { rec: Object.keys(rec), again: Object.keys(cnt).filter(function (n) { return cnt[n] >= 2; }) };
+}
+function painCard() {
+  var r = painRecent();
+  if (!r.rec.length) return '';
+  return '<div class="card"><h2>Douleur signalée récemment</h2><p class="small"><b>' + r.rec.map(esc).join(', ') + '</b></p><p class="small">Va doucement sur cet exercice, ou passe-le si ça fait mal.</p>' + (r.again.length ? '<p class="small">Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.</p>' : '') + '</div>';
+}
 function draw() {
+  if (R.painOpen) { drawPain(); return; }
   var s = cur(), h = '', pr = Math.round(R.i / R.steps.length * 100);
   h += '<div class="rtop"><span class="small">' + (s.k === 'warm' ? 'Échauffement' : 'Exercice ' + (s.pi + 1) + '/' + R.plan.length + ' · série ' + s.sn + '/' + R.plan[s.pi].sets) + '</span>' +
-    '<span class="row"><button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
+    '<span class="row">' + (s.k === 'warm' ? '' : '<button class="btn alt sm" data-act="pain">J\'ai mal</button>') + '<button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
   h += '<div class="bar"><i style="width:' + pr + '%"></i></div>' + mMiniHtml();
   if (s.k === 'warm') {
     h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p>' + drawBox(s.fig, R.paused ? 'hold' : 'loop', s.period) + '</div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
@@ -1408,6 +1433,7 @@ function drawDone() {
   h += '<div class="rbody"><div class="rl"><p class="title">' + (R.solo ? 'Enregistré dans l\'historique (libre)' : R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
   if (R.ups && R.ups.length) h += '<div class="card"><h2>Tu passes au niveau supérieur</h2><ul class="list">' + R.ups.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
   if (R.prs && R.prs.length) h += '<div class="card"><h2>Nouveau record</h2><ul class="list">' + R.prs.map(function (r) { var u = r.timed ? ' s' : ''; return '<li><b>' + esc(r.name) + '</b> : <span>' + r.v + u + '</span> <span class="small">(<span>' + r.old + u + '</span>)</span><br><span class="small">Prochain objectif</span> <span>' + r.nx + u + '</span></li>'; }).join('') + '</ul></div>';
+  if (R.pain && R.pain.length) h += '<div class="card"><h2>Douleur signalée</h2><p class="small"><b>' + R.pain.map(esc).join(', ') + '</b></p><p class="small">Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.</p></div>';
   h += '<div class="card coach"><span class="head">Le coach</span><p class="msg">' + (R.solo ? 'Bien joué. Une série de plus chaque semaine, c\'est comme ça qu\'on progresse.' : R.partial ? 'Tu as arrêté en route. La prochaine fois, tu vas au bout.' : 'Mange dans l\'heure, hydrate-toi, dors tes 7 heures. La séance ne compte que si la récupération suit.') + '</p></div>';
   if (R.sess && !R.partial && !R.solo) h += '<div class="card"><h2>Effort ressenti (1 = très facile, 5 = très dur)</h2><div class="seg">' + [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="rpe" data-n="' + n + '" class="' + (+R.sess.rpe === n ? 'on' : '') + '" aria-pressed="' + (+R.sess.rpe === n) + '">' + n + '</button>'; }).join('') + '</div></div>';
   h += '<button class="btn go" data-act="closerun">Fermer</button></div></div>';
@@ -2447,6 +2473,21 @@ document.addEventListener('click', function (ev) {
     if (R.paused) { R.remain = R.endAt - performance.now(); try { window.speechSynthesis.cancel(); } catch (e) {} }
     else R.endAt = performance.now() + R.remain;
     draw(); return;
+  }
+  if (a === 'pain') {
+    if (R.phase === 'done' || !cur() || cur().k === 'warm') return;
+    painMark(); R.painOpen = true; R.pp = !R.paused;
+    if (R.pp) { R.paused = true; R.remain = R.endAt - performance.now(); try { window.speechSynthesis.cancel(); } catch (e) {} }
+    draw(); return;
+  }
+  if (a === 'painno') { R.painOpen = false; if (R.pp) { R.paused = false; R.endAt = performance.now() + R.remain; R.pp = false; } draw(); return; }
+  if (a === 'painend') { R.painOpen = false; R.pp = false; R.paused = false; finish(true); return; }
+  if (a === 'painskip') {
+    var ci = cur().pi, ni = -1, q;
+    for (q = R.i + 1; q < R.steps.length; q++) { if (R.steps[q].k === 'set' && R.steps[q].pi !== ci) { ni = q; break; } }
+    R.painOpen = false; R.pp = false; R.paused = false; R.painSkip = true; clearTimer();
+    if (ni < 0) { finish(true); return; }
+    R.i = ni - 1; advance(); return;
   }
   if (a === 'quit') {
     if (!R.quit) { R.quit = true; draw(); setTimeout(function () { if (R && R.phase !== 'done') { R.quit = false; if (R.phase !== 'done') draw(); } }, 4000); return; }
@@ -4136,6 +4177,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Tabac": "Tobacco", "Suivre ma consommation de tabac": "Track my tobacco use", "Facultatif, privé, sans jugement : un simple compteur par jour": "Optional, private, no judgment: a simple daily counter", "+ 1 cigarette": "+ 1 cigarette", "par jour, 7 derniers jours": "per day, last 7 days", "par jour, 7 jours d'avant": "per day, the 7 days before", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "Note it without judging yourself. Every day counts. To get help quitting, talk to a doctor or a pharmacist."}, "ar": {"Tabac": "التبغ", "Suivre ma consommation de tabac": "تتبع استهلاكي للتبغ", "Facultatif, privé, sans jugement : un simple compteur par jour": "اختياري وخاص وبدون أحكام: عداد يومي بسيط", "+ 1 cigarette": "+ 1 سيجارة", "par jour, 7 derniers jours": "في اليوم، آخر 7 أيام", "par jour, 7 jours d'avant": "في اليوم، الأيام السبعة قبلها", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "سجّل دون أن تحكم على نفسك. كل يوم مهم. للحصول على مساعدة للإقلاع، تحدث مع طبيب أو صيدلي."}, "ma": {"Tabac": "Tbgha", "Suivre ma consommation de tabac": "Tbe3 l-istihlak dyali d tbgha", "Facultatif, privé, sans jugement : un simple compteur par jour": "Ikhtiyari, khass, bla7 7ok9: 3dad bsit f nhar", "+ 1 cigarette": "+ 1 cigarette", "par jour, 7 derniers jours": "f nhar, akhir 7 iyam", "par jour, 7 jours d'avant": "f nhar, 7 iyam lli 9bl", "Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.": "Kteb bla ma t7kem 3la rassk. Kol nhar muhim. Bach itsa3dek tw99ef, hder m3a tbib wla saydali."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Douleur": "Pain", "J'ai mal": "I'm in pain", "Arrête et respire": "Stop and breathe", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "Do not push through pain. If it is sharp, sudden or lasting, see a doctor or a physiotherapist.", "Passer cet exercice": "Skip this exercise", "Terminer la séance": "End the session", "Douleur signalée": "Pain reported", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "Rest. If the pain comes back or lasts, see a doctor or a physiotherapist.", "Douleur signalée récemment": "Pain reported recently", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "Go gently on this exercise, or skip it if it hurts.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "It came back several times: talk to a doctor or a physiotherapist."}, "ar": {"Douleur": "ألم", "J'ai mal": "أشعر بألم", "Arrête et respire": "توقف وتنفس", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "لا تواصل رغم الألم. إذا كان حادا أو مفاجئا أو مستمرا، استشر طبيبا أو أخصائي علاج طبيعي.", "Passer cet exercice": "تخطَّ هذا التمرين", "Terminer la séance": "أنهِ الحصة", "Douleur signalée": "ألم مُبلَّغ عنه", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "ارتح. إذا عاد الألم أو استمر، استشر طبيبا أو أخصائي علاج طبيعي.", "Douleur signalée récemment": "ألم مُبلَّغ عنه مؤخرا", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "خفف على هذا التمرين، أو تخطَّه إذا كان مؤلما.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "عاد عدة مرات: تحدث مع طبيب أو أخصائي علاج طبيعي."}, "ma": {"Douleur": "Wja3", "J'ai mal": "3ndi l-wja3", "Arrête et respire": "Wqef w tnefes", "Ne force pas à travers une douleur. Si elle est vive, brutale ou si elle dure, consulte un médecin ou un kinésithérapeute.": "Ma tkemmelsh m3a l-wja3. Ila kan 9wi, mfaj2 wla dayem, shuf tbib wla kinesitirapist.", "Passer cet exercice": "Douz had tmrin", "Terminer la séance": "Sali l-seance", "Douleur signalée": "Wja3 msjjel", "Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.": "Rtah. Ila rj3 l-wja3 wla dam, shuf tbib wla kinesitirapist.", "Douleur signalée récemment": "Wja3 msjjel mukhkharan", "Va doucement sur cet exercice, ou passe-le si ça fait mal.": "Mshi b shwiya f had tmrin, wla douzu ila kan kay-weja3.", "Elle est revenue plusieurs fois : parles-en à un médecin ou à un kinésithérapeute.": "Rja3 bzzaf d l-mrat: hder m3a tbib wla kinesitirapist."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
