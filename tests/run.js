@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.9' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.0' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,16 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 16.0 : bilan en image */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=track]');
+  t('bilan image : bouton présent', await pg.isVisible('[data-act=weekimg]'));
+  t('bilan image : poids non inclus par défaut', !(await pg.isChecked('[data-wki=w]')));
+  var [dlw] = await Promise.all([pg.waitForEvent('download', { timeout: 6000 }), pg.click('[data-act=weekimg]')]);
+  var dlp = await dlw.path(), dsz = require('fs').statSync(dlp).size, dhd = require('fs').readFileSync(dlp).slice(1, 4).toString();
+  t('bilan image : PNG téléchargé', /^bilan-semaine-\d+\.png$/.test(dlw.suggestedFilename()) && dsz > 2000 && dhd === 'PNG', [dlw.suggestedFilename(), dsz, dhd]);
   await pg.context().close();
 
   /* 15.9 : étirements */
