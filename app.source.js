@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '15.9';
+var VERSION = '16.0';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Étirements de fin de séance : à la fin, un bouton lance 5 étirements guidés (environ 3 minutes), avec chrono et voix.', 'Facultatif : tu peux fermer sans les faire.'];
+var NOTES = ['Bilan de la semaine en image : Suivi > Bilan de la semaine > Partager en image. Tu l\'envoies par WhatsApp ou tu l\'enregistres.', 'Le poids n\'est dans l\'image que si tu coches la case.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -876,6 +876,43 @@ function weekText(r) {
     '\nSommeil moyen : ' + (r.sleep === null ? '—' : fmt(r.sleep) + ' h') + '\nÉnergie moyenne : ' + (r.energy === null ? '—' : fmt(r.energy) + ' / 5') +
     '\nPoids : ' + (r.dw === null ? '—' : (r.dw > 0 ? '+' : '') + fmt(r.dw) + ' kg') + '\nConseil : ' + r.advice;
 }
+var WKI = { w: false };
+function weekImage(cb) {
+  var r = weekReview(), W = 1080, H = 1350, c = document.createElement('canvas'), x = c.getContext('2d'), L = [], y = 620;
+  c.width = W; c.height = H;
+  x.fillStyle = '#12151b'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#ff9a4d'; x.fillRect(0, 0, W, 14);
+  x.textAlign = 'center'; x.fillStyle = '#ffffff';
+  x.font = 'bold 64px system-ui, sans-serif'; x.fillText(trText('Ma semaine'), W / 2, 150);
+  x.fillStyle = '#9aa3b2'; x.font = '40px system-ui, sans-serif'; x.fillText(trText('Semaine') + ' ' + wkNo(), W / 2, 215);
+  x.fillStyle = '#ff9a4d'; x.font = 'bold 260px system-ui, sans-serif'; x.fillText(r.done + '/' + r.planned, W / 2, 470);
+  x.fillStyle = '#ffffff'; x.font = '48px system-ui, sans-serif'; x.fillText(trText('séances'), W / 2, 575);
+  if (r.meals !== null) L.push([trText('repas cochés'), Math.round(r.meals) + ' %']);
+  if (r.sleep !== null) L.push([trText('sommeil moy.'), fmt(r.sleep) + ' h']);
+  if (r.energy !== null) L.push([trText('énergie moy.'), fmt(r.energy) + '/5']);
+  if (r.rpe !== null) L.push([trText('effort moy.'), fmt(r.rpe) + '/5']);
+  if (WKI.w && r.dw !== null) L.push([trText('poids'), (r.dw > 0 ? '+' : '') + fmt(r.dw) + ' kg']);
+  L.forEach(function (it) {
+    y += 100;
+    x.textAlign = 'left'; x.fillStyle = '#9aa3b2'; x.font = '44px system-ui, sans-serif'; x.fillText(it[0], 150, y);
+    x.textAlign = 'right'; x.fillStyle = '#ffffff'; x.font = 'bold 52px system-ui, sans-serif'; x.fillText(it[1], W - 150, y);
+  });
+  x.textAlign = 'center'; x.fillStyle = '#9aa3b2'; x.font = '34px system-ui, sans-serif'; x.fillText('Coach-Mass-KVES · © KVES', W / 2, H - 70);
+  c.toBlob(function (b) { cb(b); }, 'image/png');
+}
+document.addEventListener('change', function (ev) { var t = ev.target; if (t && t.getAttribute && t.getAttribute('data-wki') === 'w') { WKI.w = !!t.checked; } });
+document.addEventListener('click', function (ev) {
+  var t = ev.target && ev.target.closest ? ev.target.closest('[data-act="weekimg"]') : null;
+  if (!t) return;
+  weekImage(function (b) {
+    if (!b) return;
+    var name = 'bilan-semaine-' + wkNo() + '.png', f = null;
+    function dl() { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+    try { f = new File([b], name, { type: 'image/png' }); } catch (e) { f = null; }
+    if (f && navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: 'Coach-Mass-KVES' }).catch(function (e) { if (!e || e.name !== 'AbortError') dl(); });
+    else dl();
+  });
+});
 function weekCard() {
   var r = weekReview();
   function st(v, u) { return '<div class="stat"><b>' + v + '</b><span>' + u + '</span></div>'; }
@@ -883,7 +920,7 @@ function weekCard() {
     st(r.done + '/' + r.planned, 'séances') + st(r.meals === null ? '—' : Math.round(r.meals) + ' %', 'repas cochés') + st(r.sleep === null ? '—' : fmt(r.sleep) + ' h', 'sommeil moy.') + '</div><div class="stats">' +
     st(r.energy === null ? '—' : fmt(r.energy) + '/5', 'énergie moy.') + st(r.kcal === null ? '—' : Math.round(r.kcal / 10) * 10, 'kcal/jour (cochés)') + st(r.dw === null ? '—' : (r.dw > 0 ? '+' : '') + fmt(r.dw), 'kg') + '</div>' +
     (r.rpe === null ? '' : '<div class="stats">' + st(fmt(r.rpe) + '/5', 'effort moy.') + '</div>') +
-    '<p><b>Conseil du coach :</b> ' + esc(r.advice) + '</p><button class="btn alt sm" data-act="weekcopy">Copier le bilan</button></div>';
+    '<p><b>Conseil du coach :</b> ' + esc(r.advice) + '</p><button class="btn alt sm" data-act="weekcopy">Copier le bilan</button> <button class="btn alt sm" data-act="weekimg">Partager en image</button><label class="meal"><input type="checkbox" data-wki="w"' + (WKI.w ? ' checked' : '') + '><span>Inclure l\'évolution du poids dans l\'image</span></label></div>';
 }
 /* © KVES · Coach-Mass-KVES */
 var CH = { range: 56, ex: 'total', mk: 'taille' };
@@ -4229,6 +4266,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Étirements": "Stretching", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 minutes to relax your muscles. Don't force, don't bounce.", "Faire les étirements": "Do the stretches", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "Stretch your chest: forearm against a wall, gently turn your torso", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "Stretch your thighs: standing, heel to buttock, one leg then the other", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "Stretch the back of your thighs: seated, one leg straight, lean forward without forcing", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "Child's pose: sit on your heels, arms forward, back relaxed", "Respire lentement : cinq grandes respirations, épaules relâchées": "Breathe slowly: five deep breaths, shoulders relaxed"}, "ar": {"Étirements": "تمارين الإطالة", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 دقائق لإرخاء العضلات. بدون إجبار وبدون ارتداد.", "Faire les étirements": "قم بتمارين الإطالة", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "مدّد الصدر: الساعد على الحائط، أدر جذعك ببطء", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "مدّد الفخذين: واقفا، الكعب نحو الأرداف، ساقا ثم الأخرى", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "مدّد خلف الفخذين: جالسا، ساق ممدودة، انحنِ دون إجبار", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "وضعية الطفل: الجلوس على الكعبين، الذراعان للأمام، الظهر مسترخٍ", "Respire lentement : cinq grandes respirations, épaules relâchées": "تنفس ببطء: خمسة أنفاس عميقة، الكتفان مرتخيان"}, "ma": {"Étirements": "Tmtit", "3 minutes pour détendre les muscles. Sans forcer, sans rebondir.": "3 d l-d9ayi9 bach t-rteh l3adlat. Bla ma tkemmel b l9ouwa, bla ma tn9ez.", "Faire les étirements": "3emmer tmtit", "Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste": "Mtt s-sder: s-sa3ed 3la l-7it, dewwer jesmek b shwiya", "Étire les cuisses : debout, talon vers la fesse, une jambe puis l'autre": "Mtt l-fkhad: wqef, l-ka3b l-l-mu7ayyat, rjel w mn b3d rjel khra", "Étire l'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer": "Mtt l-fkhad mn lor: gles, rjel mmdouda, tla mn ghir ma tkemmel b l9ouwa", "Posture de l'enfant : assis sur les talons, bras devant, dos détendu": "Wad3iyat t-tfel: gles 3la l-k3ab, dra3in l9dam, d-dher mrteh", "Respire lentement : cinq grandes respirations, épaules relâchées": "Tnefes b shwiya: khamsa d tnefsat 3miqin, l-ktaf mrtehin"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Ma semaine": "My week", "Semaine": "Week", "poids": "weight", "Partager en image": "Share as image", "Inclure l'évolution du poids dans l'image": "Include weight change in the image"}, "ar": {"Ma semaine": "أسبوعي", "Semaine": "الأسبوع", "poids": "الوزن", "Partager en image": "شارك كصورة", "Inclure l'évolution du poids dans l'image": "أدرج تغير الوزن في الصورة"}, "ma": {"Ma semaine": "Simana dyali", "Semaine": "Simana", "poids": "l-wzn", "Partager en image": "Shari f tswira", "Inclure l'évolution du poids dans l'image": "Dkhel t-tghyir d l-wzn f t-tswira"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
