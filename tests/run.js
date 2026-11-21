@@ -423,7 +423,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   var a1 = await absRun(12), a1t = await a1.p.textContent('#view');
   t('reprise : carte après 12 jours', a1t.includes('Content de te revoir'), a1t.slice(0, 80));
   await a1.p.click('[data-act=absgo]'); d = await dataOf(a1.p);
-  t('reprise : en douceur active l\'allègement', !!d.profile.deloadOn);
+  t('reprise : en douceur active l\'allègement 7 jours', !!d.profile.deloadUntil, d.profile.deloadUntil);
   t('reprise : carte disparue', !(await a1.p.textContent('#view')).includes('Content de te revoir'));
   await a1.c.close();
   var a2 = await absRun(12); await a2.p.click('[data-act=absskip]'); d = await dataOf(a2.p);
