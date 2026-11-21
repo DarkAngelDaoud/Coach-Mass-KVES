@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.0';
+var VERSION = '16.1';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Bilan de la semaine en image : Suivi > Bilan de la semaine > Partager en image. Tu l\'envoies par WhatsApp ou tu l\'enregistres.', 'Le poids n\'est dans l\'image que si tu coches la case.'];
+var NOTES = ['Photos de progression : avertissement clair (elles disparaissent si Chrome efface les données du site) et nouveaux boutons Exporter / Importer.', 'Le fichier exporté contient tes photos : garde-le en lieu sûr.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -278,7 +278,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', deloadUntil: '', vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', phExp: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -1561,7 +1561,9 @@ function phDel(ids) {
 function phCard() {
   phLoad();
   var L = PH.list || [], h = '<div class="card" id="phcard"><h2>Photos de progression</h2><p class="small">Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.</p>';
-  h += '<label class="btn alt sm">Ajouter une photo<input type="file" accept="image/*" data-ph="add" hidden></label>';
+  h += '<p class="small"><b>Attention :</b> si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.</p>';
+  h += '<div class="row"><label class="btn alt sm">Ajouter une photo<input type="file" accept="image/*" data-ph="add" hidden></label><label class="btn alt sm">Importer des photos<input type="file" accept=".json,application/json" data-ph="imp" hidden></label>' + (L.length ? '<button class="btn alt sm" data-act="phexp">Exporter les photos</button>' : '') + '</div>';
+  if (L.length) h += '<p class="small">' + (P.phExp ? '<span>Dernier export :</span> ' + esc(sdate(P.phExp)) : 'Jamais exporté') + '</p>';
   if (!L.length) return h + '<p class="small">Aucune photo pour l\'instant.</p></div>';
   h += '<p class="small">Touche deux photos pour les comparer.</p><div class="phgrid">' + L.map(function (it) {
     return '<button class="phth' + (PH.sel.indexOf(it.id) >= 0 ? ' on' : '') + '" data-act="phsel" data-id="' + esc(it.id) + '" aria-pressed="' + (PH.sel.indexOf(it.id) >= 0) + '"><img src="' + phUrl(it) + '" alt=""><span>' + esc(sdate(it.date)) + '</span></button>';
@@ -1573,8 +1575,43 @@ function phCard() {
   if (PH.sel.length) h += '<button class="btn bad sm" data-act="phdel">' + (PH.armed ? 'Confirmer : supprimer' : 'Supprimer') + '</button>';
   return h + '</div>';
 }
+function phToData(b) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(b); }); }
+function phExport() {
+  var L = PH.list || [];
+  Promise.all(L.map(function (it) { return phToData(it.blob).then(function (d) { return { id: it.id, date: it.date, data: d }; }); })).then(function (items) {
+    var b = new Blob([JSON.stringify({ app: 'coach-masse-photos', v: 1, items: items })], { type: 'application/json' }), name = 'photos-coach-mass-' + today() + '.json', f = null;
+    function dl() { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+    P.phExp = today(); save(); render();
+    try { f = new File([b], name, { type: 'application/json' }); } catch (e) { f = null; }
+    if (f && navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: 'Photos Coach-Mass-KVES' }).catch(function (e) { if (!e || e.name !== 'AbortError') dl(); });
+    else dl();
+  }).catch(function () { toast('Photo illisible'); });
+}
+function phImport(file) {
+  var r = new FileReader();
+  r.onload = function () {
+    var j, add = [], have = {};
+    try { j = JSON.parse(r.result); } catch (e) { j = null; }
+    if (!j || j.app !== 'coach-masse-photos' || !Array.isArray(j.items)) { toast('Fichier non reconnu'); return; }
+    (PH.list || []).forEach(function (x) { have[x.id] = 1; });
+    j.items.slice(0, 300).forEach(function (it) {
+      if (!it || typeof it.id !== 'string' || it.id.length > 40 || have[it.id] || !/^\d{4}-\d{2}-\d{2}$/.test(it.date) || typeof it.data !== 'string' || it.data.indexOf('data:image/jpeg;base64,') !== 0 || it.data.length > 4000000) return;
+      try {
+        var bin = atob(it.data.slice(23)), u = new Uint8Array(bin.length), k;
+        for (k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k);
+        add.push({ id: it.id, date: it.date, blob: new Blob([u], { type: 'image/jpeg' }) });
+      } catch (e) {}
+    });
+    if (!add.length) { toast('Aucune nouvelle photo'); return; }
+    Promise.all(add.map(function (it) { return phTx('readwrite', function (st) { return st.put(it); }); })).then(function () {
+      PH.list = (PH.list || []).concat(add).sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : (x.id < y.id ? -1 : 1); }); render(); toast('Photos importées');
+    }).catch(function () { toast('Photo illisible'); });
+  };
+  r.readAsText(file);
+}
 document.addEventListener('change', function (ev) {
   var t = ev.target;
+  if (t && t.getAttribute && t.getAttribute('data-ph') === 'imp') { var fi = t.files && t.files[0]; t.value = ''; if (fi) phImport(fi); return; }
   if (!t || !t.getAttribute || t.getAttribute('data-ph') !== 'add') return;
   var f = t.files && t.files[0]; t.value = '';
   if (!f) return;
@@ -1594,7 +1631,8 @@ document.addEventListener('click', function (ev) {
     var id = t.getAttribute('data-id'), i = PH.sel.indexOf(id);
     if (i >= 0) PH.sel.splice(i, 1); else { PH.sel.push(id); if (PH.sel.length > 2) PH.sel.shift(); }
     PH.armed = ''; render();
-  } else if (a === 'phdel') {
+  } else if (a === 'phexp') { phExport(); }
+  else if (a === 'phdel') {
     if (!PH.armed) { PH.armed = '1'; render(); return; }
     phDel(PH.sel.slice());
   }
@@ -4271,6 +4309,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Ma semaine": "My week", "Semaine": "Week", "poids": "weight", "Partager en image": "Share as image", "Inclure l'évolution du poids dans l'image": "Include weight change in the image"}, "ar": {"Ma semaine": "أسبوعي", "Semaine": "الأسبوع", "poids": "الوزن", "Partager en image": "شارك كصورة", "Inclure l'évolution du poids dans l'image": "أدرج تغير الوزن في الصورة"}, "ma": {"Ma semaine": "Simana dyali", "Semaine": "Simana", "poids": "l-wzn", "Partager en image": "Shari f tswira", "Inclure l'évolution du poids dans l'image": "Dkhel t-tghyir d l-wzn f t-tswira"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Attention :": "Warning:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "if you clear the site data in Chrome, the photos disappear. Export them from time to time.", "Importer des photos": "Import photos", "Exporter les photos": "Export photos", "Dernier export :": "Last export:", "Jamais exporté": "Never exported", "Fichier non reconnu": "File not recognized", "Aucune nouvelle photo": "No new photos", "Photos importées": "Photos imported"}, "ar": {"Attention :": "تنبيه:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "إذا مسحت بيانات الموقع في كروم، تختفي الصور. صدّرها من حين لآخر.", "Importer des photos": "استيراد الصور", "Exporter les photos": "تصدير الصور", "Dernier export :": "آخر تصدير:", "Jamais exporté": "لم تُصدَّر أبدا", "Fichier non reconnu": "ملف غير معروف", "Aucune nouvelle photo": "لا توجد صور جديدة", "Photos importées": "تم استيراد الصور"}, "ma": {"Attention :": "T3ejjel:", "si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.": "ila mshti l-ma3lumat d l-site f Chrome, s-suwar katmshi. Sddrhom men w9t l-akhor.", "Importer des photos": "Jib suwar", "Exporter les photos": "Sddr s-suwar", "Dernier export :": "Akhir tsdir:", "Jamais exporté": "Mabqatsh tsddrat", "Fichier non reconnu": "Fichier ma t3rfsh", "Aucune nouvelle photo": "Ma kayn ta tswira jdida", "Photos importées": "Suwar tjabu"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
