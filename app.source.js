@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.1';
+var VERSION = '16.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Photos de progression : avertissement clair (elles disparaissent si Chrome efface les données du site) et nouveaux boutons Exporter / Importer.', 'Le fichier exporté contient tes photos : garde-le en lieu sûr.'];
+var NOTES = ['Correctif : « Effacer toutes les données » supprime maintenant toutes les photos de progression, même si tu n\'as pas ouvert l\'onglet Suivi.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -1558,6 +1558,11 @@ function phDel(ids) {
     render();
   }).catch(function () {});
 }
+function phWipe() {
+  Object.keys(PH.urls).forEach(function (k) { try { URL.revokeObjectURL(PH.urls[k]); } catch (e) {} });
+  PH.urls = {}; PH.list = []; PH.sel = []; PH.armed = '';
+  return phTx('readwrite', function (st) { return st.clear(); }).catch(function () {});
+}
 function phCard() {
   phLoad();
   var L = PH.list || [], h = '<div class="card" id="phcard"><h2>Photos de progression</h2><p class="small">Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.</p>';
@@ -2567,7 +2572,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'import') { $('#importFile').click(); return; }
   if (a === 'reset') {
     if (!resetArmed) { resetArmed = true; render(); return; }
-    bkSnap('avant', 'avant-reset-' + Date.now()); phDel((PH.list || []).map(function (x) { return x.id; })); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
+    bkSnap('avant', 'avant-reset-' + Date.now()); phWipe(); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
   }
   /* séance */
   if (!R) return;
