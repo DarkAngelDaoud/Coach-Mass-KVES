@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '16.8';
+var VERSION = '16.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Mise à jour plus sûre : l\'application ne garde jamais un mélange d\'anciens et de nouveaux fichiers.', 'Une erreur du serveur ne remplace plus la copie qui fonctionne.'];
+var NOTES = ['Le bouton « J\'ai mal » est aussi disponible pendant l\'échauffement et les étirements.', 'Accessibilité : les photos de progression sont annoncées avec leur date, et le focus va sur l\'écran « Arrête et respire ».'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -1464,9 +1464,14 @@ function drawPain() {
   runner.replaceChildren.apply(runner, Array.prototype.slice.call(pn.body.childNodes));
 }
 function painMark() {
-  var s = cur(); if (!s || s.k === 'warm') return;
-  var p = R.plan[s.pi]; R.pain = R.pain || [];
-  if (R.pain.indexOf(p.name) < 0) R.pain.push(p.name);
+  var s = cur(); if (!s) return;
+  var nm = s.k === 'warm' ? s.label : R.plan[s.pi].name; R.pain = R.pain || [];
+  if (R.pain.indexOf(nm) < 0) R.pain.push(nm);
+  if (R.stretch) {
+    var sv = R.sess || null;
+    if (!sv) D.sessions.forEach(function (x) { if (x.free && x.date === today()) sv = x; });
+    if (sv) { sv.pain = sv.pain || []; if (sv.pain.indexOf(nm) < 0) sv.pain.push(nm); save(); }
+  }
 }
 function painRecent() {
   var d30 = new Date(), d7 = new Date(), lim, wk; d30.setDate(d30.getDate() - 30); d7.setDate(d7.getDate() - 7); lim = dstr(d30); wk = dstr(d7);
@@ -1483,7 +1488,7 @@ function draw() {
   if (R.painOpen) { drawPain(); return; }
   var s = cur(), h = '', pr = Math.round(R.i / R.steps.length * 100);
   h += '<div class="rtop"><span class="small">' + (s.k === 'warm' ? (R.stretch ? 'Étirements' : 'Échauffement') : 'Exercice ' + (s.pi + 1) + '/' + R.plan.length + ' · série ' + s.sn + '/' + R.plan[s.pi].sets) + '</span>' +
-    '<span class="row">' + (s.k === 'warm' ? '' : '<button class="btn alt sm" data-act="pain">J\'ai mal</button>') + '<button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
+    '<span class="row">' + '<button class="btn alt sm" data-act="pain">J\'ai mal</button>' + '<button class="btn alt sm" data-act="pause">' + (R.paused ? 'Reprendre' : 'Pause') + '</button><button class="btn alt sm" data-act="quit">' + (R.quit ? 'Confirmer' : 'Quitter') + '</button></span></div>';
   h += '<div class="bar"><i style="width:' + pr + '%"></i></div>' + mMiniHtml();
   if (s.k === 'warm') {
     h += '<div class="rbody"><div class="rl"><p class="title">' + esc(s.label) + '</p>' + (s.fig ? drawBox(s.fig, R.paused ? 'hold' : 'loop', s.period) : '') + '</div><div class="rr"><div class="big" id="tmr">' + s.sec + '</div><p class="sub">secondes</p><button class="btn alt" data-act="skip">Passer</button></div></div>';
@@ -1591,7 +1596,7 @@ function phCard() {
   if (L.length) h += '<p class="small">' + (P.phExp ? '<span>Dernier export :</span> ' + esc(sdate(P.phExp)) : 'Jamais exporté') + '</p>';
   if (!L.length) return h + '<p class="small">Aucune photo pour l\'instant.</p></div>';
   h += '<p class="small">Touche deux photos pour les comparer.</p><div class="phgrid">' + L.map(function (it) {
-    return '<button class="phth' + (PH.sel.indexOf(it.id) >= 0 ? ' on' : '') + '" data-act="phsel" data-id="' + esc(it.id) + '" aria-pressed="' + (PH.sel.indexOf(it.id) >= 0) + '"><img src="' + phUrl(it) + '" alt=""><span>' + esc(sdate(it.date)) + '</span></button>';
+    return '<button class="phth' + (PH.sel.indexOf(it.id) >= 0 ? ' on' : '') + '" data-act="phsel" data-id="' + esc(it.id) + '" aria-pressed="' + (PH.sel.indexOf(it.id) >= 0) + '" aria-label="' + esc(trText('Photo du') + ' ' + sdate(it.date)) + '"><img src="' + phUrl(it) + '" alt=""><span>' + esc(sdate(it.date)) + '</span></button>';
   }).join('') + '</div>';
   if (PH.sel.length === 2) {
     var a = L.filter(function (x) { return PH.sel.indexOf(x.id) >= 0; });
@@ -2610,13 +2615,14 @@ document.addEventListener('click', function (ev) {
     draw(); return;
   }
   if (a === 'pain') {
-    if (R.phase === 'done' || !cur() || cur().k === 'warm') return;
+    if (R.phase === 'done' || !cur()) return;
     painMark(); R.painOpen = true; R.pp = !R.paused;
     if (R.pp) { R.paused = true; R.remain = R.endAt - performance.now(); try { window.speechSynthesis.cancel(); } catch (e) {} }
-    draw(); return;
+    draw(); try { runner.querySelector('[data-act=painskip]').focus(); } catch (e) {} return;
   }
-  if (a === 'painno') { R.painOpen = false; if (R.pp) { R.paused = false; R.endAt = performance.now() + R.remain; R.pp = false; } draw(); return; }
-  if (a === 'painend') { R.painOpen = false; R.pp = false; R.paused = false; finish(true); return; }
+  if (a === 'painno') { R.painOpen = false; if (R.pp) { R.paused = false; R.endAt = performance.now() + R.remain; R.pp = false; } draw(); try { runner.querySelector('[data-act=pain]').focus(); } catch (e) {} return; }
+  if (a === 'painend') { R.painOpen = false; R.pp = false; R.paused = false; if (R.stretch) { endStretch(); return; } finish(true); return; }
+  if (a === 'painskip' && cur().k === 'warm') { R.painOpen = false; R.pp = false; R.paused = false; clearTimer(); advance(); return; }
   if (a === 'painskip') {
     var ci = cur().pi, ni = -1, q;
     for (q = R.i + 1; q < R.steps.length; q++) { if (R.steps[q].k === 'set' && R.steps[q].pi !== ci) { ni = q; break; } }
@@ -4366,6 +4372,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"express": "express", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "This session does not count toward level-ups or average effort. Do the full session to progress.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "Express session done today. You can still do the full session."}, "ar": {"express": "سريعة", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "هذه الحصة لا تُحسب في الارتقاء بالمستوى ولا في متوسط الجهد. أنجز الحصة الكاملة لتتقدم.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "تمت الحصة السريعة اليوم. يمكنك ما زال إنجاز الحصة الكاملة."}, "ma": {"express": "express", "Cette séance ne compte pas pour la montée de niveau ni pour l'effort moyen. Fais la séance complète pour progresser.": "Had s-seance ma kat7seb-ch f t-tla9i f l-mustawa wla f m3addal l-jhd. Dir s-seance kamla bach tt9ddem.", "Séance express faite aujourd'hui. Tu peux encore faire la séance complète.": "Seance express tdarat lyum. Mazal imkn lik dir s-seance kamla."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Photo du": "Photo from"}, "ar": {"Photo du": "صورة بتاريخ"}, "ma": {"Photo du": "Tswira dyal"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
