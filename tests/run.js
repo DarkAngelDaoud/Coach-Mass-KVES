@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.5' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.6' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,20 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 15.6 : suivi du tabac */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  t('tabac : désactivé par défaut (aucune carte)', !(await pg.$('[data-act=cig]')));
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
+  await pg.click('[data-set=tabac]'); await pg.click('#nav [data-v=today]');
+  t('tabac : carte visible une fois activé', await pg.isVisible('[data-act=cig][data-n="1"]'));
+  await pg.click('[data-act=cig][data-n="1"]'); await pg.click('[data-act=cig][data-n="1"]'); await pg.click('[data-act=cig][data-n="-1"]');
+  d = await dataOf(pg); var cg = d.logs[Object.keys(d.logs)[0]];
+  t('tabac : compteur 2 - 1 = 1', Object.keys(d.logs).some(function (k) { return d.logs[k].cig === 1; }), d.logs);
+  await pg.click('[data-act=cig][data-n="-1"]'); await pg.click('[data-act=cig][data-n="-1"]');
+  d = await dataOf(pg); t('tabac : jamais négatif', Object.keys(d.logs).every(function (k) { return !(d.logs[k].cig < 0); }));
+  t('tabac : message sans jugement', (await pg.textContent('#view')).includes('sans te juger'));
   await pg.context().close();
 
   /* 15.5 : voix multilingue */
