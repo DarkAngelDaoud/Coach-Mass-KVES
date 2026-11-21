@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.7' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.8' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,34 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 15.8 : reprise après une pause */
+  async function absRun(days, extra) {
+    var ac = await br.newContext({ viewport: { width: 390, height: 800 } }), ap = await ac.newPage(); ap.errs = []; ap.on('pageerror', function (e) { ap.errs.push(e.message); });
+    await ap.addInitScript(function (a) {
+      if (localStorage.getItem('coach-masse-v1')) return;
+      var dt = new Date(); dt.setDate(dt.getDate() - a.days);
+      var ds = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+      localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75, start: '2025-01-01' }, logs: {}, sessions: a.days < 0 ? [] : [{ date: ds, min: 20, sets: 4, partial: false, light: false, week: 1, logs: [{ id: 'pompes', name: 'Pompes', hi: 12, sn: 1, reps: 12 }] }] }));
+    }, { days: days });
+    await ap.goto(url); await ap.waitForSelector('#nav');
+    return { p: ap, c: ac };
+  }
+  var a1 = await absRun(12), a1t = await a1.p.textContent('#view');
+  t('reprise : carte après 12 jours', a1t.includes('Content de te revoir'), a1t.slice(0, 80));
+  await a1.p.click('[data-act=absgo]'); d = await dataOf(a1.p);
+  t('reprise : en douceur active l\'allègement', !!d.profile.deloadOn);
+  t('reprise : carte disparue', !(await a1.p.textContent('#view')).includes('Content de te revoir'));
+  await a1.c.close();
+  var a2 = await absRun(12); await a2.p.click('[data-act=absskip]'); d = await dataOf(a2.p);
+  t('reprise : normalement = pas d\'allègement, carte masquée', !d.profile.deloadOn && !(await a2.p.textContent('#view')).includes('Content de te revoir'));
+  await a2.c.close();
+  var a3 = await absRun(5);
+  t('reprise : pas de carte après 5 jours', !(await a3.p.textContent('#view')).includes('Content de te revoir'));
+  await a3.c.close();
+  var a4 = await absRun(-1);
+  t('reprise : pas de carte sans séance', !(await a4.p.textContent('#view')).includes('Content de te revoir'));
+  await a4.c.close();
 
   /* 15.7 : bouton J'ai mal */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
