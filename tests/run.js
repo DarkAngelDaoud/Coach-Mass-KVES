@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '16.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '16.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -407,6 +407,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 16.2 : effacement total et photos */
+  var rc2 = await br.newContext({ viewport: { width: 390, height: 800 } }), rp2 = await rc2.newPage(); rp2.errs = []; rp2.on('pageerror', function (e) { rp2.errs.push(e.message); });
+  await rp2.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75 }, logs: {}, sessions: [] })); });
+  await rp2.goto(url); await rp2.waitForSelector('#nav'); await rp2.click('#nav [data-v=track]');
+  var png2 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await rp2.setInputFiles('[data-ph=add]', { name: 'a.png', mimeType: 'image/png', buffer: png2 }); await rp2.waitForTimeout(600);
+  async function phCount(pp) { return await pp.evaluate(function () { return new Promise(function (r) { var q = indexedDB.open('coach-masse-ph', 1); q.onsuccess = function () { var g = q.result.transaction('p').objectStore('p').count(); g.onsuccess = function () { r(g.result); }; }; }); }); }
+  t('effacement : la photo est bien enregistrée avant', (await phCount(rp2)) === 1);
+  await rp2.reload(); await rp2.waitForSelector('#nav');
+  await rp2.click('#nav [data-v=more]'); await rp2.click('[data-act=tab][data-v=settings]');
+  await rp2.evaluate(function () { document.querySelectorAll('details').forEach(function (d) { d.open = true; }); });
+  await rp2.click('[data-act=reset]'); await rp2.click('[data-act=reset]'); await rp2.waitForTimeout(600);
+  t('effacement : photos supprimées sans avoir ouvert Suivi', (await phCount(rp2)) === 0);
+  t('aucune erreur (16.2)', rp2.errs.length === 0, rp2.errs);
+  await rc2.close();
 
   /* 16.0 : bilan en image */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
