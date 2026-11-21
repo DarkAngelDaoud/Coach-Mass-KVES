@@ -172,7 +172,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '15.8' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '15.9' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -406,6 +406,30 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : "Coach" s\'ouvre', await pg.isVisible('[data-act=testvoice]'));
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
+  await pg.context().close();
+
+  /* 15.9 : étirements */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=train]'); await pg.click('[data-act=start]');
+  for (var z9 = 0; z9 < 12 && /Échauffement/.test(await pg.textContent('#runner')); z9++) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(120); }
+  await pg.click('#runner [data-act=pain]'); await pg.click('#runner [data-act=painend]'); await pg.waitForTimeout(300);
+  t('étirements : carte sur l\'écran de fin', await pg.isVisible('#runner [data-act=stretch]'));
+  var ns0 = (await dataOf(pg)).sessions.length;
+  await pg.click('#runner [data-act=stretch]'); await pg.waitForTimeout(300);
+  var stt = await pg.textContent('#runner');
+  t('étirements : écran d\'étirement', stt.includes('Étirements') && stt.includes('pectoraux'), stt.slice(0, 120));
+  for (var zz = 0; zz < 5 && !(await pg.isVisible('#runner [data-act=closerun]')); zz++) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(150); }
+  t('étirements : retour à l\'écran de fin sans nouvelle séance', (await pg.isVisible('#runner [data-act=closerun]')) && (await dataOf(pg)).sessions.length === ns0 && !(await pg.isVisible('#runner [data-act=stretch]')));
+  await pg.click('#runner [data-act=closerun]');
+  await pg.context().close();
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=train]'); await pg.click('[data-act=start]');
+  for (var z8 = 0; z8 < 12 && /Échauffement/.test(await pg.textContent('#runner')); z8++) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(120); }
+  await pg.click('#runner [data-act=pain]'); await pg.click('#runner [data-act=painend]'); await pg.waitForTimeout(300);
+  var ns1 = (await dataOf(pg)).sessions.length;
+  await pg.click('#runner [data-act=stretch]'); await pg.waitForTimeout(200);
+  await pg.click('#runner [data-act=quit]'); await pg.click('#runner [data-act=quit]'); await pg.waitForTimeout(250);
+  t('étirements : quitter ne crée pas de séance et revient à la fin', (await dataOf(pg)).sessions.length === ns1 && await pg.isVisible('#runner [data-act=closerun]'));
   await pg.context().close();
 
   /* 15.8 : reprise après une pause */
