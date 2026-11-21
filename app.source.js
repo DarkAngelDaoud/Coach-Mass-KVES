@@ -271,7 +271,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -355,7 +355,7 @@ function levelsFor(e) { return e.id === 'tirage' && P.hasBar ? e.levels.concat([
 function wkNo() { return Math.max(1, Math.floor((dnum(today()) - dnum(P.start)) / 7) + 1); }
 function isTrainDay(dow) { return P.days.indexOf(dow) >= 0; }
 function doneToday() { return D.sessions.some(function (s) { return s.date === today() && !s.partial; }); }
-function deloadActive() { return !!P.deloadOn && P.deloadOn === weekStartStr(); }
+function deloadActive() { return (!!P.deloadOn && P.deloadOn === weekStartStr()) || (!!P.deloadUntil && today() <= P.deloadUntil); }
 function rpeLast3() {
   var a = D.sessions.filter(function (x) { return !x.partial && !x.free && +x.rpe > 0; }).slice(-3);
   return a.length === 3 ? (a[0].rpe + a[1].rpe + a[2].rpe) / 3 : null;
@@ -373,11 +373,11 @@ function absenceDays() {
 }
 function absenceDue() { return !!P.onboarded && !deloadActive() && absenceDays() >= 10 && P.absSkip !== lastSessDate(); }
 function absenceCard() {
-  return '<div class="card coach"><h2>Content de te revoir</h2><p class="small"><span>Dernière séance il y a</span> <b>' + absenceDays() + '</b> <span>jours</span></p><p class="small">Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.</p><button class="btn go" data-act="absgo">Reprendre en douceur</button><button class="btn alt" data-act="absskip">Reprendre normalement</button></div>';
+  return '<div class="card coach"><h2>Content de te revoir</h2><p class="small"><span>Dernière séance il y a</span> <b>' + absenceDays() + '</b> <span>jours</span></p><p class="small">Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.</p><button class="btn go" data-act="absgo">Reprendre en douceur</button><button class="btn alt" data-act="absskip">Reprendre normalement</button></div>';
 }
 function deloadCard() {
   if (absenceDue()) return absenceCard();
-  if (deloadActive()) return '<div class="card coach"><h2>Semaine d\'allègement en cours</h2><p class="small">Les séances sont allégées jusqu\'à dimanche.</p><button class="btn alt sm" data-act="deloadstop">Arrêter l\'allègement</button></div>';
+  if (deloadActive()) return '<div class="card coach"><h2>Semaine d\'allègement en cours</h2><p class="small">' + (P.deloadUntil && today() <= P.deloadUntil && P.deloadOn !== weekStartStr() ? 'Les séances sont allégées pendant 7 jours.' : 'Les séances sont allégées jusqu\'à dimanche.') + '</p><button class="btn alt sm" data-act="deloadstop">Arrêter l\'allègement</button></div>';
   if (deloadDue()) return '<div class="card"><h2>Semaine d\'allègement conseillée</h2><p class="small">Après plusieurs semaines d\'effort, ou si tes séances sont très dures, une semaine plus légère aide à récupérer et à progresser ensuite.</p><button class="btn alt" data-act="deloadon">Activer cette semaine</button><button class="btn alt sm" data-act="deloadskip">Pas maintenant</button></div>';
   return '';
 }
@@ -2778,10 +2778,10 @@ document.addEventListener('click', function (ev) {
   var a = t.getAttribute('data-act');
   if (a === 'rpe') { if (R && R.sess) { R.sess.rpe = +t.getAttribute('data-n'); save(); drawDone(); } }
   else if (a === 'deloadon') { P.deloadOn = weekStartStr(); P.deloadLast = wkNo(); save(); render(); }
-  else if (a === 'absgo') { P.deloadOn = weekStartStr(); P.deloadLast = wkNo(); save(); render(); }
+  else if (a === 'absgo') { var u7 = new Date(); u7.setDate(u7.getDate() + 6); P.deloadUntil = dstr(u7); P.deloadLast = wkNo(); save(); render(); }
   else if (a === 'absskip') { P.absSkip = lastSessDate(); save(); render(); }
   else if (a === 'deloadskip') { P.deloadSkip = wkNo(); save(); render(); }
-  else if (a === 'deloadstop') { P.deloadOn = ''; save(); render(); }
+  else if (a === 'deloadstop') { P.deloadOn = ''; P.deloadUntil = ''; save(); render(); }
   else if (a === 'parqopen') showParq();
   else if (a === 'parqdone') { P.parq = 'consulte'; save(); render(); }
   else if (a === 'parqsave') {
@@ -4198,7 +4198,12 @@ function startI18n() {
 })();
 
 (function(){
-  var X = {"en": {"Content de te revoir": "Good to see you again", "Dernière séance il y a": "Last session", "jours": "days", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "Ease back in: one lighter week, then back to the normal program. Your body will thank you.", "Reprendre en douceur": "Ease back in", "Reprendre normalement": "Resume normally"}, "ar": {"Content de te revoir": "سعيد برؤيتك مجددا", "Dernière séance il y a": "آخر حصة قبل", "jours": "أيام", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "استأنف بلطف: أسبوع خفيف، ثم العودة إلى البرنامج العادي. جسمك سيشكرك.", "Reprendre en douceur": "استأنف بلطف", "Reprendre normalement": "استأنف بشكل عادي"}, "ma": {"Content de te revoir": "Ferhan b shufetek mn jdid", "Dernière séance il y a": "Akhir seance men", "jours": "iyam", "Reprends en douceur : une semaine allégée, puis retour au programme normal. Ton corps te remerciera.": "Rje3 b shwiya: simana khfifa, mn b3d rje3 l-programme l3adi. Jesmek ghadi yshkerek.", "Reprendre en douceur": "Rje3 b shwiya", "Reprendre normalement": "Rje3 b tari9a 3adiya"}};
+  var X = {"en": {"Content de te revoir": "Good to see you again", "Dernière séance il y a": "Last session", "jours": "days", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Ease back in: one lighter week, then back to the normal program. Your body will thank you.", "Reprendre en douceur": "Ease back in", "Reprendre normalement": "Resume normally"}, "ar": {"Content de te revoir": "سعيد برؤيتك مجددا", "Dernière séance il y a": "آخر حصة قبل", "jours": "أيام", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "استأنف بلطف: أسبوع خفيف، ثم العودة إلى البرنامج العادي. جسمك سيشكرك.", "Reprendre en douceur": "استأنف بلطف", "Reprendre normalement": "استأنف بشكل عادي"}, "ma": {"Content de te revoir": "Ferhan b shufetek mn jdid", "Dernière séance il y a": "Akhir seance men", "jours": "iyam", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Rje3 b shwiya: simana khfifa, mn b3d rje3 l-programme l3adi. Jesmek ghadi yshkerek.", "Reprendre en douceur": "Rje3 b shwiya", "Reprendre normalement": "Rje3 b tari9a 3adiya"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Les séances sont allégées pendant 7 jours.": "Sessions are lighter for 7 days.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Ease back in: 7 lighter days, then back to the normal program. Your body will thank you."}, "ar": {"Les séances sont allégées pendant 7 jours.": "الحصص خفيفة لمدة 7 أيام.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "استأنف بلطف: 7 أيام خفيفة، ثم العودة إلى البرنامج العادي. جسمك سيشكرك."}, "ma": {"Les séances sont allégées pendant 7 jours.": "Sseances khfifin l 7 iyam.", "Reprends en douceur : 7 jours allégés, puis retour au programme normal. Ton corps te remerciera.": "Rje3 b shwiya: 7 iyam khfaf, mn b3d rje3 l-programme l3adi. Jesmek ghadi yshkerek."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
