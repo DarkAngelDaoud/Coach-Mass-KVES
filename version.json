@@ -1,6 +1,6 @@
 {
- "version": "18.0",
+ "version": "18.1",
  "notes": [
-  "Les traductions (anglais, arabe, darija) sont maintenant dans un fichier à part, langues.js : plus facile à relire et à corriger. Rien ne change à l'écran."
+  "Les données du programme (exercices, figures animées, repas, courses, précautions) sont maintenant dans un fichier à part, donnees.js : plus facile à faire relire par un professionnel. Rien ne change à l'écran."
  ]
 }
