@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.1';
+var VERSION = '18.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Les données du programme (exercices, figures animées, repas, courses, précautions) sont maintenant dans un fichier à part, donnees.js : plus facile à faire relire par un professionnel. Rien ne change à l\'écran.'];
+var NOTES = ['Traductions complétées : les variantes avancées des exercices et les précautions de sécurité s\'affichaient encore en français dans les autres langues. Un test vérifie maintenant que tout texte du programme est traduit.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
