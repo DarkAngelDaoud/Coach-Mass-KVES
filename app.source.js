@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.3';
+var VERSION = '17.4';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Verrouillage par code facultatif (Plus) : un code de 4 à 8 chiffres cache l\'application à l\'ouverture et après une minute d\'absence. C\'est un verrou d\'écran, pas un chiffrement.'];
+var NOTES = ['Un bouton « Voir » permet d\'afficher ou de masquer le code et la phrase secrète que tu saisis.', 'Contrôle automatique : le fichier app.js doit correspondre exactement au fichier source.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -2769,6 +2769,23 @@ document.addEventListener('keydown', function (ev) {
   if (ev.key !== 'Enter' || !ev.target || !ev.target.id) return;
   if (ev.target.id === 'lockpin') lockTry();
 });
+/* œil pour voir ou masquer un mot de passe (17.4) */
+function eyeAll() {
+  var list = document.querySelectorAll('input[type=password]:not([data-eye])'), i;
+  for (i = 0; i < list.length; i++) {
+    var inp = list[i], foc = document.activeElement === inp, w = document.createElement('span'), b = document.createElement('button');
+    inp.setAttribute('data-eye', '1'); w.className = 'pw';
+    b.type = 'button'; b.className = 'eye'; b.setAttribute('data-act', 'eye'); b.setAttribute('aria-pressed', 'false'); b.textContent = 'Voir';
+    inp.parentNode.insertBefore(w, inp); w.appendChild(inp); w.appendChild(b);
+    if (foc) { try { inp.focus(); } catch (e) {} }
+  }
+}
+function eyeToggle(b) {
+  var inp = b.parentNode.querySelector('input'); if (!inp) return;
+  var show = inp.type === 'password'; inp.type = show ? 'text' : 'password';
+  b.setAttribute('aria-pressed', show ? 'true' : 'false'); b.textContent = show ? 'Masquer' : 'Voir';
+}
+new MutationObserver(eyeAll).observe(document.body, { childList: true, subtree: true });
 function modal(h) {
   var m = $('#modal');
   if (m.hidden) modal._prev = document.activeElement;
@@ -2838,6 +2855,7 @@ document.addEventListener('click', function (ev) {
   var a = t.getAttribute('data-act');
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
+  else if (a === 'eye') eyeToggle(t);
   else if (a === 'lockgo') lockTry();
   else if (a === 'lockforgot') lockForgotGo(t);
   else if (a === 'locknow') lockShow();
@@ -4531,6 +4549,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Verrouillage par code": "Code lock", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "A 4 to 8 digit code hides the app when you open it and after a minute away. It is a screen lock, not encryption: it protects against prying eyes.", "Code actif.": "Code active.", "Verrouiller maintenant": "Lock now", "Retirer le code": "Remove code", "Activer le code": "Turn on code", "Choisir un code": "Choose a code", "Code (4 à 8 chiffres)": "Code (4 to 8 digits)", "Répète le code": "Repeat the code", "Enregistrer": "Save", "Annuler": "Cancel", "Retirer": "Remove", "Code actuel": "Current code", "Le code doit contenir 4 à 8 chiffres.": "The code must have 4 to 8 digits.", "Les deux codes ne correspondent pas.": "The two codes do not match.", "Impossible d'enregistrer le code.": "Could not save the code.", "Code enregistré.": "Code saved.", "Code retiré.": "Code removed.", "Code incorrect.": "Wrong code.", "Application verrouillée": "App locked", "Saisis ton code pour continuer.": "Enter your code to continue.", "Déverrouiller": "Unlock", "Code oublié": "Forgot code", "Confirmer : effacer toutes les données et le code": "Confirm: erase all data and the code", "Sans le code, la seule issue est d'effacer les données de l'appli.": "Without the code, the only way out is to erase the app's data.", "Trop d'essais : réessaie dans quelques secondes.": "Too many tries: try again in a few seconds.", "Code": "Code"}, "ar": {"Verrouillage par code": "القفل برمز", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "رمز من 4 إلى 8 أرقام يخفي التطبيق عند فتحه وبعد دقيقة من الغياب. هو قفل للشاشة وليس تشفيرا: يحميك من النظرات الفضولية.", "Code actif.": "الرمز مفعّل.", "Verrouiller maintenant": "اقفل الآن", "Retirer le code": "إزالة الرمز", "Activer le code": "تفعيل الرمز", "Choisir un code": "اختر رمزا", "Code (4 à 8 chiffres)": "الرمز (من 4 إلى 8 أرقام)", "Répète le code": "أعد كتابة الرمز", "Enregistrer": "حفظ", "Annuler": "إلغاء", "Retirer": "إزالة", "Code actuel": "الرمز الحالي", "Le code doit contenir 4 à 8 chiffres.": "يجب أن يتكون الرمز من 4 إلى 8 أرقام.", "Les deux codes ne correspondent pas.": "الرمزان غير متطابقين.", "Impossible d'enregistrer le code.": "تعذر حفظ الرمز.", "Code enregistré.": "تم حفظ الرمز.", "Code retiré.": "تمت إزالة الرمز.", "Code incorrect.": "الرمز غير صحيح.", "Application verrouillée": "التطبيق مقفل", "Saisis ton code pour continuer.": "أدخل رمزك للمتابعة.", "Déverrouiller": "فتح القفل", "Code oublié": "نسيت الرمز", "Confirmer : effacer toutes les données et le code": "تأكيد: مسح كل البيانات والرمز", "Sans le code, la seule issue est d'effacer les données de l'appli.": "بدون الرمز، الحل الوحيد هو مسح بيانات التطبيق.", "Trop d'essais : réessaie dans quelques secondes.": "محاولات كثيرة: أعد المحاولة بعد ثوان.", "Code": "الرمز"}, "ma": {"Verrouillage par code": "Qfel b-code", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "Code mn 4 l 8 d l-arqam kaykhbbi l-application mnin tfta7ha w mn b3d dqiqa dyal l-ghyab. Hada qfel dyal l-ecran machi chiffrement: kayhmik mn nadra dyal l-fdoul.", "Code actif.": "Code mfa33al.", "Verrouiller maintenant": "Qfel daba", "Retirer le code": "7yyd l-code", "Activer le code": "Fa33al l-code", "Choisir un code": "Khtar code", "Code (4 à 8 chiffres)": "Code (mn 4 l 8 d l-arqam)", "Répète le code": "3awd kteb l-code", "Enregistrer": "Sjjel", "Annuler": "Lghi", "Retirer": "7yyd", "Code actuel": "L-code d daba", "Le code doit contenir 4 à 8 chiffres.": "L-code khass ykon mn 4 l 8 d l-arqam.", "Les deux codes ne correspondent pas.": "L-codayn mashi bhal bhal.", "Impossible d'enregistrer le code.": "Ma9dernach nsjjlo l-code.", "Code enregistré.": "L-code tsjjel.", "Code retiré.": "L-code tms7.", "Code incorrect.": "L-code ghalat.", "Application verrouillée": "L-application mqfula", "Saisis ton code pour continuer.": "Kteb l-code dyalk bach tkmml.", "Déverrouiller": "7ll l-qfel", "Code oublié": "Nsit l-code", "Confirmer : effacer toutes les données et le code": "Akked: mse7 koll l-ma3lumat w l-code", "Sans le code, la seule issue est d'effacer les données de l'appli.": "Bla l-code, l-7ell l-wa7id howa tms7 l-ma3lumat d l-application.", "Trop d'essais : réessaie dans quelques secondes.": "Bzzaf d l-m7awalat: 3awd mn b3d chi tawani.", "Code": "Code"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Voir": "Show", "Masquer": "Hide"}, "ar": {"Voir": "إظهار", "Masquer": "إخفاء"}, "ma": {"Voir": "Werri", "Masquer": "Khbbi"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();

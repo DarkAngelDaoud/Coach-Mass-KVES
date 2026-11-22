@@ -1,6 +1,7 @@
 {
- "version": "17.3",
+ "version": "17.4",
  "notes": [
-  "Verrouillage par code facultatif (Plus) : un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement."
+  "Un bouton « Voir » permet d'afficher ou de masquer le code et la phrase secrète que tu saisis.",
+  "Contrôle automatique : le fichier app.js doit correspondre exactement au fichier source."
  ]
 }

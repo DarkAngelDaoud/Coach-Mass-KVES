@@ -65,6 +65,34 @@ fs.readdirSync(root).filter(function (f) { return /\.(js|html|json|webmanifest|m
   ok(vApp && vSw && vSw === vApp.replace(/\./g, '-'), 'Version incohérente entre app.js (' + vApp + ') et sw.js (' + vSw + ') : fichiers de versions différentes ?');
 })();
 
+/* 6b. app.js doit être la version minifiée EXACTE de app.source.js : tout mot d'un texte du source doit se retrouver dans app.js
+   (un app.js oublié ou resté à l'ancienne version laisse des mots manquants). Aucune dépendance : petit lecteur de chaînes. */
+(function () {
+  if (!HAS_SRC) return;
+  var src = rd('app.source.js'), min = rd('app.js'), i = 0, n = src.length, words = {}, prev = '', lit = 0;
+  function addWords(t) { (t.match(/[A-Za-zÀ-ÿ0-9_]{8,}/g) || []).forEach(function (w) { words[w] = 1; }); }
+  while (i < n) {
+    var ch = src[i], nx = src[i + 1];
+    if (ch === '/' && nx === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+    if (ch === '/' && nx === '*') { i = src.indexOf('*/', i + 2); if (i < 0) break; i += 2; continue; }
+    if (ch === '\'' || ch === '"' || ch === '`') {
+      var q2 = ch, j = i + 1, buf = '';
+      while (j < n && src[j] !== q2) { if (src[j] === '\\') { buf += ' '; j += 2; continue; } buf += src[j]; j++; }
+      addWords(buf); lit++; prev = 'x'; i = j + 1; continue;
+    }
+    if (ch === '/' && '(,=:[!&|?{};+-*%<>~^'.indexOf(prev) >= 0) {
+      var k = i + 1, cls = false;
+      while (k < n && (src[k] !== '/' || cls) && src[k] !== '\n') { if (src[k] === '\\') k++; else if (src[k] === '[') cls = true; else if (src[k] === ']') cls = false; k++; }
+      i = k + 1; while (/[a-z]/.test(src[i] || '')) i++; prev = 'x'; continue;
+    }
+    if (!/\s/.test(ch)) prev = ch;
+    i++;
+  }
+  var DROPPED = ['translate']; /* mots d'un code mort retiré par la minification */
+  var miss = Object.keys(words).filter(function (w) { return min.indexOf(w) < 0 && DROPPED.indexOf(w) < 0; });
+  ok(lit > 500 && miss.length === 0, 'app.js ne correspond pas à app.source.js (' + miss.length + ' mot(s) absent(s), ex. : ' + miss.slice(0, 5).join(', ') + ') : relance la minification.');
+})();
+
 /* 7. service worker : même origine uniquement */
 ok(!/fetch\(\s*['"]https?:/.test(rd('sw.js')), 'sw.js : requête vers un site externe.');
 ok(/skipWaiting/.test(rd('sw.js')) && /coach-masse-v/.test(rd('sw.js')), 'sw.js : mise à jour / nom de cache inattendus.', true);
