@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.4';
+var VERSION = '17.5';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Un bouton « Voir » permet d\'afficher ou de masquer le code et la phrase secrète que tu saisis.', 'Contrôle automatique : le fichier app.js doit correspondre exactement au fichier source.'];
+var NOTES = ['Les données portent maintenant un numéro de format. Les futures versions pourront convertir tes anciennes données sans rien perdre, et une sauvegarde venue d\'une version plus récente est refusée au lieu d\'être abîmée.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -291,8 +291,18 @@ function dstr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + 
 function today() { return dstr(new Date()); }
 function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5); }
 
+/* version du format des données : à augmenter quand la forme de D change, avec une étape dans MIGR */
+var SCHEMA = 1;
+var MIGR = { 0: function (o) { return o; } }; /* 0 -> 1 : anciennes données sans numéro, rien à convertir */
+function schemaOf(o) { return o && typeof o === 'object' && typeof o.schema === 'number' && isFinite(o.schema) ? Math.floor(o.schema) : 0; }
+function migrate(o) {
+  var v = schemaOf(o);
+  while (v < SCHEMA) { if (MIGR[v]) o = MIGR[v](o) || o; v++; }
+  return o;
+}
 function defaults() {
   return {
+    schema: SCHEMA,
     profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', ignUpd: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
@@ -338,7 +348,7 @@ function cleanProfile(p, d) {
 }
 function normalize(o) {
   var d = defaults(), i, k, r;
-  o = o && typeof o === 'object' ? o : {};
+  o = o && typeof o === 'object' ? migrate(o) : {};
   var logs = {}, lg = o.logs && typeof o.logs === 'object' && !Array.isArray(o.logs) ? o.logs : {};
   Object.keys(lg).slice(0, 5000).forEach(function (dk) { if (DATE_RE.test(dk) && lg[dk] && typeof lg[dk] === 'object') logs[dk] = cleanV(lg[dk], 1); });
   var measures = [];
@@ -355,11 +365,17 @@ function normalize(o) {
   var levels = {}, lv0 = o.levels && typeof o.levels === 'object' && !Array.isArray(o.levels) ? o.levels : {};
   Object.keys(lv0).slice(0, 200).forEach(function (id) { if (KEY_RE.test(id) && id !== '__proto__' && lv0[id] && typeof lv0[id] === 'object') levels[id] = { level: numOr(lv0[id].level, 0), off: numOr(lv0[id].off, 0) }; });
   var av = o.avis && typeof o.avis === 'object' ? o.avis : {};
-  return { profile: cleanProfile(o.profile, d.profile), logs: logs, measures: measures, sessions: sessions, levels: levels,
+  return { schema: SCHEMA, profile: cleanProfile(o.profile, d.profile), logs: logs, measures: measures, sessions: sessions, levels: levels,
     avis: { sent: Array.isArray(av.sent) ? cleanV(av.sent, 2, 20000) : [], inbox: Array.isArray(av.inbox) ? cleanV(av.inbox, 2, 20000) : [] } };
 }
 var D;
-try { D = normalize(JSON.parse(localStorage.getItem(KEY) || 'null')); } catch (e) { D = defaults(); try { window.__cmCorrupt = localStorage.getItem(KEY); } catch (e2) {} }
+var NEWER = false;
+try {
+  var rawD = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (schemaOf(rawD) > SCHEMA) { NEWER = true; if (!localStorage.getItem(KEY + '-newer')) localStorage.setItem(KEY + '-newer', localStorage.getItem(KEY)); }
+  D = normalize(rawD);
+  if (rawD && !NEWER && schemaOf(rawD) < SCHEMA) localStorage.setItem(KEY, JSON.stringify(D));
+} catch (e) { D = defaults(); try { window.__cmCorrupt = localStorage.getItem(KEY); } catch (e2) {} }
 var P = D.profile;
 function applyRotate() {
   try {
@@ -2500,6 +2516,7 @@ $('#importFile').addEventListener('change', function (ev) {
       if (String(r.result).length > 5000000) throw 0;
       var o = JSON.parse(r.result);
       if (o && o.coachMasse && o.data) o = o.data;
+      if (schemaOf(o) > SCHEMA) { toast('Cette sauvegarde vient d\'une version plus récente de l\'appli : mets l\'appli à jour d\'abord.'); return; }
       if (!validData(o)) throw 0;
       applyData(o, 'avant-import'); toast('Sauvegarde importée.');
     } catch (e) { toast('Fichier invalide : rien n\'a été modifié.'); }
@@ -4556,12 +4573,18 @@ function startI18n() {
   var X = {"en": {"Voir": "Show", "Masquer": "Hide"}, "ar": {"Voir": "إظهار", "Masquer": "إخفاء"}, "ma": {"Voir": "Werri", "Masquer": "Khbbi"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
+
+(function(){
+  var X = {"en": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "This backup comes from a newer version of the app: update the app first.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "Your data comes from a newer version: a copy was kept aside."}, "ar": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "هذه النسخة الاحتياطية من إصدار أحدث للتطبيق: حدّث التطبيق أولا.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "بياناتك من إصدار أحدث: تم الاحتفاظ بنسخة منفصلة."}, "ma": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "Had n-noskha jaya mn version jdida d l-application: dir mise à jour l-l-application lwwel.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "L-ma3lumat dyalk jaya mn version jdida: tkhbbat noskha b-wahd-ha."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
 startI18n();
 /* © KVES · Coach-Mass-KVES */
 applyRotate();
 render();
 requestAnimationFrame(frame);
 lockShow();
+if (NEWER) setTimeout(function () { toast('Tes données viennent d\'une version plus récente : une copie a été gardée à part.'); }, 900);
 if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').then(watchReg).catch(function () {}); }); }
 window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); } };

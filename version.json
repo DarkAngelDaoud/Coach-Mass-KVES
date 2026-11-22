@@ -1,7 +1,6 @@
 {
- "version": "17.4",
+ "version": "17.5",
  "notes": [
-  "Un bouton « Voir » permet d'afficher ou de masquer le code et la phrase secrète que tu saisis.",
-  "Contrôle automatique : le fichier app.js doit correspondre exactement au fichier source."
+  "Les données portent maintenant un numéro de format. Les futures versions pourront convertir tes anciennes données sans rien perdre, et une sauvegarde venue d'une version plus récente est refusée au lieu d'être abîmée."
  ]
 }
