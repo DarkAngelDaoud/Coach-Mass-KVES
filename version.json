@@ -1,6 +1,6 @@
 {
- "version": "17.5",
+ "version": "17.6",
  "notes": [
-  "Les données portent maintenant un numéro de format. Les futures versions pourront convertir tes anciennes données sans rien perdre, et une sauvegarde venue d'une version plus récente est refusée au lieu d'être abîmée."
+  "Niveau de départ : tu choisis, pour chaque exercice, la variante que tu sais déjà faire, et tes premières séances sont adaptées (Plus, ou carte sur l'écran Aujourd'hui au début)."
  ]
 }

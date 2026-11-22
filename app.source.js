@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.5';
+var VERSION = '17.6';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Les données portent maintenant un numéro de format. Les futures versions pourront convertir tes anciennes données sans rien perdre, et une sauvegarde venue d\'une version plus récente est refusée au lieu d\'être abîmée.'];
+var NOTES = ['Niveau de départ : tu choisis, pour chaque exercice, la variante que tu sais déjà faire, et tes premières séances sont adaptées (Plus, ou carte sur l\'écran Aujourd\'hui au début).'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -303,7 +303,7 @@ function migrate(o) {
 function defaults() {
   return {
     schema: SCHEMA,
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', ignUpd: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', ignUpd: '', lvlDone: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -828,6 +828,7 @@ function viewToday() {
     h += '<div class="card"><h2>Ajustement conseillé</h2><p>' + sug.msg +
       '</p><div class="row"><button class="btn sm grow" data-act="adj" data-v="' + sug.v + '">Appliquer</button><button class="btn alt sm" data-act="adjno">Plus tard</button></div></div>';
   }
+  if (P.onboarded && !P.lvlDone && !D.sessions.length) h += '<div class="card"><h2>Règle ton niveau de départ</h2><p class="small">Dis à l\'application ce que tu sais déjà faire : tes premières séances seront adaptées.</p><button class="btn sm" data-act="lvlopen">Régler mon niveau</button></div>';
   if (!P.onboarded) h += '<div class="card"><h2>Complète ton profil</h2><p class="small">Genre, objectif (prise de masse, perte de poids, tonification, maintien), âge et mensurations : l\'application adapte les calories et les conseils.</p><button class="btn alt" data-act="obopen">Compléter mon profil</button></div>';
   return h;
 }
@@ -1937,7 +1938,7 @@ function viewAdapt() { return viewLegal('adapt'); }
 function viewMore() {
   return '<h1>Plus</h1>' + (PEND ? '<div class="card"><h2>Mise à jour disponible</h2>' + (PEND.v ? '<p class="small">Version ' + esc(PEND.v) + '</p>' : '') + '<button class="btn" data-act="updopen">Voir les nouveautés</button></div>' : '') +
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
-    pinCard() +
+    pinCard() + lvlCard() +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
@@ -2803,6 +2804,25 @@ function eyeToggle(b) {
   b.setAttribute('aria-pressed', show ? 'true' : 'false'); b.textContent = show ? 'Masquer' : 'Voir';
 }
 new MutationObserver(eyeAll).observe(document.body, { childList: true, subtree: true });
+/* niveau de départ (17.6) : auto-évaluation par mouvement, aucun effort demandé */
+var TL = {};
+function lvlOpen() {
+  TL = {};
+  var h = '<h2>Niveau de départ</h2><p class="small">Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l\'application te fera monter toute seule. Rien à faire maintenant, ce n\'est pas un test physique.</p>';
+  EX.filter(function (e) { return e.core; }).forEach(function (e) {
+    TL[e.id] = Math.min(lv(e.id).level, 2);
+    h += '<h3>' + esc(e.name) + '</h3><div class="seg wrap" role="group">' + e.levels.slice(0, 3).map(function (n, i) { return '<button type="button" data-act="lvpick" data-e="' + e.id + '" data-v="' + i + '" class="' + (TL[e.id] === i ? 'on' : '') + '">' + esc(n) + '</button>'; }).join('') + '</div>';
+  });
+  h += '<button class="btn go" data-act="lvsave">Appliquer ce niveau</button> <button class="btn alt" data-act="modalclose">Plus tard</button>';
+  modal(h);
+}
+function lvlSave() {
+  EX.filter(function (e) { return e.core; }).forEach(function (e) { if (TL[e.id] !== undefined && TL[e.id] !== lv(e.id).level) { lv(e.id).level = TL[e.id]; lv(e.id).off = 0; } });
+  P.lvlDone = today(); save(); closeModal(); render(); toast('Niveau enregistré.');
+}
+function lvlCard() {
+  return '<div class="card"><h2>Niveau de départ</h2><p class="small">Règle la variante de chaque exercice selon ce que tu sais déjà faire.</p><button class="btn alt" data-act="lvlopen">Régler mon niveau</button></div>';
+}
 function modal(h) {
   var m = $('#modal');
   if (m.hidden) modal._prev = document.activeElement;
@@ -2873,6 +2893,9 @@ document.addEventListener('click', function (ev) {
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
   else if (a === 'eye') eyeToggle(t);
+  else if (a === 'lvlopen') lvlOpen();
+  else if (a === 'lvpick') { TL[t.getAttribute('data-e')] = +t.getAttribute('data-v'); Array.prototype.forEach.call(t.parentNode.children, function (b) { b.classList.toggle('on', b === t); }); }
+  else if (a === 'lvsave') lvlSave();
   else if (a === 'lockgo') lockTry();
   else if (a === 'lockforgot') lockForgotGo(t);
   else if (a === 'locknow') lockShow();
@@ -4576,6 +4599,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "This backup comes from a newer version of the app: update the app first.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "Your data comes from a newer version: a copy was kept aside."}, "ar": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "هذه النسخة الاحتياطية من إصدار أحدث للتطبيق: حدّث التطبيق أولا.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "بياناتك من إصدار أحدث: تم الاحتفاظ بنسخة منفصلة."}, "ma": {"Cette sauvegarde vient d'une version plus récente de l'appli : mets l'appli à jour d'abord.": "Had n-noskha jaya mn version jdida d l-application: dir mise à jour l-l-application lwwel.", "Tes données viennent d'une version plus récente : une copie a été gardée à part.": "L-ma3lumat dyalk jaya mn version jdida: tkhbbat noskha b-wahd-ha."}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Niveau de départ": "Starting level", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "For each movement, pick the variant you can do 8 to 12 times (or hold for 30 seconds for the plank) with good form. When in doubt, pick the easiest: the app will move you up by itself. Nothing to do now, this is not a physical test.", "Appliquer ce niveau": "Apply this level", "Plus tard": "Later", "Niveau enregistré.": "Level saved.", "Règle ton niveau de départ": "Set your starting level", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "Tell the app what you can already do: your first sessions will be adapted.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "Set each exercise's variant according to what you can already do.", "Régler mon niveau": "Set my level"}, "ar": {"Niveau de départ": "مستوى البداية", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "لكل حركة، اختر النسخة التي تستطي3 أداءها من 8 إلى 12 مرة (أو الثبات 30 ثانية للبلانك) بشكل سليم. 3ند الشك اختر الأسهل: سيرف3 التطبيق مستواك تلقائيا. لا شيء تف3له الآن، هذا ليس اختبارا بدنيا.", "Appliquer ce niveau": "تطبيق هذا المستوى", "Plus tard": "لاحقا", "Niveau enregistré.": "تم حفظ المستوى.", "Règle ton niveau de départ": "اضبط مستوى البداية", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "أخبر التطبيق بما تستطي3 ف3له: ستكون حصصك الأولى مناسبة.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "اضبط نسخة كل تمرين حسب ما تستطي3 ف3له.", "Régler mon niveau": "ضبط مستواي"}, "ma": {"Niveau de départ": "Mustawa d l-bdaya", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "F kol tmrin, khtar n-noskha li tqder dirha mn 8 l 12 mra (awla tb9a 30 tanya f l-gainage) b-forme mzyana. Ila shkiti khtar s-sahla: l-application ghadi t3elli-k l-mustawa b-wahd-ha. Walo tdir daba, hada machi test d l-jism.", "Appliquer ce niveau": "Tbbq had l-mustawa", "Plus tard": "Mn b3d", "Niveau enregistré.": "L-mustawa tsjjel.", "Règle ton niveau de départ": "7ded mustawa d l-bdaya", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "Qol l-l-application ach kat3rf dir: l-jalsat l-lwlin dyalk ghadi ykhdmu 3la hsab-k.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "7ded n-noskha d kol tmrin 3la hsab ach kat3rf dir.", "Régler mon niveau": "7ded mustawa dyali"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
