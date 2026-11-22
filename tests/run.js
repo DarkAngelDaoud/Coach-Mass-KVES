@@ -11,10 +11,12 @@ try { chromium = require('playwright').chromium; } catch (e) { chromium = requir
 var root = path.join(__dirname, '..'), fails = 0, ok = 0;
 function t(name, cond, extra) { if (cond) ok++; else { fails++; console.log('ECHEC : ' + name + (extra !== undefined ? ' -> ' + JSON.stringify(extra) : '')); } }
 var types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-var CFGKEY = null, BREAK = null;
+var CFGKEY = null, BREAK = null, SWV = null;
 var server = http.createServer(function (q, r) {
   var p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
   if (BREAK && p === BREAK) { r.writeHead(500); return r.end('boom'); }
+  if (SWV && p === '/sw.js') { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end(fs.readFileSync(path.join(root, 'sw.js'), 'utf8').replace(/coach-masse-v[0-9-]+'/, 'coach-masse-v' + SWV.cache + "'")); }
+  if (SWV && p === '/version.json') { r.writeHead(200, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ version: SWV.version, notes: ['Test nouveauté A', 'Test nouveauté B'] })); }
   if (p === '/avis-config.js' && CFGKEY) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('window.AVIS_CONFIG=' + JSON.stringify({ publicKey: CFGKEY, email: '', whatsapp: '' }) + ';'); }
   var f = path.join(root, p);
   if (f.indexOf(root) !== 0 || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); }
@@ -173,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.0' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.1' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -408,6 +410,47 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   await pg.click('[data-act=testvib]'); await pg.waitForTimeout(150);
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
+
+  /* 17.1 : mises à jour en deux temps */
+  var VJ = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8'));
+  t('version.json : version cohérente avec l\'application', typeof VJ.version === 'string' && VJ.notes.length >= 1 && /\bVERSION = '/.test(fs.readFileSync(path.join(root, 'app.source.js'), 'utf8')) && fs.readFileSync(path.join(root, 'app.source.js'), 'utf8').indexOf("var VERSION = '" + VJ.version + "'") >= 0, VJ.version);
+  async function uCtx() { var c = await br.newContext({ viewport: { width: 390, height: 800 }, serviceWorkers: 'allow' }); var p = await c.newPage(); p.errs = []; p.on('pageerror', function (e) { p.errs.push(e.message); }); await p.addInitScript(function () { if (!localStorage.getItem('coach-masse-v1')) localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { onboarded: true, healthOk: true, w0: 75 } })); }); return { c: c, p: p }; }
+  async function cacheNames(p) { return (await p.evaluate(function () { return caches.keys(); })).filter(function (k) { return /^coach-masse-v/.test(k); }); }
+  var U = await uCtx();
+  await U.p.goto(url); await U.p.waitForSelector('#nav'); await U.p.evaluate(function () { return navigator.serviceWorker.ready.then(function () { return true; }); }); await U.p.waitForTimeout(1000);
+  SWV = { cache: '99-0', version: '99.0' };
+  await U.p.evaluate(function () { return navigator.serviceWorker.getRegistration().then(function (r) { return r.update(); }); });
+  await U.p.waitForSelector('#modal:not([hidden])', { timeout: 8000 });
+  var m1 = await U.p.textContent('#modal');
+  t('mise à jour : 1re fenêtre annonce les nouveautés', m1.includes('Nouvelle version disponible') && m1.includes('Test nouveauté A') && m1.includes('99.0'), m1.slice(0, 160));
+  await U.p.click('#modal [data-act=updnext]');
+  var m2 = await U.p.textContent('#modal');
+  t('mise à jour : 2e fenêtre propose mettre à jour ou ignorer', m2.includes('Mettre à jour et recharger') && m2.includes('Ignorer et garder cette version'), m2.slice(0, 160));
+  var ctl0 = await U.p.evaluate(function () { return navigator.serviceWorker.controller && navigator.serviceWorker.controller.scriptURL; });
+  await U.p.click('#modal [data-act=updignore]'); await U.p.waitForTimeout(500);
+  t('mise à jour : ignorer ferme la fenêtre', await U.p.evaluate(function () { return document.querySelector('#modal').hidden; }));
+  var cn1 = await cacheNames(U.p);
+  t('mise à jour : ignorer garde l\'ancienne version (ancien cache toujours là, nouvelle en attente)', cn1.some(function (k) { return k.indexOf('v17-1') > 0 || /v\d+-\d+$/.test(k); }) && cn1.indexOf('coach-masse-v99-0') >= 0 && cn1.length === 2, cn1);
+  await U.p.reload(); await U.p.waitForSelector('#nav'); await U.p.waitForTimeout(1200);
+  t('mise à jour : après ignorer, plus de fenêtre au prochain lancement', await U.p.evaluate(function () { return document.querySelector('#modal').hidden; }));
+  await U.p.click('#nav [data-v=more]');
+  t('mise à jour : carte "Mise à jour disponible" dans Plus', (await U.p.textContent('#view')).includes('Mise à jour disponible'));
+  await U.p.click('[data-act=updopen]'); await U.p.click('#modal [data-act=updnext]');
+  await Promise.all([U.p.waitForEvent('load', { timeout: 10000 }), U.p.click('#modal [data-act=updgo]')]);
+  await U.p.waitForSelector('#nav'); await U.p.waitForTimeout(800);
+  var cn2 = await cacheNames(U.p);
+  t('mise à jour : accepter active la nouvelle version et supprime l\'ancien cache', cn2.length === 1 && cn2[0] === 'coach-masse-v99-0', cn2);
+  t('aucune erreur (17.1)', U.p.errs.length === 0, U.p.errs);
+  await U.c.close(); SWV = null;
+  /* même numéro de version que l'application : bascule silencieuse (cas de la première mise à jour vers 17.1) */
+  var U2 = await uCtx();
+  await U2.p.goto(url); await U2.p.waitForSelector('#nav'); await U2.p.evaluate(function () { return navigator.serviceWorker.ready.then(function () { return true; }); }); await U2.p.waitForTimeout(1000);
+  SWV = { cache: '98-0', version: VJ.version };
+  await U2.p.evaluate(function () { return navigator.serviceWorker.getRegistration().then(function (r) { return r.update(); }); });
+  await U2.p.waitForTimeout(3500);
+  var cn3 = await cacheNames(U2.p);
+  t('mise à jour : même version = bascule silencieuse, sans fenêtre', cn3.length === 1 && cn3[0] === 'coach-masse-v98-0' && await U2.p.evaluate(function () { return document.querySelector('#modal').hidden; }), cn3);
+  await U2.c.close(); SWV = null;
 
   /* 17.0 : politique de confidentialité alignée */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
