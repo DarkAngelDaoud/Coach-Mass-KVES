@@ -1,6 +1,6 @@
 {
- "version": "17.7",
+ "version": "17.8",
  "notes": [
-  "Tests automatiques des calculs du coaching (calories, protéines, eau, suivi du poids, montée de niveau, records, reprise). Rien ne change à l'écran : ça sécurise les futures versions."
+  "Sauvegarde chiffrée facultative : « Exporter chiffré » protège le fichier par une phrase secrète. À l'import, l'appli reconnaît le fichier et demande la phrase."
  ]
 }

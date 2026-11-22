@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.7';
+var VERSION = '17.8';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Tests automatiques des calculs du coaching (calories, protéines, eau, suivi du poids, montée de niveau, records, reprise). Rien ne change à l\'écran : ça sécurise les futures versions.'];
+var NOTES = ['Sauvegarde chiffrée facultative : « Exporter chiffré » protège le fichier par une phrase secrète. À l\'import, l\'appli reconnaît le fichier et demande la phrase.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -1117,7 +1117,7 @@ function viewTrack() {
     }).join('') + '</ul><p class="small">Dernière mesure : ' + z.date + '</p>';
     h += '<div class="chips">' + MKEYS.map(function (k) { return '<button class="chip' + (CH.mk === k ? ' on' : '') + '" data-act="mksel" data-v="' + k + '">' + MLAB[k] + '</button>'; }).join('') + '</div>' + measChart(CH.mk);
   }
-  h += '</div>' + phCard() + '<div class="card"><h2>Sauvegarde</h2><p class="small">Tes données restent sur ce téléphone. Exporte-les de temps en temps.</p><div class="row"><button class="btn alt sm grow" data-act="export">Exporter</button><button class="btn alt sm grow" data-act="import">Importer</button></div></div>';
+  h += '</div>' + phCard() + '<div class="card"><h2>Sauvegarde</h2><p class="small">Tes données restent sur ce téléphone. Exporte-les de temps en temps.</p><div class="row"><button class="btn alt sm grow" data-act="export">Exporter</button><button class="btn alt sm grow" data-act="exportenc">Exporter chiffré</button><button class="btn alt sm grow" data-act="import">Importer</button></div></div>';
   return h;
 }
 
@@ -2445,9 +2445,56 @@ function applyData(o, label) {
 
 /* export : partage de fichier (Drive, WhatsApp, e-mail...) ou téléchargement */
 function bkMark() { P.bkLast = today(); save(); render(); toast('Sauvegarde créée.'); }
-function exportData() {
-  var txt = JSON.stringify({ app: NOM, auteur: AUTEUR, coachMasse: VERSION, exportedAt: new Date().toISOString(), data: D });
-  var name = 'coach-mass-kves-sauvegarde-' + today() + '.json', file = null;
+/* sauvegarde chiffrée par phrase secrète (17.8) : PBKDF2-SHA256 + AES-GCM */
+var ENCIMP = null;
+function encKey(pass, salt, it) {
+  return subtle().importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']).then(function (k) {
+    return subtle().deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: it }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  });
+}
+function encPack(txt, pass) {
+  var salt = rnd(16), iv = rnd(12), it = 250000;
+  return encKey(pass, salt, it).then(function (k) { return subtle().encrypt({ name: 'AES-GCM', iv: iv }, k, new TextEncoder().encode(txt)); }).then(function (ct) {
+    return JSON.stringify({ app: NOM, auteur: AUTEUR, coachMasseEnc: 1, kdf: 'PBKDF2-SHA256', it: it, salt: b64u(salt), iv: b64u(iv), ct: b64u(new Uint8Array(ct)) });
+  });
+}
+function encUnpack(o, pass) {
+  if (!o || o.coachMasseEnc !== 1 || typeof o.salt !== 'string' || typeof o.iv !== 'string' || typeof o.ct !== 'string' || !(o.it >= 100000 && o.it <= 1000000)) return Promise.reject(new Error('format'));
+  return encKey(pass, unb64u(o.salt), o.it).then(function (k) { return subtle().decrypt({ name: 'AES-GCM', iv: unb64u(o.iv) }, k, unb64u(o.ct)); }).then(function (b) { return JSON.parse(new TextDecoder().decode(b)); });
+}
+function encMsg(t) { var m = $('#encmsg'); if (m) m.textContent = t; }
+function encExportOpen() {
+  if (!pinOk()) { toast('Le chiffrement n\'est pas disponible sur cet appareil.'); return; }
+  modal('<h2>Exporter chiffré</h2><p class="small">Ta sauvegarde sera illisible sans cette phrase secrète. Si tu l\'oublies, personne ne pourra la récupérer, pas même moi.</p><label class="f">Phrase secrète (8 caractères minimum)<input type="password" autocomplete="new-password" id="enc1"></label><label class="f">Répète-la<input type="password" autocomplete="new-password" id="enc2"></label><p class="small" id="encmsg" role="alert"></p><button class="btn" data-act="encgo">Exporter</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
+}
+function encExportGo() {
+  var a = $('#enc1').value, b = $('#enc2').value;
+  if (a.length < 8) { encMsg('La phrase secrète doit faire au moins 8 caractères.'); return; }
+  if (a !== b) { encMsg('Les deux phrases ne correspondent pas.'); return; }
+  closeModal(); exportData(a);
+}
+function encImportOpen() {
+  modal('<h2>Sauvegarde chiffrée</h2><p class="small">Saisis la phrase secrète choisie lors de l\'export.</p><label class="f">Phrase secrète<input type="password" autocomplete="off" id="encp"></label><p class="small" id="encmsg" role="alert"></p><button class="btn" data-act="encimpgo">Déchiffrer et importer</button> <button class="btn alt" data-act="encimpno">Annuler</button>');
+}
+function encImportGo() {
+  var pw = $('#encp').value;
+  encUnpack(ENCIMP, pw).then(function (o) { ENCIMP = null; closeModal(); importObj(o); }).catch(function () { encMsg('Phrase secrète incorrecte, ou fichier abîmé.'); });
+}
+function importObj(o) {
+  try {
+    if (o && o.coachMasse && o.data) o = o.data;
+    if (schemaOf(o) > SCHEMA) { toast('Cette sauvegarde vient d\'une version plus récente de l\'appli : mets l\'appli à jour d\'abord.'); return; }
+    if (!validData(o)) throw 0;
+    applyData(o, 'avant-import'); toast('Sauvegarde importée.');
+  } catch (e) { toast('Fichier invalide : rien n\'a été modifié.'); }
+}
+function exportData(pass) {
+  var plain = JSON.stringify({ app: NOM, auteur: AUTEUR, coachMasse: VERSION, exportedAt: new Date().toISOString(), data: D });
+  if (pass) { encPack(plain, pass).then(function (x) { exportRun(x, 'coach-mass-kves-sauvegarde-chiffree-' + today() + '.json'); }).catch(function () { toast('Export impossible sur cet appareil.'); }); return; }
+  exportRun(plain, 'coach-mass-kves-sauvegarde-' + today() + '.json');
+}
+function exportRun(txt, name) {
+  var file = null;
   function dl() {
     try {
       var b = new Blob([txt], { type: 'application/json' }), a = document.createElement('a');
@@ -2516,10 +2563,8 @@ $('#importFile').addEventListener('change', function (ev) {
     try {
       if (String(r.result).length > 5000000) throw 0;
       var o = JSON.parse(r.result);
-      if (o && o.coachMasse && o.data) o = o.data;
-      if (schemaOf(o) > SCHEMA) { toast('Cette sauvegarde vient d\'une version plus récente de l\'appli : mets l\'appli à jour d\'abord.'); return; }
-      if (!validData(o)) throw 0;
-      applyData(o, 'avant-import'); toast('Sauvegarde importée.');
+      if (o && o.coachMasseEnc) { ENCIMP = o; encImportOpen(); return; }
+      importObj(o);
     } catch (e) { toast('Fichier invalide : rien n\'a été modifié.'); }
   };
   r.readAsText(f);
@@ -2893,6 +2938,10 @@ document.addEventListener('click', function (ev) {
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
   else if (a === 'eye') eyeToggle(t);
+  else if (a === 'exportenc') encExportOpen();
+  else if (a === 'encgo') encExportGo();
+  else if (a === 'encimpgo') encImportGo();
+  else if (a === 'encimpno') { ENCIMP = null; closeModal(); }
   else if (a === 'lvlopen') lvlOpen();
   else if (a === 'lvpick') { TL[t.getAttribute('data-e')] = +t.getAttribute('data-v'); Array.prototype.forEach.call(t.parentNode.children, function (b) { b.classList.toggle('on', b === t); }); }
   else if (a === 'lvsave') lvlSave();
@@ -4604,6 +4653,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Niveau de départ": "Starting level", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "For each movement, pick the variant you can do 8 to 12 times (or hold for 30 seconds for the plank) with good form. When in doubt, pick the easiest: the app will move you up by itself. Nothing to do now, this is not a physical test.", "Appliquer ce niveau": "Apply this level", "Plus tard": "Later", "Niveau enregistré.": "Level saved.", "Règle ton niveau de départ": "Set your starting level", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "Tell the app what you can already do: your first sessions will be adapted.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "Set each exercise's variant according to what you can already do.", "Régler mon niveau": "Set my level"}, "ar": {"Niveau de départ": "مستوى البداية", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "لكل حركة، اختر النسخة التي تستطي3 أداءها من 8 إلى 12 مرة (أو الثبات 30 ثانية للبلانك) بشكل سليم. 3ند الشك اختر الأسهل: سيرف3 التطبيق مستواك تلقائيا. لا شيء تف3له الآن، هذا ليس اختبارا بدنيا.", "Appliquer ce niveau": "تطبيق هذا المستوى", "Plus tard": "لاحقا", "Niveau enregistré.": "تم حفظ المستوى.", "Règle ton niveau de départ": "اضبط مستوى البداية", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "أخبر التطبيق بما تستطي3 ف3له: ستكون حصصك الأولى مناسبة.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "اضبط نسخة كل تمرين حسب ما تستطي3 ف3له.", "Régler mon niveau": "ضبط مستواي"}, "ma": {"Niveau de départ": "Mustawa d l-bdaya", "Pour chaque mouvement, choisis la variante que tu peux faire 8 à 12 fois (ou tenir 30 secondes pour le gainage) en gardant une bonne forme. Dans le doute, prends la plus facile : l'application te fera monter toute seule. Rien à faire maintenant, ce n'est pas un test physique.": "F kol tmrin, khtar n-noskha li tqder dirha mn 8 l 12 mra (awla tb9a 30 tanya f l-gainage) b-forme mzyana. Ila shkiti khtar s-sahla: l-application ghadi t3elli-k l-mustawa b-wahd-ha. Walo tdir daba, hada machi test d l-jism.", "Appliquer ce niveau": "Tbbq had l-mustawa", "Plus tard": "Mn b3d", "Niveau enregistré.": "L-mustawa tsjjel.", "Règle ton niveau de départ": "7ded mustawa d l-bdaya", "Dis à l'application ce que tu sais déjà faire : tes premières séances seront adaptées.": "Qol l-l-application ach kat3rf dir: l-jalsat l-lwlin dyalk ghadi ykhdmu 3la hsab-k.", "Règle la variante de chaque exercice selon ce que tu sais déjà faire.": "7ded n-noskha d kol tmrin 3la hsab ach kat3rf dir.", "Régler mon niveau": "7ded mustawa dyali"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Exporter chiffré": "Export encrypted", "Ta sauvegarde sera illisible sans cette phrase secrète. Si tu l'oublies, personne ne pourra la récupérer, pas même moi.": "Your backup will be unreadable without this passphrase. If you forget it, nobody can recover it, not even me.", "Phrase secrète (8 caractères minimum)": "Passphrase (8 characters minimum)", "Répète-la": "Repeat it", "Exporter": "Export", "La phrase secrète doit faire au moins 8 caractères.": "The passphrase must be at least 8 characters.", "Les deux phrases ne correspondent pas.": "The two passphrases do not match.", "Sauvegarde chiffrée": "Encrypted backup", "Saisis la phrase secrète choisie lors de l'export.": "Enter the passphrase you chose when exporting.", "Phrase secrète": "Passphrase", "Déchiffrer et importer": "Decrypt and import", "Phrase secrète incorrecte, ou fichier abîmé.": "Wrong passphrase, or damaged file.", "Le chiffrement n'est pas disponible sur cet appareil.": "Encryption is not available on this device."}, "ar": {"Exporter chiffré": "تصدير مشفّر", "Ta sauvegarde sera illisible sans cette phrase secrète. Si tu l'oublies, personne ne pourra la récupérer, pas même moi.": "ستكون نسختك الاحتياطية غير مقروءة بدون هذه العبارة السرية. إذا نسيتها فلا أحد يستطيع استرجاعها، ولا حتى أنا.", "Phrase secrète (8 caractères minimum)": "العبارة السرية (8 أحرف على الأقل)", "Répète-la": "أعد كتابتها", "Exporter": "تصدير", "La phrase secrète doit faire au moins 8 caractères.": "يجب أن تتكون العبارة السرية من 8 أحرف على الأقل.", "Les deux phrases ne correspondent pas.": "العبارتان غير متطابقتين.", "Sauvegarde chiffrée": "نسخة احتياطية مشفّرة", "Saisis la phrase secrète choisie lors de l'export.": "أدخل العبارة السرية التي اخترتها عند التصدير.", "Phrase secrète": "العبارة السرية", "Déchiffrer et importer": "فك التشفير والاستيراد", "Phrase secrète incorrecte, ou fichier abîmé.": "العبارة السرية غير صحيحة، أو الملف تالف.", "Le chiffrement n'est pas disponible sur cet appareil.": "التشفير غير متوفر على هذا الجهاز."}, "ma": {"Exporter chiffré": "Export m-chiffri", "Ta sauvegarde sera illisible sans cette phrase secrète. Si tu l'oublies, personne ne pourra la récupérer, pas même moi.": "N-noskha dyalk ma ghadi tt9ra bla had l-jomla s-sriya. Ila nsiti-ha, ta wa7ed ma ghadi y9der yrj3ha, wla ana.", "Phrase secrète (8 caractères minimum)": "L-jomla s-sriya (8 d l-7rouf 3la l-a9ell)", "Répète-la": "3awd kteb-ha", "Exporter": "Export", "La phrase secrète doit faire au moins 8 caractères.": "L-jomla s-sriya khasha tkon mn 8 d l-7rouf 3la l-a9ell.", "Les deux phrases ne correspondent pas.": "L-jomlatayn mashi bhal bhal.", "Sauvegarde chiffrée": "Noskha m-chiffria", "Saisis la phrase secrète choisie lors de l'export.": "Kteb l-jomla s-sriya li khtariti mnin dditi l-export.", "Phrase secrète": "L-jomla s-sriya", "Déchiffrer et importer": "Fkk t-chiffrement w import", "Phrase secrète incorrecte, ou fichier abîmé.": "L-jomla s-sriya ghalta, wla l-fichier khrban.", "Le chiffrement n'est pas disponible sur cet appareil.": "T-chiffrement ma kaynch f had l-jihaz."}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();
