@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.7' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.8' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,35 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.8 : sauvegarde chiffrée */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.evaluate(function () { var D = window.__coach.D(); D.profile.onboarded = true; D.profile.healthOk = true; D.profile.w0 = 77.7; D.profile.goal = 83.3; window.__coach.setTab('track'); });
+  await pg.waitForTimeout(700); await pg.evaluate(function () { document.querySelector('#modal').hidden = true; });
+  await pg.evaluate(function () { var d = document.querySelector('details[data-sec=Sauvegarde]'); if (d) d.open = true; });
+  await pg.click('[data-act=exportenc]');
+  await pg.fill('#enc1', 'court'); await pg.fill('#enc2', 'court'); await pg.click('[data-act=encgo]');
+  t('chiffré : phrase trop courte refusée', /8 caractères/.test(await pg.textContent('#encmsg')));
+  await pg.fill('#enc1', 'phrase-secrete-1'); await pg.fill('#enc2', 'phrase-secrete-2'); await pg.click('[data-act=encgo]');
+  t('chiffré : phrases différentes refusées', /ne correspondent pas/.test(await pg.textContent('#encmsg')));
+  await pg.fill('#enc2', 'phrase-secrete-1');
+  var [dle] = await Promise.all([pg.waitForEvent('download', { timeout: 15000 }), pg.click('[data-act=encgo]')]);
+  var encPath = await dle.path(), encTxt = fs.readFileSync(encPath, 'utf8'), encObj = JSON.parse(encTxt);
+  t('chiffré : fichier chiffré téléchargé, sans données lisibles', /^coach-mass-kves-sauvegarde-chiffree-/.test(dle.suggestedFilename()) && encObj.coachMasseEnc === 1 && encObj.kdf === 'PBKDF2-SHA256' && encTxt.indexOf('77.7') < 0 && encTxt.indexOf('"profile"') < 0 && encTxt.indexOf('phrase-secrete') < 0, [dle.suggestedFilename(), Object.keys(encObj)]);
+  var encCopy = '/tmp/enc178.json'; fs.copyFileSync(encPath, encCopy);
+  await pg.context().close();
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav'); await pg.waitForTimeout(700);
+  await pg.evaluate(function () { document.querySelector('#modal').hidden = true; });
+  await pg.setInputFiles('#importFile', encCopy); await pg.waitForSelector('#encp');
+  t('chiffré : à l\'import, la phrase est demandée', await pg.isVisible('#encp'));
+  await pg.fill('#encp', 'mauvaise-phrase'); await pg.click('[data-act=encimpgo]'); await pg.waitForTimeout(800);
+  t('chiffré : mauvaise phrase refusée, rien n\'est modifié', /incorrecte/.test(await pg.textContent('#encmsg')) && (await pg.evaluate(function () { return window.__coach.D().profile.w0; })) !== 77.7);
+  await pg.fill('#encp', 'phrase-secrete-1'); await pg.click('[data-act=encimpgo]'); await pg.waitForTimeout(1200);
+  var d79 = await pg.evaluate(function () { return window.__coach.D().profile; });
+  t('chiffré : bonne phrase : données restaurées', d79.w0 === 77.7 && d79.goal === 83.3, [d79.w0, d79.goal]);
+  var tampered = JSON.parse(encTxt); tampered.ct = tampered.ct.slice(0, -4) + (tampered.ct.slice(-4) === 'AAAA' ? 'BBBB' : 'AAAA'); fs.writeFileSync('/tmp/enc178b.json', JSON.stringify(tampered));
+  await pg.setInputFiles('#importFile', '/tmp/enc178b.json'); await pg.waitForSelector('#encp'); await pg.fill('#encp', 'phrase-secrete-1'); await pg.click('[data-act=encimpgo]'); await pg.waitForTimeout(800);
+  t('chiffré : fichier modifié détecté (intégrité)', /incorrecte|abîmé/.test(await pg.textContent('#encmsg')));
+  await pg.context().close();
   /* 17.7 : tests unitaires des calculs du coaching (valeurs attendues calculées à la main) */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   var U7 = await pg.evaluate(function () {
