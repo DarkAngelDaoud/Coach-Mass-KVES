@@ -8,15 +8,15 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.1';
+var VERSION = '17.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Mises à jour en deux temps : une annonce des nouveautés, puis le choix de mettre à jour (l\'appli recharge) ou d\'ignorer (tu gardes ta version).', 'L\'application ne change plus de version toute seule : elle garde la même version tant que tu n\'as pas accepté.'];
+var NOTES = ['Les étirements ont maintenant une illustration animée pour chaque mouvement (pectoraux, cuisses, arrière des cuisses, posture de l\'enfant, respiration).'];
 var STRETCH = [
-  { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
-  { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
-  { l: 'Étire l\'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer', s: 40 },
-  { l: 'Posture de l\'enfant : assis sur les talons, bras devant, dos détendu', s: 30 },
-  { l: 'Respire lentement : cinq grandes respirations, épaules relâchées', s: 30 }
+  { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
+  { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
+  { l: 'Étire l\'arrière des cuisses : assis, une jambe tendue, penche-toi sans forcer', s: 40, fig: 'stHam', period: 5 },
+  { l: 'Posture de l\'enfant : assis sur les talons, bras devant, dos détendu', s: 30, fig: 'stChild', period: 6 },
+  { l: 'Respire lentement : cinq grandes respirations, épaules relâchées', s: 30, fig: 'stBreath', period: 6 }
 ];
 var WARM = [
   { l: 'Sauts légers sur place', s: 60, fig: 'jump', period: 0.9 },
@@ -75,7 +75,22 @@ var FIG = {
     b: { paths: [[[78,92],[90,68],[100,46]], [[122,92],[110,68],[100,46]], [[100,46],[100,22]], [[100,28],[86,20],[76,8]], [[100,28],[114,20],[124,8]]], head: [100,12] } },
   arms: { name: 'Rotations des épaules', la: 'Bras bas', lb: 'Bras hauts',
     a: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[84,40],[70,50]], [[100,32],[116,40],[130,50]]], head: [100,16] },
-    b: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[90,16],[84,2]], [[100,32],[110,16],[116,2]]], head: [100,16] } }
+    b: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[90,16],[84,2]], [[100,32],[110,16],[116,2]]], head: [100,16] } },
+  stChest: { name: 'Étirement des pectoraux', la: 'Avant-bras contre le mur', lb: 'Tourne le buste',
+    a: { props: [[[142,8],[142,100]]], paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[92,44],[90,58]], [[102,32],[132,32],[132,12]]], head: [100,16] },
+    b: { props: [[[142,8],[142,100]]], paths: [LEGS[0], LEGS[1], [[100,50],[94,26]], [[94,32],[86,44],[84,58]], [[96,32],[132,32],[132,12]]], head: [90,16] } },
+  stQuad: { name: 'Étirement des cuisses', la: 'Debout, jambes tendues', lb: 'Talon vers la fesse',
+    a: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[92,44],[90,58]], [[100,32],[108,44],[110,58]]], head: [100,16] },
+    b: { paths: [LEGS[0], [[100,50],[102,74],[84,62]], [[100,50],[100,26]], [[100,32],[90,46],[84,62]], [[100,32],[108,44],[110,58]]], head: [100,16] } },
+  stHam: { name: 'Étirement arrière des cuisses', la: 'Assis, dos droit', lb: 'Penche-toi sans forcer',
+    a: { paths: [[[60,96],[60,66]], [[60,96],[122,96]], [[122,96],[126,86]], [[60,96],[80,80],[76,96]], [[60,72],[82,82]]], head: [60,54] },
+    b: { paths: [[[60,96],[84,74]], [[60,96],[122,96]], [[122,96],[126,86]], [[60,96],[80,80],[76,96]], [[84,78],[112,90],[122,92]]], head: [96,66] } },
+  stChild: { name: 'Posture de l\'enfant', la: 'Assis sur les talons', lb: 'Bras devant, front vers le sol',
+    a: { paths: [[[68,98],[100,98]], [[100,98],[72,86]], [[72,86],[72,50]], [[72,56],[80,74],[84,84]]], head: [72,38] },
+    b: { paths: [[[68,98],[100,98]], [[100,98],[72,86]], [[72,86],[112,92]], [[108,92],[140,96],[164,97]]], head: [124,91] } },
+  stBreath: { name: 'Respiration lente', la: 'Inspire, bras levés', lb: 'Expire, bras baissés',
+    a: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[90,16],[84,2]], [[100,32],[110,16],[116,2]]], head: [100,16] },
+    b: { paths: [LEGS[0], LEGS[1], [[100,50],[100,26]], [[100,32],[92,44],[90,58]], [[100,32],[108,44],[110,58]]], head: [100,16] } }
 };
 var FIGS = {};
 EX.forEach(function (e) { FIGS[e.id] = e; });
@@ -1316,7 +1331,7 @@ function setTxt(id, t) { var n = $('#' + id); if (n) n.textContent = t; }
 function cur() { return R.steps[R.i]; }
 function startStretch() {
   clearTimer();
-  R.stretch = true; R.steps = STRETCH.map(function (x) { return { k: 'warm', label: x.l, sec: x.s }; });
+  R.stretch = true; R.steps = STRETCH.map(function (x) { return { k: 'warm', label: x.l, sec: x.s, fig: x.fig, period: x.period }; });
   R.i = -1; R.paused = false; R.quit = false; R.painOpen = false; R.phase = 'warm';
   wake(); advance();
 }
@@ -4428,6 +4443,11 @@ function startI18n() {
 
 (function(){
   var X = {"en": {"Nouvelle version disponible": "New version available", "Suite": "Next", "Mettre à jour ?": "Update?", "L'application va se recharger. Tes données sont conservées.": "The app will reload. Your data is kept.", "Mettre à jour et recharger": "Update and reload", "Ignorer et garder cette version": "Ignore and keep this version", "Nouvelle version disponible : voir dans Plus.": "New version available: see More.", "Mise à jour en cours…": "Updating…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "Update ignored. You can do it later from More.", "Mise à jour disponible": "Update available", "Voir les nouveautés": "See what's new", "Version": "Version"}, "ar": {"Nouvelle version disponible": "نسخة جديدة متوفرة", "Suite": "التالي", "Mettre à jour ?": "هل تريد التحديث؟", "L'application va se recharger. Tes données sont conservées.": "سيُعاد تحميل التطبيق. بياناتك محفوظة.", "Mettre à jour et recharger": "حدّث وأعد التحميل", "Ignorer et garder cette version": "تجاهل والاحتفاظ بهذه النسخة", "Nouvelle version disponible : voir dans Plus.": "نسخة جديدة متوفرة: انظر في المزيد.", "Mise à jour en cours…": "التحديث جارٍ…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "تم تجاهل التحديث. يمكنك إجراؤه لاحقا من المزيد.", "Mise à jour disponible": "تحديث متوفر", "Voir les nouveautés": "اطلع على الجديد", "Version": "النسخة"}, "ma": {"Nouvelle version disponible": "Nsskha jdida kayna", "Suite": "Mn b3d", "Mettre à jour ?": "Tdir mise à jour?", "L'application va se recharger. Tes données sont conservées.": "L-application ghadi t3awd t-tcharja. L-ma3lumat dyalk ghadi tb9a.", "Mettre à jour et recharger": "Dir mise à jour w 3awd charja", "Ignorer et garder cette version": "Tjahel w khlli had nsskha", "Nouvelle version disponible : voir dans Plus.": "Nsskha jdida kayna: shuf f Plus.", "Mise à jour en cours…": "Mise à jour kat-t3mel…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "Mise à jour tjahlat. Imkn lik dirha mn b3d mn Plus.", "Mise à jour disponible": "Mise à jour kayna", "Voir les nouveautés": "Shuf l-jdid", "Version": "Nsskha"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
+
+(function(){
+  var X = {"en": {"Étirement des pectoraux": "Chest stretch", "Avant-bras contre le mur": "Forearm on the wall", "Tourne le buste": "Turn your chest", "Étirement des cuisses": "Quad stretch", "Debout, jambes tendues": "Standing, legs straight", "Talon vers la fesse": "Heel to buttock", "Étirement arrière des cuisses": "Hamstring stretch", "Assis, dos droit": "Sitting, back straight", "Penche-toi sans forcer": "Lean forward gently", "Posture de l'enfant": "Child's pose", "Assis sur les talons": "Sitting on your heels", "Bras devant, front vers le sol": "Arms forward, forehead down", "Respiration lente": "Slow breathing", "Inspire, bras levés": "Breathe in, arms up", "Expire, bras baissés": "Breathe out, arms down"}, "ar": {"Étirement des pectoraux": "تمدد الصدر", "Avant-bras contre le mur": "الساعد على الحائط", "Tourne le buste": "أدر صدرك", "Étirement des cuisses": "تمدد الفخذ", "Debout, jambes tendues": "واقفا، الساقان مستقيمتان", "Talon vers la fesse": "الكعب نحو المؤخرة", "Étirement arrière des cuisses": "تمدد خلف الفخذ", "Assis, dos droit": "جالسا، الظهر مستقيم", "Penche-toi sans forcer": "انحنِ بلطف", "Posture de l'enfant": "وضعية الطفل", "Assis sur les talons": "جالسا على الكعبين", "Bras devant, front vers le sol": "الذراعان للأمام، الجبهة نحو الأرض", "Respiration lente": "تنفس بطيء", "Inspire, bras levés": "شهيق، الذراعان مرفوعتان", "Expire, bras baissés": "زفير، الذراعان منخفضتان"}, "ma": {"Étirement des pectoraux": "Tmdid dyal s-sder", "Avant-bras contre le mur": "Sa3d 3la l-hit", "Tourne le buste": "Dwwer s-sder", "Étirement des cuisses": "Tmdid dyal l-fkhed", "Debout, jambes tendues": "Wa9ef, rjlin mdoudin", "Talon vers la fesse": "Ka3b nhar l-mou'akhira", "Étirement arrière des cuisses": "Tmdid dyal mor l-fkhed", "Assis, dos droit": "Jales, d-dhar mdoud", "Penche-toi sans forcer": "Mil b-hdou", "Posture de l'enfant": "Wad3iyat t-tfl", "Assis sur les talons": "Jales 3la l-ka3biyn", "Bras devant, front vers le sol": "Drai3 l-qoddam, jbha l-lard", "Respiration lente": "Tnfos bti", "Inspire, bras levés": "Shhiq, drai3 l-fouq", "Expire, bras baissés": "Zfir, drai3 l-t7t"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
 startI18n();

@@ -1,7 +1,6 @@
 {
- "version": "17.1",
+ "version": "17.2",
  "notes": [
-  "Mises à jour en deux temps : une annonce des nouveautés, puis le choix de mettre à jour (l'appli recharge) ou d'ignorer (tu gardes ta version).",
-  "L'application ne change plus de version toute seule : elle garde la même version tant que tu n'as pas accepté."
+  "Les étirements ont maintenant une illustration animée pour chaque mouvement (pectoraux, cuisses, arrière des cuisses, posture de l'enfant, respiration)."
  ]
 }
