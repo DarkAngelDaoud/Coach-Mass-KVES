@@ -1,6 +1,6 @@
 {
- "version": "17.6",
+ "version": "17.7",
  "notes": [
-  "Niveau de départ : tu choisis, pour chaque exercice, la variante que tu sais déjà faire, et tes premières séances sont adaptées (Plus, ou carte sur l'écran Aujourd'hui au début)."
+  "Tests automatiques des calculs du coaching (calories, protéines, eau, suivi du poids, montée de niveau, records, reprise). Rien ne change à l'écran : ça sécurise les futures versions."
  ]
 }

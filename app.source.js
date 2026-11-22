@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.6';
+var VERSION = '17.7';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Niveau de départ : tu choisis, pour chaque exercice, la variante que tu sais déjà faire, et tes premières séances sont adaptées (Plus, ou carte sur l\'écran Aujourd\'hui au début).'];
+var NOTES = ['Tests automatiques des calculs du coaching (calories, protéines, eau, suivi du poids, montée de niveau, records, reprise). Rien ne change à l\'écran : ça sécurise les futures versions.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -4615,5 +4615,8 @@ lockShow();
 if (NEWER) setTimeout(function () { toast('Tes données viennent d\'une version plus récente : une copie a été gardée à part.'); }, 900);
 if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').then(watchReg).catch(function () {}); }); }
-window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); } };
+window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); },
+  /* calculs du coaching exposés pour les tests automatiques (lecture seule, aucun effet sur l'écran) */
+  calc: { bmr: bmr, tdee: tdee, kcalCore: kcalCore, kcalTarget: kcalTarget, protTarget: protTarget, waterTarget: waterTarget, goalCheck: goalCheck, slopeWeek: slopeWeek, suggestion: suggestion, findPrs: findPrs, deloadDue: deloadDue, absenceDue: absenceDue, wkNo: wkNo, ex: function (id) { return EX.filter(function (e) { return e.id === id; })[0]; },
+    progress: function (plan, logs) { var o = R; R = { plan: plan }; try { return applyProgress(logs); } finally { R = o; } } } };
 })();
