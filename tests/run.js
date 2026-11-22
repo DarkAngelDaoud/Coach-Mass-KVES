@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.5' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.6' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,22 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.6 : niveau de départ */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.evaluate(function () { var D = window.__coach.D(); D.profile.onboarded = true; D.profile.healthOk = true; window.__coach.render(); });
+  await pg.waitForTimeout(700); await pg.evaluate(function () { document.querySelector('#modal').hidden = true; });
+  await pg.click('#nav [data-v=today]').catch(function () {});
+  t('niveau : carte proposée au départ', await pg.isVisible('[data-act=lvlopen]'));
+  await pg.click('[data-act=lvlopen]');
+  t('niveau : la variante la plus facile est présélectionnée', (await pg.locator('#modal [data-act=lvpick].on').count()) === 8);
+  await pg.click('#modal [data-act=lvpick][data-e=pompes][data-v="1"]'); await pg.click('#modal [data-act=lvpick][data-e=squats][data-v="2"]');
+  await pg.click('[data-act=lvsave]'); await pg.waitForTimeout(300);
+  var d78 = await pg.evaluate(function () { return JSON.parse(localStorage.getItem('coach-masse-v1')); });
+  t('niveau : niveaux enregistrés', d78.levels.pompes.level === 1 && d78.levels.squats.level === 2 && (!d78.levels.tirage || d78.levels.tirage.level === 0) && /^\d{4}-/.test(d78.profile.lvlDone), d78.levels);
+  t('niveau : la carte disparaît de l\'écran Aujourd\'hui', !(await pg.isVisible('#view [data-act=lvlopen]')));
+  await pg.click('#nav [data-v=more]');
+  t('niveau : toujours accessible depuis Plus', await pg.isVisible('#view [data-act=lvlopen]'));
+  await pg.context().close();
   /* 17.5 : numéro de format des données */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   var d75 = await pg.evaluate(function () { return window.__coach.D(); });
