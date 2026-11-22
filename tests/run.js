@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,17 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.2 : couverture des traductions du programme (donnees.js) */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  var cov = await pg.evaluate(function () {
+    var LD = {}, strs = {}, miss = { en: [], ar: [], ma: [] };
+    window.CM_I18N(LD, function (fr, en) { var parts = fr.split(/\{\d+\}/), keys = (fr.match(/\{\d+\}/g) || []), src = '^'; parts.forEach(function (p, i) { src += p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); if (i < keys.length) src += '(.+?)'; }); return { re: new RegExp(src + '$'), en: en }; }, {});
+    (function walk(o) { if (typeof o === 'string') { if (/[A-Za-zÀ-ÿ]{3,}/.test(o) && !/^[a-z][A-Za-z0-9]*$/.test(o)) strs[o] = 1; } else if (Array.isArray(o)) o.forEach(walk); else if (o && typeof o === 'object') Object.keys(o).forEach(function (k) { walk(o[k]); }); })(window.CM_DATA);
+    Object.keys(strs).forEach(function (s) { ['en', 'ar', 'ma'].forEach(function (l) { var d = LD[l]; if (!(Object.prototype.hasOwnProperty.call(d.w, s) || d.p.some(function (p) { return p.re.test(s); }))) miss[l].push(s); }); });
+    return { n: Object.keys(strs).length, miss: miss };
+  });
+  t('traductions : tout texte du programme (' + cov.n + ') est traduit en anglais, arabe et darija', cov.n > 200 && !cov.miss.en.length && !cov.miss.ar.length && !cov.miss.ma.length, [cov.miss.en.slice(0, 3), cov.miss.ar.length, cov.miss.ma.length]);
+  await pg.context().close();
   /* 17.9 : export de photos chiffré */
   var jpg79 = (await (async function () { var pp = await br.newPage(); var u = await pp.evaluate(function () { var c = document.createElement('canvas'); c.width = 40; c.height = 40; var x = c.getContext('2d'); x.fillStyle = '#3a7'; x.fillRect(0, 0, 40, 40); return c.toDataURL('image/jpeg'); }); await pp.close(); return u; })());
   fs.writeFileSync('/tmp/ph179.jpg', Buffer.from(jpg79.split(',')[1], 'base64'));
