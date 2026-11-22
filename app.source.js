@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.2';
+var VERSION = '18.3';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Traductions complétées : les variantes avancées des exercices et les précautions de sécurité s\'affichaient encore en français dans les autres langues. Un test vérifie maintenant que tout texte du programme est traduit.'];
+var NOTES = ['Nouvelle identité visuelle KVES : icône, image de partage et bannière aux couleurs bleu et vert du logo KVES Services & Tech, et logo dans la page À propos.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -1690,7 +1690,7 @@ function viewMore() {
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
     '<div class="card"><h2>Comment le programme s\'adapte</h2><p class="small">Ce qui change selon ton objectif, et ce qui reste fixe.</p><button class="btn alt" data-act="tab" data-v="adapt">Lire</button></div>' +
     shareCard() +
-    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>' +
+    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><img class="klogo" src="logo-kves.png" alt="KVES Services &amp; Tech" width="900" height="491"><p class="small">Une application de KVES Services &amp; Tech.</p><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>' +
     '<div class="card"><h2>Légal</h2><div class="links"><button class="linkrow" data-act="tab" data-v="sante">Avertissement santé</button><button class="linkrow" data-act="tab" data-v="confid">Politique de confidentialité</button><button class="linkrow" data-act="tab" data-v="cond">Conditions d\'utilisation</button></div></div>';
 }
 function avItem(it, i) {

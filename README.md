@@ -4,7 +4,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 18.2 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 18.3 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -161,6 +161,7 @@ Chaque fichier source porte la marque `© KVES · Coach-Mass-KVES`, qui apparaî
 | 18.0 | Traductions déplacées dans langues.js (fichier à part) |
 | 18.1 | Données du programme déplacées dans donnees.js (fichier à part) |
 | 18.2 | Traductions complétées (62 textes) + test de couverture |
+| 18.3 | Identité visuelle KVES (bleu et vert) : icônes, bannière, partage, logo dans À propos |
 | 15.0 | Eau : objectif personnalisé et rappel du coach |
 | 14.9 | Carte Légal en liste, sous À propos |
 | 14.8 | Application minifiée (app.js) ; code lisible dans app.source.js |
@@ -298,6 +299,7 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | `src/` | Le code source, découpé en 19 modules numérotés (données, état, vues, séance, avis, courses, rappels, sauvegarde...) |
 | `build.js` | Assemble `src/` en `app.js` : `node build.js` |
 | `donnees.js` | Données du programme : exercices, figures, repas, précautions (à faire valider), lisible, chargé avant `app.js` |
+| `logo-kves.png` | Logo KVES Services & Tech (page À propos), couvert par la signature |
 | `langues.js` | Traductions (anglais, arabe, darija), lisible, chargé avant `app.js` |
 | `tests/run.js` | Tests automatiques : `node build.js && node tests/run.js` |
 | `styles.css` | Styles, thèmes clair et sombre, adaptation portrait et paysage |
