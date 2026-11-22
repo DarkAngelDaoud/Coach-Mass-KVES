@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.2' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.3' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,21 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.3 : identité visuelle KVES */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.evaluate(function () { window.__coach.setTab('more'); });
+  await pg.waitForTimeout(700); await pg.evaluate(function () { document.querySelector('#modal').hidden = true; });
+  var brand = await pg.evaluate(function () {
+    function px(src) { return new Promise(function (res) { var i = new Image(); i.onload = function () { var c = document.createElement('canvas'); c.width = i.naturalWidth; c.height = i.naturalHeight; var x = c.getContext('2d'); x.drawImage(i, 0, 0); var d = x.getImageData(4, 4, 1, 1).data; res([d[0], d[1], d[2]]); }; i.onerror = function () { res(null); }; i.src = src; }); }
+    var logo = document.querySelector('img.klogo');
+    return Promise.all([px('icon-512.png'), px('icon-192.png')]).then(function (p) { return { i512: p[0], i192: p[1], logoOk: !!logo && logo.complete && logo.naturalWidth > 0, mf: null }; });
+  });
+  var mf = JSON.parse(fs.readFileSync(path.join(root, 'manifest.webmanifest'), 'utf8'));
+  function navy(c) { return !!c && c[0] < 30 && c[1] > 40 && c[1] < 100 && c[2] > 70 && c[2] < 150; }
+  t('identité : icônes aux couleurs bleu marine KVES', navy(brand.i512) && navy(brand.i192), [brand.i512, brand.i192]);
+  t('identité : fond de démarrage Android = bleu KVES', mf.background_color === '#0B4471', mf.background_color);
+  t('identité : logo KVES Services & Tech affiché dans À propos', brand.logoOk);
+  await pg.context().close();
   /* 18.2 : couverture des traductions du programme (donnees.js) */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   var cov = await pg.evaluate(function () {
