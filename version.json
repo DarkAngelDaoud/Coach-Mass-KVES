@@ -1,6 +1,6 @@
 {
- "version": "17.8",
+ "version": "17.9",
  "notes": [
-  "Sauvegarde chiffrée facultative : « Exporter chiffré » protège le fichier par une phrase secrète. À l'import, l'appli reconnaît le fichier et demande la phrase."
+  "Export de photos chiffré facultatif (Suivi, photos) : même phrase secrète que pour la sauvegarde. À l'import, l'appli reconnaît le fichier et demande la phrase."
  ]
 }

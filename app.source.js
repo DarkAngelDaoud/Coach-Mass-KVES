@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.8';
+var VERSION = '17.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Sauvegarde chiffrée facultative : « Exporter chiffré » protège le fichier par une phrase secrète. À l\'import, l\'appli reconnaît le fichier et demande la phrase.'];
+var NOTES = ['Export de photos chiffré facultatif (Suivi, photos) : même phrase secrète que pour la sauvegarde. À l\'import, l\'appli reconnaît le fichier et demande la phrase.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -1624,7 +1624,7 @@ function phCard() {
   phLoad();
   var L = PH.list || [], h = '<div class="card" id="phcard"><h2>Photos de progression</h2><p class="small">Tes photos restent uniquement sur ce téléphone, jamais envoyées. Elles ne sont pas dans la sauvegarde.</p>';
   h += '<p class="small"><b>Attention :</b> si tu effaces les données du site dans Chrome, les photos disparaissent. Exporte-les de temps en temps.</p>';
-  h += '<div class="row"><label class="btn alt sm">Ajouter une photo<input type="file" accept="image/*" data-ph="add" hidden></label><label class="btn alt sm">Importer des photos<input type="file" accept=".json,application/json" data-ph="imp" hidden></label>' + (L.length ? '<button class="btn alt sm" data-act="phexp">Exporter les photos</button>' : '') + '</div>';
+  h += '<div class="row"><label class="btn alt sm">Ajouter une photo<input type="file" accept="image/*" data-ph="add" hidden></label><label class="btn alt sm">Importer des photos<input type="file" accept=".json,application/json" data-ph="imp" hidden></label>' + (L.length ? '<button class="btn alt sm" data-act="phexp">Exporter les photos</button><button class="btn alt sm" data-act="phexpenc">Exporter chiffré</button>' : '') + '</div>';
   if (L.length) h += '<p class="small">' + (P.phExp ? '<span>Dernier export :</span> ' + esc(sdate(P.phExp)) : 'Jamais exporté') + '</p>';
   if (!L.length) return h + '<p class="small">Aucune photo pour l\'instant.</p></div>';
   h += '<p class="small">Touche deux photos pour les comparer.</p><div class="phgrid">' + L.map(function (it) {
@@ -1638,10 +1638,13 @@ function phCard() {
   return h + '</div>';
 }
 function phToData(b) { return new Promise(function (res, rej) { var r = new FileReader(); r.onload = function () { res(r.result); }; r.onerror = rej; r.readAsDataURL(b); }); }
-function phExport() {
+function phExport(pass) {
   var L = PH.list || [];
   Promise.all(L.map(function (it) { return phToData(it.blob).then(function (d) { return { id: it.id, date: it.date, data: d }; }); })).then(function (items) {
-    var b = new Blob([JSON.stringify({ app: 'coach-masse-photos', v: 1, items: items })], { type: 'application/json' }), name = 'photos-coach-mass-' + today() + '.json', f = null;
+    var plain = JSON.stringify({ app: 'coach-masse-photos', v: 1, items: items });
+    return pass ? encPack(plain, pass) : plain;
+  }).then(function (txt) {
+    var b = new Blob([txt], { type: 'application/json' }), name = 'photos-coach-mass-' + (pass ? 'chiffrees-' : '') + today() + '.json', f = null;
     function dl() { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
     P.phExp = today(); save(); render();
     try { f = new File([b], name, { type: 'application/json' }); } catch (e) { f = null; }
@@ -1652,8 +1655,16 @@ function phExport() {
 function phImport(file) {
   var r = new FileReader();
   r.onload = function () {
-    var j, add = [], have = {};
+    var j;
     try { j = JSON.parse(r.result); } catch (e) { j = null; }
+    if (j && j.coachMasseEnc) { ENCIMP = j; ENCCB = phImportObj; encImportOpen(); return; }
+    phImportObj(j);
+  };
+  r.readAsText(file);
+}
+function phImportObj(j) {
+  var add = [], have = {};
+  {
     if (!j || j.app !== 'coach-masse-photos' || !Array.isArray(j.items)) { toast('Fichier non reconnu'); return; }
     (PH.list || []).forEach(function (x) { have[x.id] = 1; });
     j.items.slice(0, 300).forEach(function (it) {
@@ -1668,8 +1679,7 @@ function phImport(file) {
     Promise.all(add.map(function (it) { return phTx('readwrite', function (st) { return st.put(it); }); })).then(function () {
       PH.list = (PH.list || []).concat(add).sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : (x.id < y.id ? -1 : 1); }); render(); toast('Photos importées');
     }).catch(function () { toast('Photo illisible'); });
-  };
-  r.readAsText(file);
+  }
 }
 document.addEventListener('change', function (ev) {
   var t = ev.target;
@@ -1694,6 +1704,7 @@ document.addEventListener('click', function (ev) {
     if (i >= 0) PH.sel.splice(i, 1); else { PH.sel.push(id); if (PH.sel.length > 2) PH.sel.shift(); }
     PH.armed = ''; render();
   } else if (a === 'phexp') { phExport(); }
+  else if (a === 'phexpenc') { encExportOpen('ph'); }
   else if (a === 'phdel') {
     if (!PH.armed) { PH.armed = '1'; render(); return; }
     phDel(PH.sel.slice());
@@ -2446,7 +2457,7 @@ function applyData(o, label) {
 /* export : partage de fichier (Drive, WhatsApp, e-mail...) ou téléchargement */
 function bkMark() { P.bkLast = today(); save(); render(); toast('Sauvegarde créée.'); }
 /* sauvegarde chiffrée par phrase secrète (17.8) : PBKDF2-SHA256 + AES-GCM */
-var ENCIMP = null;
+var ENCIMP = null, ENCCB = null, ENCWHAT = 'data';
 function encKey(pass, salt, it) {
   return subtle().importKey('raw', new TextEncoder().encode(pass), 'PBKDF2', false, ['deriveKey']).then(function (k) {
     return subtle().deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: it }, k, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
@@ -2463,7 +2474,8 @@ function encUnpack(o, pass) {
   return encKey(pass, unb64u(o.salt), o.it).then(function (k) { return subtle().decrypt({ name: 'AES-GCM', iv: unb64u(o.iv) }, k, unb64u(o.ct)); }).then(function (b) { return JSON.parse(new TextDecoder().decode(b)); });
 }
 function encMsg(t) { var m = $('#encmsg'); if (m) m.textContent = t; }
-function encExportOpen() {
+function encExportOpen(what) {
+  ENCWHAT = what === 'ph' ? 'ph' : 'data';
   if (!pinOk()) { toast('Le chiffrement n\'est pas disponible sur cet appareil.'); return; }
   modal('<h2>Exporter chiffré</h2><p class="small">Ta sauvegarde sera illisible sans cette phrase secrète. Si tu l\'oublies, personne ne pourra la récupérer, pas même moi.</p><label class="f">Phrase secrète (8 caractères minimum)<input type="password" autocomplete="new-password" id="enc1"></label><label class="f">Répète-la<input type="password" autocomplete="new-password" id="enc2"></label><p class="small" id="encmsg" role="alert"></p><button class="btn" data-act="encgo">Exporter</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
 }
@@ -2471,14 +2483,14 @@ function encExportGo() {
   var a = $('#enc1').value, b = $('#enc2').value;
   if (a.length < 8) { encMsg('La phrase secrète doit faire au moins 8 caractères.'); return; }
   if (a !== b) { encMsg('Les deux phrases ne correspondent pas.'); return; }
-  closeModal(); exportData(a);
+  closeModal(); if (ENCWHAT === 'ph') phExport(a); else exportData(a);
 }
 function encImportOpen() {
   modal('<h2>Sauvegarde chiffrée</h2><p class="small">Saisis la phrase secrète choisie lors de l\'export.</p><label class="f">Phrase secrète<input type="password" autocomplete="off" id="encp"></label><p class="small" id="encmsg" role="alert"></p><button class="btn" data-act="encimpgo">Déchiffrer et importer</button> <button class="btn alt" data-act="encimpno">Annuler</button>');
 }
 function encImportGo() {
   var pw = $('#encp').value;
-  encUnpack(ENCIMP, pw).then(function (o) { ENCIMP = null; closeModal(); importObj(o); }).catch(function () { encMsg('Phrase secrète incorrecte, ou fichier abîmé.'); });
+  encUnpack(ENCIMP, pw).then(function (o) { ENCIMP = null; closeModal(); (ENCCB || importObj)(o); ENCCB = null; }).catch(function () { encMsg('Phrase secrète incorrecte, ou fichier abîmé.'); });
 }
 function importObj(o) {
   try {
@@ -2563,7 +2575,7 @@ $('#importFile').addEventListener('change', function (ev) {
     try {
       if (String(r.result).length > 5000000) throw 0;
       var o = JSON.parse(r.result);
-      if (o && o.coachMasseEnc) { ENCIMP = o; encImportOpen(); return; }
+      if (o && o.coachMasseEnc) { ENCIMP = o; ENCCB = importObj; encImportOpen(); return; }
       importObj(o);
     } catch (e) { toast('Fichier invalide : rien n\'a été modifié.'); }
   };
@@ -2941,7 +2953,7 @@ document.addEventListener('click', function (ev) {
   else if (a === 'exportenc') encExportOpen();
   else if (a === 'encgo') encExportGo();
   else if (a === 'encimpgo') encImportGo();
-  else if (a === 'encimpno') { ENCIMP = null; closeModal(); }
+  else if (a === 'encimpno') { ENCIMP = null; ENCCB = null; closeModal(); }
   else if (a === 'lvlopen') lvlOpen();
   else if (a === 'lvpick') { TL[t.getAttribute('data-e')] = +t.getAttribute('data-v'); Array.prototype.forEach.call(t.parentNode.children, function (b) { b.classList.toggle('on', b === t); }); }
   else if (a === 'lvsave') lvlSave();

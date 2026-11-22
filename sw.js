@@ -1,5 +1,5 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v17-8';
+var CACHE = 'coach-masse-v17-9';
 /* Fichiers indispensables : tout est mis en cache ou rien (pas de mélange d'anciens et de nouveaux fichiers). */
 var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'version.json', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 var OPTIONAL = ['avis-config.js'];
