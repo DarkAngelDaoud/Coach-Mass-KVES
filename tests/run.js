@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.2' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.3' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,35 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.3 : verrou par code */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  t('verrou : absent par défaut', !(await pg.isVisible('#lockpin')));
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=pinset]');
+  await pg.fill('#pin1', '12'); await pg.fill('#pin2', '12'); await pg.click('[data-act=pinsave]');
+  t('verrou : code trop court refusé', /4 à 8/.test(await pg.textContent('#pinmsg')));
+  await pg.fill('#pin1', '4821'); await pg.fill('#pin2', '4822'); await pg.click('[data-act=pinsave]');
+  t('verrou : codes différents refusés', /ne correspondent pas/.test(await pg.textContent('#pinmsg')));
+  await pg.fill('#pin2', '4821'); await pg.click('[data-act=pinsave]'); await pg.waitForTimeout(600);
+  var rec = await pg.evaluate(function () { return localStorage.getItem('coach-masse-pin-v1'); });
+  t('verrou : code enregistré sous forme d\'empreinte (pas en clair)', !!rec && rec.indexOf('4821') < 0 && /"h":/.test(rec), rec);
+  await pg.reload(); await pg.waitForSelector('#lockpin');
+  t('verrou : écran de verrouillage à l\'ouverture', await pg.isVisible('#lockpin'));
+  await pg.fill('#lockpin', '0000'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(600);
+  t('verrou : mauvais code refusé', await pg.isVisible('#lockpin') && /incorrect/.test(await pg.textContent('#lockmsg')));
+  await pg.fill('#lockpin', '4821'); await pg.keyboard.press('Enter'); await pg.waitForTimeout(600);
+  t('verrou : bon code déverrouille', !(await pg.isVisible('#lockpin')));
+  for (var q73 = 0; q73 < 5; q73++) { await pg.evaluate(function () { window.__coach.render(); }); }
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=locknow]');
+  t('verrou : verrouiller maintenant', await pg.isVisible('#lockpin'));
+  for (var f73 = 0; f73 < 5; f73++) { await pg.fill('#lockpin', '1111'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(450); }
+  await pg.fill('#lockpin', '4821'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(500);
+  t('verrou : 5 échecs déclenchent une pause (même le bon code est refusé)', await pg.isVisible('#lockpin') && /Trop d/.test(await pg.textContent('#lockmsg')));
+  await pg.reload(); await pg.waitForSelector('#lockpin');
+  await pg.click('[data-act=lockforgot]');
+  t('verrou : code oublié demande une confirmation', /Confirmer/.test(await pg.textContent('[data-act=lockforgot]')) && await pg.isVisible('#lockpin'));
+  await pg.click('[data-act=lockforgot]'); await pg.waitForTimeout(500);
+  t('verrou : code oublié efface le code et déverrouille', !(await pg.isVisible('#lockpin')) && (await pg.evaluate(function () { return localStorage.getItem('coach-masse-pin-v1'); })) === null);
+  await pg.context().close();
   /* 17.2 : illustrations des étirements */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.click('#nav [data-v=train]'); await pg.click('[data-act=start]');
