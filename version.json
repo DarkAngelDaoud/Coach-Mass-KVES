@@ -1,6 +1,6 @@
 {
- "version": "18.3",
+ "version": "18.4",
  "notes": [
-  "Nouvelle identité visuelle KVES : icône, image de partage et bannière aux couleurs bleu et vert du logo KVES Services & Tech, et logo dans la page À propos."
+  "Signature numérique KVES : la page À propos vérifie que les fichiers de l'application viennent bien de KVES et n'ont pas été modifiés (signature Ed25519)."
  ]
 }

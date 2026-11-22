@@ -1,0 +1,315 @@
+COACH-MASS-KVES - JOURNAL DES MISES A JOUR ET MODE D'EMPLOI
+(c) KVES - Etat au 15 novembre 2026 : version 13.8
+Adresse : https://darkangeldaoud.github.io/Coach-Mass-KVES/   Depot : github.com/darkangeldaoud/Coach-Mass-KVES
+
+=====================================================================
+A. COMMENT METTRE A JOUR (valable depuis n'importe quelle version)
+=====================================================================
+Remplace TOUS les fichiers de la racine du depot par ceux du dossier A-ENVOYER :
+  index.html, app.js, theme-init.js, styles.css, sw.js, manifest.webmanifest,
+  icon-192.png, icon-512.png, banner.jpg, share.jpg, SIGNATURE-KVES.txt, README.md, SECURITY.md, securite.js, capture-*.png
+
+Cas particulier : avis-config.js
+  - S'il est DEJA dans ton depot : ne l'envoie pas (il contient ta cle d'avis).
+  - S'il n'y est pas : envoie celui du dossier SI-AVIS-CONFIG-ABSENT, puis refais l'activation (voir B, version 6).
+
+Etapes sur Android (Chrome, "Version pour ordinateur") :
+ 1. Files > Telechargements > coach-mass-kves-v13-8-a-envoyer.zip > Extraire.
+ 2. github.com/darkangeldaoud/Coach-Mass-KVES > Add file > Upload files > choose your files.
+ 3. Selectionne tous les fichiers du dossier A-ENVOYER (appui long, puis touches).
+ 4. Commit changes (branche main).
+ 5. Attends 2 minutes, ferme completement l'application, rouvre-la.
+ 6. Plus > A propos doit afficher : version 12.1.1.1.1.
+ 7. Plus > Reglages > Sauvegarde > Sauvegarder maintenant, puis envoie le fichier sur Drive ou WhatsApp.
+ 8. Plus > Reglages > Coach > Tester la vibration. Si rien ne vibre, mets l'intensite sur Tres forte.
+Si la version reste ancienne : desinstalle l'application, rouvre l'adresse dans Chrome, reinstalle.
+Le nom et l'icone de l'ecran d'accueil Android ne changent parfois qu'apres quelques heures ou une reinstallation.
+Les dossiers src/ et tests/ et le fichier build.js (dans l'archive "complet") servent au developpement : facultatifs sur GitHub.
+Sur telephone, GitHub ne permet pas d'envoyer un dossier : envoie seulement les fichiers de la racine.
+
+=====================================================================
+B. JOURNAL DES VERSIONS
+=====================================================================
+(Les versions 1 a 5 ont ete livrees au fil des demandes ; le decoupage exact de chaque version est approximatif.)
+
+--- Creation du logiciel (versions 1 a 5) ---
+Point de depart : programme de prise de poids et de muscle a la maison, sans materiel (profil : 41 ans, 1,79 m, 75 kg,
+objectif 80 kg, gros fumeur, budget alimentaire 100 dh/jour, travail sedentaire, 3 seances d'une heure par semaine).
+Transforme en application web installable (PWA), hors ligne, legere, pour Pixel 8, avec un coach vocal francais strict.
+ - Installation : pas a pas via GitHub Pages (depot public), faite depuis Chrome en "Version pour ordinateur",
+   car l'application mobile GitHub ne permet pas d'envoyer des fichiers ni d'activer Pages.
+ - Base : programme de seances au poids du corps, repas types (budget 100 dh), bilan du jour adaptatif, suivi du poids
+   et des mensurations, objectifs, tableau de la semaine.
+ - Seance guidee : voix francaise, vibrations, bips et signaux de fin d'exercice et de repos, metronome du tempo,
+   compte des repetitions, ecran maintenu allume.
+ - Illustrations : figures SVG animees pour chaque exercice (poses interpolees, modes boucle / manuel / maintien).
+ - Graphiques : evolution du poids et de la performance par semaine et par periode ; historique des exercices et records.
+ - Affichage : adapte a tous les telephones, portrait et paysage (barre laterale en paysage), rotation forcee en option.
+ - Documentation : README.md complet (presentation, utilisation, utilite, 6 captures d'ecran).
+Corrections de cette periode :
+ - metronome des demi-repetitions impossible (minuteur trop lent) : corrige par un pas de 100 ms ;
+ - poses incoherentes des fentes et des mollets : trajets redefinis ;
+ - reglages deformes a 360 px de large : boutons de jours rendus flexibles ;
+ - ecran qui refusait le paysage : le manifeste imposait "portrait" ; passe a "any", aucun verrou dans le code ;
+ - README : plusieurs inexactitudes de texte corrigees (repos, metronome, mise a jour/cache).
+
+--- Version 6 : boite a avis chiffree + onglet Plus ---
+ - Bouton "Plus" dans la barre du bas (donne acces aux Reglages, a la boite a avis, a l'espace proprietaire, a "A propos").
+ - Boite a avis : l'utilisateur ecrit nom, e-mail, type, note et message ; l'avis est chiffre sur son telephone
+   (cle publique du proprietaire, ECDH P-256 + HKDF + AES-256-GCM) puis il l'envoie lui-meme (Partager, e-mail, WhatsApp, copie).
+ - Espace proprietaire : creation de la cle protegee par une phrase secrete, sauvegarde de la cle, import, lecture des avis
+   (colle, classes Nouveau / A traiter / Fait, reponse par e-mail, export lisible), verrouillage automatique.
+ - Fichier avis-config.js : contient la cle publique ; a remplir depuis "Espace proprietaire" (Copier, puis modifier le fichier sur GitHub).
+ - Pseudo du README remplace par DarkAngelDaoud.
+ - Aucun serveur : aucune donnee ne transite par un tiers.
+
+--- Version 7 : courses, rappels, minuteur par exercice, theme ---
+ - Liste de courses automatique (onglet Repas) : 3, 7 ou 14 jours, variantes poulet / sardines et lentilles / pois chiches
+   (ou alterne), cases a cocher, copie ; aucun prix affiche.
+ - Rappels (Reglages > Rappels) : notification pour noter le poids (07 h 30) et valider les repas (22 h), seulement si ce n'est pas deja fait.
+   Application fermee, Android peut retarder le rappel ; boutons "Alarme" vers l'Horloge (non verifies sur le Pixel).
+ - Mini compteur et minuteur sur chaque exercice (onglet Seance) ; "Enregistrer la serie" ajoute une serie "libre" a l'historique.
+ - Theme : Auto, Clair ou Sombre ; fond, barre d'etat et graphiques suivent le choix.
+ - Nom du depot confirme : Coach-Mass-KVES (README et documents corriges).
+
+--- Version 8 : sauvegarde + code decoupe + tests ---
+ - Copies automatiques dans Chrome (7 jours), copies avant import / restauration / effacement, copie des donnees abimees.
+ - Rappel de sauvegarde en fichier (tous les 7 jours par defaut), export par partage (Drive, WhatsApp...) ou telechargement,
+   restauration depuis Plus > Reglages > Sauvegarde, import qui refuse un fichier invalide sans rien modifier.
+ - Code source decoupe en modules numerotes dans src/ ; app.js est genere par "node build.js".
+ - Tests automatiques : "node tests/run.js" (demarrage, ecrans, debordements, courses, minuteur, theme, sauvegarde, donnees abimees, avis).
+
+--- Version 9 : vibrations, logo, nom, signature ---
+ - Vibrations plus fortes (impulsions courtes de 30-40 ms allongees) et reglables : Normale, Forte (defaut), Tres forte.
+   Bouton "Tester la vibration" qui explique le resultat. (Cause probable du probleme : impulsions trop breves ; non confirme sur le Pixel.)
+ - Nouveau logo : icone = haltere seul recadre ; banniere complete dans le README et Plus > A propos.
+ - Nom de l'application : Coach-Mass-KVES (court : Coach-Mass sur l'ecran d'accueil). Les cles internes ne changent pas.
+ - Signature KVES : marque "(c) KVES" dans chaque fichier source, dans A propos et dans les sauvegardes ;
+   SIGNATURE-KVES.txt (empreintes SHA-256 des fichiers publies, verifiee par les tests).
+   C'est une preuve d'integrite, pas une signature cryptographique a cle.
+ - Paquets de livraison : A-ENVOYER (fichiers a mettre sur GitHub) + archive complete.
+
+--- Version 10 : garde-fou de la boite a avis ---
+ - Un message contenant deja un code d'avis chiffre (ou commencant par "Avis pour Coach...") est refuse avec une explication.
+   (Cas rencontre : un code colle par erreur dans le champ message.)
+ - 67 verifications automatiques reussies.
+
+--- Version 11 : couleurs, exercices dissociables, calendrier, popup, sources ---
+ - Theme colore : une couleur par rubrique (Seance orange, Repas vert, Suivi violet, Historique cyan), logo bleu, icones dans la barre du bas ; mise en page inchangee.
+ - Exercices dissociables : reglage par exercice (series, repetitions ou duree, repos), memorise ; bouton "Lancer seul" (seance guidee d'un seul exercice,
+   sans echauffement, enregistree comme serie libre, sans effet sur la progression).
+ - "Ajouter au calendrier" (Reglages > Rappels) : fichier .ics, evenements quotidiens 07 h 30 et 22 h avec alerte, a la place des boutons Alarme.
+ - Popup de mise a jour : version + 3 nouveautes, une seule fois ; popup "nouvelle version prete, recharger". Il n'apparait qu'a partir de la version 11
+   (le passage 10 -> 11 se fait sans popup).
+ - Nouvelle banniere "Coach-Mass-KVES".
+ - Page "Sources et limites" (Plus) : references (OMS, ACSM, etc.), limites, prudence medicale. Les remarques du professionnel seront ajoutees quand tu les enverras.
+ - 84 verifications automatiques reussies.
+
+--- Version 12 : profil, zones du corps, mannequin, partage ---
+ - Profil au premier lancement : genre (homme, femme, ne pas préciser), objectif (prise de masse, perte de poids, tonification, maintien), âge (18 ans minimum,
+   sinon refus), taille, poids, poids visé, mensurations facultatives. Modifiable dans Plus > Réglages > Modifier mon profil. Ton profil existant est conservé :
+   une carte "Complète ton profil" apparaît dans Aujourd'hui.
+ - Calories selon l'objectif : estimation Mifflin-St Jeor x 1,4. Perte de poids : déficit limité (500 kcal ou 20 %), plancher 1 500 kcal (homme), 1 200 (femme),
+   1 350 (non précisé). Les portions des repas sont ajustées ; le poids visé est contrôlé (IMC 18,5 minimum pour une perte).
+ - Mensurations étendues : poitrine, taille, hanches, bras, cuisse, mollet, avec courbe d'évolution.
+ - 12 nouveaux exercices (20 au total) classés en 7 zones : pompes diamant*, pompes inclinées, élévations latérales, superman, rowing au sol avec serviette,
+   dips sur chaise*, curl biceps, crunchs, relevés de jambes, mountain climbers, squat bulgare, squat sauté*. (* avancés : verrouillés tant que les pompes
+   et les squats n'ont pas progressé, ou réglage "Débloquer les exercices avancés".) Les 8 exercices d'origine forment toujours la séance complète ; les nouveaux
+   s'ajoutent par une case "Ajouter à la séance complète" ou se lancent avec "Lancer seul".
+ - Mannequin face + profil avec les muscles sollicités colorés, dans chaque exercice.
+ - Partager l'application (Plus) : bouton Partager (message en français + lien), Copier le lien, QR code hors ligne. Le lien reste
+   https://darkangeldaoud.github.io/Coach-Mass-KVES/ ; l'aperçu (logo, titre, description) vient de la nouvelle image share.jpg et des balises Open Graph.
+ - 109 verifications automatiques reussies.
+
+--- Version 12.1 : mannequin animé, séance personnalisable, précautions ---
+ - Mannequin dans l'animation : le corps de profil s'anime avec du volume et les muscles qui travaillent s'illuminent à leur place ; le mannequin de face
+   (muscles sollicités) est affiché à côté, dans l'onglet Séance et pendant la séance guidée.
+ - Séance personnalisable : une case "Dans ma séance complète" sur les 20 exercices (tous cochés par défaut pour les 8 d'origine), 3 exercices minimum.
+   Les 3 exercices avancés restent verrouillés tant qu'ils ne sont pas débloqués. "Lancer seul" reste disponible pour tous.
+ - Précautions : encadré "Précautions" et signaux d'arret sur 9 exercices (dips, pompes diamant, squat saute, rowing au sol, squat bulgare, superman,
+   releves de jambes, pompes pike, fentes) + section "Exercices a risque" dans Sources.
+ - QR code stylise : points arrondis bleus, reperes orange, haltère au centre, nom Coach-Mass-KVES ; correction d'erreurs renforcee (niveau H, plus dense).
+   Decodage verifie avec un lecteur de test (clair, sombre, reduit) ; a confirmer avec l'appareil photo du Pixel.
+ - Mannequin de face : les muscles sollicites pulsent au rythme du mouvement (contraction a l'effort, relachement au retour).
+ - Securite : politique de securite de contenu (CSP) stricte (nouveau fichier theme-init.js, indispensable), nettoyage strict des donnees lues ou importees
+   (types forces, cles sures, tailles limitees, fichier de sauvegarde limite a 5 Mo), bouton WhatsApp isole, SECURITY.md (politique de signalement),
+   script securite.js lance avec les tests (dependances, adresses externes, code dangereux, CSP, secrets, signature).
+   GUIDE-SECURITE-GITHUB.txt : double authentification + alertes automatiques GitHub (Dependabot, secrets, CodeQL), a activer par toi.
+ - Les remarques ecrites du professionnel ne sont pas encore dans la page Sources (a m'envoyer).
+ - 122 verifications automatiques reussies + 143 controles de securite.
+
+--- Version 12.1.1 (actuelle) : confirmation des exercices a risque, filet GitHub ---
+ - "Lancer seul" disponible sur tous les exercices ; sur les 9 exercices a risque, un message de precautions doit etre valide avant le lancement.
+   Les 3 exercices avances restent verrouilles tant qu'ils ne sont pas debloques.
+ - Numero de version distinct (12.1.1) : Plus > A propos l'affiche, et la popup de nouveautes apparait. Le QR code stylise (points arrondis bleus,
+   reperes orange, haltere au centre) est dans cette version ; si tu vois encore l'ancien QR noir et blanc, l'ancienne version est encore en place.
+ - securite.js verifie aussi la coherence des fichiers publies (syntaxe, fichiers references, version identique dans app.js et sw.js).
+ - GUIDE-SECURITE-GITHUB.txt : sections 6 (releases) et 7 (verification automatique, fichier GITHUB-VERIFICATION/verification.yml).
+ - 124 verifications automatiques reussies + 172 controles de securite.
+
+=====================================================================
+C. CE QUI NE CHANGE JAMAIS (pour ne rien perdre)
+=====================================================================
+Cles internes conservees : donnees "coach-masse-v1", cle proprietaire "coach-masse-owner-v1", sauvegardes "coach-masse-bk",
+rappels "coach-masse-remind", chiffrement "coach-masse-avis-v1". Les renommer ferait perdre les donnees ou rendrait les avis illisibles.
+Les donnees sont liees a l'adresse du site : changer d'adresse = repartir de zero (utilise une sauvegarde en fichier pour migrer).
+
+=====================================================================
+D. LIMITES CONNUES
+=====================================================================
+ - Aperçu du lien (WhatsApp...) : non verifie en conditions reelles ; les applications gardent l'ancien aperçu en cache un certain temps.
+ - Les calories sont des estimations ; les repas et la liste de courses gardent les aliments du plan de base (portions ajustées seulement dans Repas).
+ - Les copies automatiques restent dans Chrome : seul le fichier exporte protege d'un telephone perdu ou d'un effacement des donnees du site.
+ - Rappels : fiables application ouverte ; application fermee, Android peut les retarder ou les ignorer.
+ - Calendrier (.ics) : non verifie sur ton Pixel ; ouvre le fichier avec Google Agenda.
+ - Vibrations : a confirmer sur le Pixel (test dans Reglages > Coach).
+ - Avis : l'identite (nom, e-mail) n'est pas verifiee ; pas d'accuse de reception ; si la cle du site (avis-config.js) est ecrasee,
+   plus personne ne peut envoyer d'avis (les avis deja recus restent lisibles avec ta cle).
+ - Contenu nutrition et exercices : reperes generaux, non relus par un professionnel de sante.
+ - iPhone : installation manuelle, pas de vibration web ; une vraie application iOS demande un compte Apple et du code natif.
+
+=====================================================================
+E. PROCHAINES AMELIORATIONS (une version par modification, de la plus legere a la plus lourde)
+=====================================================================
+Rien ci-dessous n'est fait.
+ 0. FAIT : 12.1.2, 12.1.3, 12.2, 12.3. Ordre decide : 12.1.2 confirmation "Lancer seul" sur les 9 exercices a risque ; 12.1.3 filet GitHub (releases + verification automatique) ;
+    12.2 repas et courses adaptes a l'objectif ; 12.3 bilan hebdomadaire. Langues (V13) : reportees, sans date.
+    A faire au moment de la publication publique : RAPPELER le chiffrement des donnees, la double authentification GitHub et la relecture du professionnel.
+ 1. Version 12.2 (validee dans son principe) : repas et liste de courses vraiment adaptes a l'objectif (perte, tonification, maintien) et au budget,
+    bilan hebdomadaire. Details a valider avant de commencer.
+ 2. Remarques ecrites du professionnel : a m'envoyer, integrees sans modification dans la page Sources.
+ 3. Langues (anglais, arabe) : reportees, sans date. A lancer sur ta demande.
+ 4. Protection des donnees (chiffrement local et des sauvegardes, double authentification GitHub) : a te rappeler avant toute publication publique.
+ 5. Plus tard : mannequin de face reellement anime, version Android (PWABuilder), monetisation, iOS.
+Fichiers non utilises dans le dossier du projet (non publies) : logo-banner.jpg, logo-header.png, icon-maskable-512.png.
+
+Version 12.1.2 : avant « Lancer seul » sur les 9 exercices a risque, une fenetre rappelle precautions et signes d'arret (Annuler / Je comprends). Series, repetitions et repos restent reglables partout. Rien d'autre ne change.
+
+Version 12.1.3 : filet de securite GitHub (rien ne change dans l'application).
+ A) Verification automatique : cree le fichier .github/workflows/verification.yml (voir GUIDE-GITHUB-FILET.txt). A chaque envoi, GitHub lance "node securite.js" ; onglet Actions = coche verte OK, croix rouge = alerte.
+ B) Releases : apres chaque version validee, cree une Release (tag v12.1.3) = copie figee pour revenir en arriere.
+
+Version 12.2 : page Repas.
+ - La liste de courses est calculee d'apres les repas reellement affiches (objectif perte/tonification/maintien/masse) : riz, pain, huile, amlou, flocons, miel, dattes et lait sont ajustes ; oeufs, viande et legumes restent.
+ - Nouvelle carte "Regime et budget" : sans oeufs, sans lait, sans fruits a coque, sans gluten, vegetarien ; budget serre = pas de poulet au repas de 14 h 30.
+ - Le bilan hebdomadaire sera la version 12.3.
+
+Version 12.3 : onglet Suivi, carte "Bilan de la semaine" (7 derniers jours) : seances faites/prevues, repas coches, sommeil et energie moyens, evolution du poids, conseil du coach, bouton "Copier le bilan". Calcule sur ton telephone, rien n'est envoye.
+
+Version 13.0 : langues. Reglages > Langue : Francais / English (l'application se recharge). Traduits : menu, Aujourd'hui, Repas et courses, Suivi, Historique, Plus, Reglages, noms des exercices, messages courts.
+Reste en francais en mode English (a completer plus tard) : descriptions longues des exercices, precautions, page Sources, voix du coach, messages aleatoires du coach, partage.
+Prochaines etapes : 13.1 arabe (ecriture de droite a gauche), 13.2 darija en ecriture latine (arabizi). Traductions sante a faire relire avant le public.
+
+Version 13.1 : arabe (Reglages > Langue > العربية). Memes ecrans que l'anglais ; lecture de droite a gauche ; les chiffres restent en chiffres latins. Meme reste en francais qu'en anglais (exercices detailles, precautions, Sources, voix du coach, partage). Traductions a faire relire (toi ou un proche) avant le public. Prochaine : 13.2 darija (ecriture latine).
+
+Version 13.2 : darija (Reglages > Langue > Darija), ecriture latine avec chiffres (3, 7, 9, 5). Memes ecrans que l'anglais et l'arabe. A relire avant le public. Reste en francais dans toutes les langues : descriptions longues des exercices, precautions, page Sources, voix du coach, messages du coach, partage (a traduire dans une version dediee, avec relecture).
+
+Version 13.3 : consignes, muscles, signes d'arret et precautions des exercices traduits en English, arabe et darija ; quelques textes de la seance en cours (Echauffement, Pause, Passer...). A faire relire par toi ou un proche AVANT le public (sante). Reste en francais : page Sources, messages du coach, texte de partage, voix du coach (version 13.4).
+
+Version 13.4 : page Sources, messages du coach, ecran de seance (titres, "Vise...", "Ensuite..."), fin de seance et texte de partage traduits en English, arabe et darija. Un texte partage suit la langue choisie. Seule la voix du coach reste en francais (a regler apres test sur ton Pixel). Tout est a faire relire avant le public. Les remarques du professionnel s'ajouteront a la page Sources (France seulement pour l'instant : a traduire avec).
+
+Version 13.5 : lecteur de musique (Plus > Lecteur). Tu choisis des fichiers audio de ton telephone (MP3, M4A, etc.) ; liste, precedent/suivant, aleatoire, repetition (aucune / liste / un morceau), volume, commandes sur l'ecran verrouille et les ecouteurs. Les fichiers ne sont NI copies NI envoyes : a la prochaine ouverture de l'application il faut les choisir de nouveau. Le mini-lecteur dans la seance et la baisse du volume quand le coach parle arrivent en 13.6. A verifier sur ton Pixel : lecture avec l'ecran verrouille.
+
+Version 13.6 : mini-lecteur dans la seance (precedent / lecture-pause / suivant + titre) quand une liste est chargee dans Plus > Lecteur ; la musique baisse a 30 % quand le coach parle puis remonte (elle continue pendant le repos). Necessite que la voix du coach soit activee. A verifier sur ton Pixel : volume de la musique pendant la voix, et lecture ecran verrouille.
+
+Version 13.7 (qualite, aucun changement visible sauf la page Avis traduite) : 
+ - tests de comportement ajoutes a la verification GitHub (voir GUIDE-GITHUB-FILET.txt, section 13.7 : creer tests/run.js et remplacer verification.yml) ;
+ - test qui signale toute phrase francaise restante en anglais ou en arabe ;
+ - test de restauration d'une sauvegarde sur un autre appareil ;
+ - FICHE-RELECTURE.csv : tableau Francais / Anglais / Arabe / Darija a faire relire (ouvre-le dans Excel ou Google Sheets, colonnes "Relu par" et "OK ?").
+Items valides de l'audit, ordre propose : 13.8 sections repliables dans Reglages ; 13.9 avertissement sante + confidentialite + conditions ; 14.0 accessibilite et voix arabe/darija ; 14.1 questionnaire de sante + garde-fou du poids ; 14.2 effort ressenti + semaine d'allegement ; ensuite minification.
+
+Version 13.8 : Reglages en sections repliables (Jours de seance ouverte au depart ; les autres fermees, avec une fleche). L'etat ouvert/ferme est garde pendant que l'application reste ouverte. Attention : tests/run.js a change (il ouvre les sections avant de les tester) : remplace son contenu sur GitHub avec TESTS-RUN-JS.txt (voir GUIDE-GITHUB-FILET.txt).
+
+Version 13.9 : Plus > carte "Legal" avec 3 pages : Avertissement sante, Politique de confidentialite, Conditions d'utilisation (francais, English, arabe, darija). A la creation du profil, une case "J'ai lu l'avertissement sante" est obligatoire. Les pages portent la mention "Brouillon a faire relire par un professionnel" : a retirer avant la publication publique, apres relecture juridique (CNDP, limitation de responsabilite, licence, tribunal). Remplace aussi tests/run.js sur GitHub avec TESTS-RUN-JS.txt (nouveaux tests).
+
+Version 14.0 : accessibilite. TalkBack n'annonce plus toute la page a chaque changement ; au changement d'onglet le titre recoit le focus et est lu ; onglet actif annonce ; les fenetres avec bouton "Compris/Plus tard" se ferment avec Echap et rendent le focus ; contour de focus visible sur plus d'elements ; animations coupees si Android demande moins de mouvement (Parametres > Accessibilite > Supprimer les animations) ; vert du theme clair assombri pour le contraste. A tester sur ton Pixel avec TalkBack, y compris en arabe et darija (la voix du coach reste en francais). Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.1 : questionnaire de sante en 7 questions (carte sur Aujourd'hui tant qu'il n'est pas fait ; aussi dans Reglages > Profil et objectif). Une case cochee = "Avis medical conseille" avec bouton "J'ai consulte un medecin". Garde-fou du poids vise (profil et Reglages) : refuse si l'IMC vise depasse 27 en prise de masse, ou si l'ecart depasse 15 % du poids actuel ; le plancher IMC 18,5 en perte existait deja. Les questions sont a faire valider par ton professionnel avant le public. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.2 : (1) effort ressenti : a la fin d'une seance complete, note de 1 (tres facile) a 5 (tres dur) ; la moyenne de la semaine apparait dans Suivi > Bilan de la semaine avec un conseil (au moins 4,5 : alleger ; 2 ou moins et seances toutes faites : monter d'une repetition). (2) semaine d'allegement : proposee sur Aujourd'hui apres 4 semaines d'effort puis toutes les 5 semaines, ou des que les 3 dernieres seances ont une moyenne d'au moins 4,5. "Activer cette semaine" allege les seances jusqu'a dimanche (comme une seance legere : une serie en moins) ; "Pas maintenant" repousse d'une semaine ; arret possible a tout moment. Seuils a faire valider par ton professionnel. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.3 : page Plus > "Comment le programme s'adapte" (ce qui s'adapte automatiquement, ce qui reste fixe pour l'instant, a retenir). Plan valide par Ernest, une version chacune : 14.4 heures de repas modifiables (rappels suivent) ; 14.5 fruits dans les menus ; 14.6 menus adaptes a la perte / tonification / maintien ; 14.7 option "dernier repas avant 20 h 30". Ensuite : minification, carte Legal en liste (A/B/C a choisir). Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.4 : Reglages > "Heures des repas" : une heure par repas (defaut 9 h 30, 12 h, 14 h 30, 18 h, 21 h 30), affichee dans l'onglet Repas. Heures dans l'ordre avec au moins 2 h d'ecart (sinon refus). Bouton "Heures par defaut". Conseil discret si le dernier repas est apres 21 h 30. Les listes de courses disent maintenant "Dejeuner" et "Diner". Le rappel "valide tes repas" reste regle a part dans Rappels. La page "Comment le programme s'adapte" est mise a jour. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.5 : fruits dans les menus : 1 orange au petit-dejeuner (omelette) et 1 fruit de saison (pomme, orange...) a la collation de 18 h (variantes pain+amlou et pain+miel) ; les autres variantes avaient deja des bananes ou des dattes. La liste de courses compte "Fruits" (16 lignes). Les calories de ces repas augmentent de 45 a 60 kcal ; les portions se recalent sur ta cible. La page "Comment le programme s'adapte" est mise a jour. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.6 : menus adaptes a l'objectif. Perte de poids, tonification et maintien utilisent des plats plus legers (omelette + pain + fruit, flocons + yaourt, dejeuner avec grande portion de legumes, diner legumineuses + legumes, collations yaourt/fruits/dattes), au total proche de 1900 kcal avant recalage. La prise de masse garde ses menus riches (lait au chocolat, amlou, bananes...). Les regimes (sans oeuf, lait, gluten, noix, vegetarien), le budget et la liste de courses fonctionnent comme avant ; si aucune option legere n'est compatible, le plan retombe sur une option normale. Les quantites et calories sont des estimations : a faire valider par ton professionnel (dieteticien) avant le public. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.7 : Reglages > Heures des repas : case "Dernier repas avant 20 h 30". Active, le dernier repas est ramene a 20 h 30 au plus tard et les repas precedents se decalent si besoin (2 h d'ecart minimum) ; tes heures choisies restent memorisees et reviennent si tu decoches. En prise de masse, la collation "Avant de dormir" devient "Avec le diner". Les rappels restent regles a part. Fin du plan repas (14.3 a 14.7). Reste : minification, carte Legal en liste (A/B/C). Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 14.8 : minification. app.js est maintenant minifie (455 Ko -> 389 Ko, environ 15 % de moins ; apres compression reseau environ 9 %). Le code lisible est dans app.source.js : c'est LUI la reference pour toute modification future, ne le supprime pas du depot. Les deux fichiers sont publies. securite.js verifie les deux (version identique, motifs dangereux, app.js plus court que la source). Fonctionnement identique : 195 tests passes sur la version minifiee. Remplace aussi securite.js et tests/run.js (TESTS-RUN-JS.txt).
+
+Version 14.9 : Plus > carte "Legal" devient une liste simple de 3 lignes avec fleche (Avertissement sante, Politique de confidentialite, Conditions d'utilisation), sans texte d'introduction, placee tout en bas sous "A propos". Style .linkrow dans styles.css (zone de toucher 48 px, fleche inversee en arabe). Modifier app.source.js puis minifier vers app.js. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 15.0 : eau. Le compteur d'eau existait deja (+250 / -250 ml, objectif fixe 2,5 L). Il est ameliore : objectif personnalise = 30 ml par kg de poids actuel (+500 ml les jours de seance), entre 2 et 3,5 L ; barre de progression sur cet objectif ; message du coach "Tu es dans le rythme" / "En retard sur ton objectif : bois un verre maintenant" (a partir de 11 h, attendu lineaire de 8 h a 21 h) / "Objectif atteint". Pas de notification pour l'eau (reportee : elle demanderait de toucher au systeme de rappels). Plan valide ensuite : 15.1 records personnels et progression, 15.2 seance de 15 minutes, 15.3 photos de progression locales, puis voix du coach multilingue (apres ton test Pixel), suivi du tabac facultatif, installation Android. Modifier app.source.js puis minifier vers app.js. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 15.1 : rappel d'eau. Reglages > Rappels : case "Rappel d'eau". Aux creneaux 10 h, 12 h, 14 h, 16 h et 18 h (jusqu'a 20 h 30), une notification "Pense a boire : un verre d'eau maintenant." part SEULEMENT si ton eau du jour est inferieure a la progression attendue (objectif x (heure-8)/13) ; un seul rappel par creneau. Fonctionne comme les autres rappels : application ouverte (message + vibration), ou notification systeme ; application fermee, Android/Chrome peut retarder ou ignorer (verification periodique, sw.js). Cocher la case active aussi les rappels quotidiens et demande l'autorisation des notifications. Le plan valide continue : 15.2 records personnels et progression, 15.3 seance de 15 minutes, 15.4 photos de progression locales, puis voix multilingue, suivi du tabac facultatif, installation Android. Modifier app.source.js puis minifier vers app.js. Remplace aussi tests/run.js avec TESTS-RUN-JS.txt.
+
+Version 15.2 : records personnels. A la fin d'une seance (ou d'un exercice lance seul), si tu fais plus de repetitions (ou de secondes) que ton meilleur resultat precedent sur un exercice, une carte "Nouveau record" s'affiche avec l'ancien score et le prochain objectif (+1 repetition, +5 secondes pour les exercices chronometres). Pas de record la toute premiere fois (rien a battre). Aucune donnee ajoutee.
+
+Version 15.3 : seance express. Onglet Seance, bouton "Seance express" : environ 15 minutes (echauffement court, 2 series par exercice, exercices retenus selon la duree). Enregistree comme une seance normale mais sans montee de niveau automatique. Records, effort ressenti et serie conserves.
+
+Version 15.4 : photos de progression. Onglet Suivi, carte "Photos de progression" : ajout d'une photo (reduite a 900 px, JPEG), miniatures datees, touche deux photos pour voir Avant/Apres, suppression avec confirmation. Stockage dans IndexedDB (base coach-masse-ph) sur le telephone : aucun envoi, hors sauvegarde. "Effacer toutes les donnees" supprime aussi les photos. A savoir : les photos sont perdues si tu effaces les donnees du site Chrome.
+
+Version 15.5 : voix du coach multilingue. La voix suit la langue de l'application : anglais (en-US), arabe (ar-SA) ; en darija elle parle en arabe (pas de voix darija en lettres latines). Si une phrase n'a pas de traduction connue, le coach parle francais. Reglages > Coach : case "Voix toujours en francais". Le telephone doit avoir la voix correspondante (Android > synthese vocale). Aucun changement si l'application est en francais.
+
+Version 15.6 : suivi du tabac facultatif. Reglages > Tabac : case a cocher (desactivee par defaut). Si activee, une carte "Tabac" dans Aujourd'hui : compteur de cigarettes du jour (+1 / -1) et moyenne par jour sur 7 jours puis sur les 7 jours d'avant, sans note ni reproche. Donnees dans le journal du jour, uniquement sur le telephone. Aucun objectif impose.
+
+Version 15.7 : bouton "J'ai mal" en seance (hors echauffement). Il met la seance en pause et propose : Passer cet exercice, Terminer la seance, Reprendre. La douleur est notee dans la seance (nom de l'exercice) ; passer un exercice ou terminer rend la seance incomplete (pas de montee de niveau). Fin de seance : carte "Douleur signalee" avec conseil medecin/kine. Onglet Seance : rappel 7 jours, avec conseil medical si la douleur revient (2 seances ou plus en 30 jours).
+
+Version 15.8 : reprise apres une pause. Si la derniere seance (complete ou non) date de 10 jours ou plus, une carte "Content de te revoir" propose "Reprendre en douceur" (active la semaine allegee, comme l'allegement existant) ou "Reprendre normalement" (la carte ne reapparait pas avant la prochaine seance). Aucune carte pour un nouvel utilisateur sans seance.
+Correctif 15.8 : "Reprendre en douceur" dure maintenant 7 jours a partir du clic (et non jusqu'au dimanche), donc plus de limite le samedi.
+
+Version 15.9 : etirements de fin de seance. Sur l'ecran de fin, une carte "Etirements" propose 5 etirements guides (environ 3 minutes) avec chrono, voix et bouton Passer. Facultatif. Les etirements ne creent pas de seance supplementaire et ne changent ni l'historique ni les niveaux. Textes sans illustration. Les mouvements doivent etre valides par un professionnel avant publication publique.
+
+Version 16.0 : bilan de la semaine en image. Suivi > Bilan de la semaine > "Partager en image" : cree une image PNG (seances, repas coches, sommeil, energie, effort) a envoyer par WhatsApp ou a enregistrer. Le poids n'y figure que si la case "Inclure l'evolution du poids" est cochee. Rien n'est envoye automatiquement : c'est toi qui partages.
+
+Version 16.1 : protection des photos de progression. Avertissement visible (les photos disparaissent si Chrome efface les donnees du site), bouton "Exporter les photos" (un fichier .json avec toutes les photos, partage ou telechargement), bouton "Importer des photos" (restaure sans doublon), date du dernier export. Le fichier exporte contient tes photos : garde-le en lieu sur. Les photos ne sont toujours pas dans la sauvegarde normale.
+
+Version 16.2 : correctif (audit 2, erreur E1). "Effacer toutes les donnees" supprime maintenant TOUTES les photos de progression, meme si l'onglet Suivi n'a pas ete ouvert depuis le lancement de l'appli. Avant, la 16.1 annoncait cette suppression mais les photos restaient. Aucun texte nouveau.
+
+Version 16.3 : alerte d'echec d'enregistrement (audit 2, erreur E2). Si le telephone ne peut plus enregistrer les donnees (stockage plein ou bloque), un bandeau rouge s'affiche en bas avec un bouton "Sauvegarder maintenant". Il disparait des qu'un enregistrement reussit. Avant, l'echec etait silencieux et les saisies perdues.
+
+Version 16.4 : correctif tabac (audit 2, erreur E3). La moyenne par jour compte maintenant tous les jours passes depuis l'activation ; un jour sans saisie compte pour 0 cigarette (avant, ces jours etaient ignores et la moyenne etait trop haute). Aujourd'hui compte seulement si tu as saisi quelque chose. La date d'activation est enregistree au premier affichage de la carte.
+
+Version 16.5 : correctif records (audit 2, erreurs E4 et E10). Un record se compare maintenant a la meme variante de l'exercice (ex. pompes pieds surelevés ne sont plus comparees aux pompes classiques). Une serie n'est comptee que si les repetitions ont ete mesurees : compteur actif, exercice chronometre, ou valeur corrigee a la main. Sans comptage, la valeur n'etait que la cible et ne pouvait pas etre un vrai record. Les anciennes seances restent des references. Test precis ajoute (valeurs exactes).
+
+Version 16.6 : correctif rappel des repas (audit 2, erreur E6). Le rappel "valide tes repas" garde ton heure de validation (Reglages > Rappels, champ renomme "Validation repas a") mais n'est jamais envoye avant 30 minutes apres ton dernier repas, selon les heures de repas que tu as reglees (onglet Repas). Meme regle pour le rappel en arriere-plan et le fichier calendrier. Avant, si tes repas etaient tardifs, le rappel pouvait arriver avant le dernier repas.
+
+Version 16.7 : correctif seance express (audit 2, erreur E5). La seance express est marquee "express" dans l'historique, n'est plus comptee dans l'effort moyen (qui declenche l'allegement) et n'affiche plus la question d'effort ressenti. Elle ne compte plus comme "seance du jour faite" : le bouton de la seance complete reste propose le meme jour, avec une note. Elle compte toujours dans le bilan de la semaine (presence). Pas de montee de niveau, comme avant : l'ecran de fin l'explique.
+
+Version 16.8 : correctif mise a jour hors ligne (audit 2, erreur E7). (1) Installation tout ou rien : si un fichier indispensable n'a pas pu etre telecharge, la nouvelle version n'est pas installee et l'ancienne continue (plus de melange ancien/nouveau). avis-config.js reste facultatif. (2) Si le serveur repond par une erreur (404, 500) alors qu'une copie valide existe en cache, la copie est utilisee. Aucun texte nouveau.
+
+Version 16.9 : correctifs audit 2 (E8, E9). "J'ai mal" est maintenant disponible aussi pendant l'echauffement et les etirements (la douleur est notee sous le nom du mouvement ; "Passer" ne saute que ce mouvement ; pendant les etirements, "Terminer" revient a l'ecran de fin sans creer de seance). Accessibilite : les miniatures de photos sont annoncees "Photo du <date>" par les lecteurs d'ecran, et le focus passe sur l'ecran "Arrete et respire" puis revient au bouton.
+
+Version 17.0 : politique de confidentialite alignee sur l'appli (audits 1 et 2). Corrige : le QR ne contient que l'adresse de l'appli (l'ancien texte disait qu'il contenait des informations). Ajoute : tabac, douleurs et photos dans les donnees ; photos gardees a part et hors sauvegarde ; export des photos non chiffre ; image du bilan (poids seulement si coche) ; voix du coach (synthese vocale Android, peut passer par un service en ligne) ; effacement total supprime les photos. Texte toujours a faire relire par un juriste avant publication publique.
+
+Version 17.1 : mises a jour en deux temps (demande d'Ernest). Quand une nouvelle version est prete, 1) une fenetre annonce les nouveautes, 2) une seconde fenetre propose "Mettre a jour et recharger" ou "Ignorer et garder cette version". L'application ne change plus de version toute seule : elle utilise sa copie en cache (cache d'abord) tant que la mise a jour n'est pas acceptee. Si tu ignores, la mise a jour reste disponible dans Plus (carte "Mise a jour disponible"). Nouveau fichier : version.json (numero et nouveautes), a envoyer avec chaque version. IMPORTANT : pour la premiere fois (de la 17.0 vers la 17.1) la bascule se fait sans question ; le choix s'applique a partir de la 17.1 vers les versions suivantes. Les nouveautes annoncees sont en francais.
+
+Version 17.2 : illustrations animees pour les 5 etirements (pectoraux, cuisses, arriere des cuisses, posture de l'enfant, respiration), meme systeme que l'echauffement. Libelles traduits EN/AR/darija (brouillons a relire).
+
+Version 17.3 : verrouillage par code facultatif (carte dans Plus). Code 4 a 8 chiffres, stocke sous forme d'empreinte PBKDF2-SHA256 salee (cle coach-masse-pin-v1). Verrou a l'ouverture et apres 1 min d'absence ; 5 essais puis pause de 30 s ; code oublie = effacement des donnees. C'est un verrou d'ecran, pas un chiffrement : les donnees restent lisibles par un outil de developpement ou une sauvegarde.
+
+Version 17.4 : (1) controle automatique dans securite.js : app.js doit contenir tous les mots des textes de app.source.js (detecte un app.js oublie ou ancien) ; (2) bouton Voir/Masquer sur tous les champs de mot de passe (code, phrase secrete de la boite a avis).
+
+Version 17.5 : numero de format des donnees (schema = 1) dans les donnees et les exports ; chaine de migrations MIGR (0->1 sans changement) ; donnees ou sauvegarde plus recentes que l'appli : import refuse, et copie de securite gardee a part (cle coach-masse-v1-newer) au lieu d'ecraser des champs inconnus. Pour changer la forme des donnees a l'avenir : SCHEMA +1 et une etape MIGR[n].
+
+Version 17.6 : niveau de depart. Carte sur l'ecran Aujourd'hui (profil rempli, aucune seance, niveau non regle) et dans Plus. Auto-evaluation : pour chacun des 8 exercices de base, l'utilisateur choisit parmi les 3 premieres variantes celle qu'il fait 8 a 12 fois proprement ; aucun effort physique demande, par prudence la plus facile est preselectionnee. Enregistre D.levels[id].level et P.lvlDone.
+
+Version 17.7 : tests unitaires des calculs du coaching (metabolisme de base, calories par objectif avec bornes, proteines, eau, objectif realiste, pente de poids, suggestions d'ajustement, montee de niveau, records, allegement et reprise). Les fonctions sont exposees en lecture dans window.__coach.calc ; aucun changement visible. Les valeurs attendues sont calculees a la main, independamment du code.
+
+Version 17.8 : sauvegarde chiffree facultative. Reglages > Sauvegarde > Exporter chiffre : phrase secrete (8 car. min), cle PBKDF2-SHA256 250 000 iterations, AES-GCM 256, sel et IV aleatoires ; fichier coach-mass-kves-sauvegarde-chiffree-DATE.json (champ coachMasseEnc). A l'import, le fichier chiffre est reconnu et la phrase est demandee ; le dechiffre passe par le meme controle que les sauvegardes normales. Phrase perdue = sauvegarde irrecuperable. L'export de photos n'est pas encore chiffre (a faire separement).
+
+Version 17.9 : export de photos chiffre (meme methode que 17.8 : PBKDF2-SHA256 250 000 it., AES-GCM). Bouton Exporter chiffre a cote de Exporter les photos ; fichier photos-coach-mass-chiffrees-DATE.json ; a l'import le fichier chiffre est reconnu et la phrase demandee. Aucun nouveau texte a traduire (memes libelles que 17.8).
+
+Version 18.0 : decoupage, premiere etape. Tout le dictionnaire de traductions (EN, AR, darija : environ 1250 lignes) quitte app.source.js pour le nouveau fichier langues.js (lisible, non minifie, charge avant app.js, liste dans le cache du service worker). app.js appelle window.CM_I18N(LANG_DATA, PT) juste avant startI18n(). Si langues.js manque, l'appli reste en francais. Pour ajouter des traductions a l'avenir : ajouter un bloc dans langues.js, plus dans app.source.js. NOUVEAU FICHIER a mettre en ligne : langues.js (+ index.html modifie).
+
+Version 18.1 : decoupage, deuxieme etape. Les donnees du programme (etirements, echauffement, exercices et figures animees, repas, courses, zones, muscles, precautions) quittent app.source.js pour donnees.js (lisible, non minifie, charge avant app.js, dans le cache du service worker). Le fichier expose window.CM_DATA ; app.js en recupere les 18 elements. Si donnees.js manque, un message clair s'affiche. NOUVEAU FICHIER a mettre en ligne : donnees.js (+ index.html modifie).
+
+Version 18.2 : un test de couverture (nouveau) a montre que 62 textes de donnees.js n'avaient aucune traduction : noms des variantes avancees (pompes archer, squat bulgare, pike, dips...) et surtout les precautions de securite de 10 exercices, affiches en francais en EN/AR/darija. Traductions ajoutees dans langues.js (brouillons ; les textes de securite sont a faire valider par un professionnel). Le test echoue desormais si un texte de donnees.js n'a pas de traduction dans les 3 langues.
+
+Version 18.3 : identite visuelle KVES. Palette du logo : bleu marine #0B4471, vert #16A85A (vert clair #3FD08A). Nouvelles icones (hexagone vert + haltere sur fond bleu), banniere, image de partage, fond de demarrage Android (background_color) en bleu. Logo KVES Services & Tech (logo-kves.png) dans A propos, ajoute au cache du service worker et a la signature SHA-256. L'interface elle-meme n'est pas recoloree (contraste du vert vif a mesurer avant). NOUVEAU FICHIER : logo-kves.png ; fichiers images modifies : icon-192.png, icon-512.png, banner.jpg, share.jpg ; manifest.webmanifest, styles.css.
+
+Version 18.4 : signature numerique KVES. L'application (A propos) verifie : (1) la signature Ed25519 de SIGNATURE-KVES.txt avec la cle publique kves-cle-publique.txt, (2) que les empreintes SHA-256 de 7 fichiers (index.html, app.js, langues.js, donnees.js, theme-init.js, styles.css, manifest.webmanifest) correspondent a la liste signee. Cela detecte aussi un envoi partiel ou un ancien fichier. Etats : verifiee, invalide, fichiers differents, non configuree, impossible. La cle privee n'est JAMAIS chez Claude : l'outil outils/SIGNER-KVES.html (hors ligne, local) la cree chiffree par phrase secrete (PBKDF2 250 000 it. + AES-GCM) et signe chaque version. Si on oublie de signer, l'appli fonctionne, seul le message change. securite.js verifie qu'aucune cle privee n'est dans les fichiers publies. Limite : la signature prouve l'origine et detecte les modifications, elle n'empeche pas la copie.

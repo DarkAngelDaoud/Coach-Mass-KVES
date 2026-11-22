@@ -93,6 +93,11 @@ fs.readdirSync(root).filter(function (f) { return /\.(js|html|json|webmanifest|m
   ok(lit > 500 && miss.length === 0, 'app.js ne correspond pas à app.source.js (' + miss.length + ' mot(s) absent(s), ex. : ' + miss.slice(0, 5).join(', ') + ') : relance la minification.');
 })();
 
+/* 6c. aucune clé privée dans les fichiers publiés (préfixe PKCS8 d'une clé Ed25519, ou fichier de clé privée) */
+PUB.forEach(function (f) { if (fs.existsSync(path.join(root, f))) ok(rd(f).indexOf('MC4CAQAwBQYDK2VwBCIEI') < 0 && rd(f).indexOf('cle-privee') < 0, 'Clé privée dans ' + f + ' : à retirer immédiatement.'); });
+ok(!fs.existsSync(path.join(root, 'KVES-cle-privee-CHIFFREE.json')), 'Le fichier de clé privée ne doit jamais être dans le dossier du site.');
+if (fs.existsSync(path.join(root, 'kves-cle-publique.txt'))) ok(/^[A-Za-z0-9_-]{43}$/.test(rd('kves-cle-publique.txt').trim()), 'kves-cle-publique.txt : clé publique Ed25519 attendue (43 caractères).');
+
 /* 7. service worker : même origine uniquement */
 ok(!/fetch\(\s*['"]https?:/.test(rd('sw.js')), 'sw.js : requête vers un site externe.');
 ok(/skipWaiting/.test(rd('sw.js')) && /coach-masse-v/.test(rd('sw.js')), 'sw.js : mise à jour / nom de cache inattendus.', true);

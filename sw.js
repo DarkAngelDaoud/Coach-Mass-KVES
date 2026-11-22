@@ -1,8 +1,8 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v18-3';
+var CACHE = 'coach-masse-v18-4';
 /* Fichiers indispensables : tout est mis en cache ou rien (pas de mélange d'anciens et de nouveaux fichiers). */
 var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'langues.js', 'donnees.js', 'version.json', 'banner.jpg', 'logo-kves.png', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
-var OPTIONAL = ['avis-config.js'];
+var OPTIONAL = ['avis-config.js', 'SIGNATURE-KVES.txt', 'SIGNATURE-KVES.sig', 'kves-cle-publique.txt'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
     return c.addAll(FILES.map(function (f) { return new Request(f, { cache: 'reload' }); })).then(function () {

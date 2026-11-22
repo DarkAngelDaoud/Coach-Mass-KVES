@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.3';
+var VERSION = '18.4';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Nouvelle identité visuelle KVES : icône, image de partage et bannière aux couleurs bleu et vert du logo KVES Services & Tech, et logo dans la page À propos.'];
+var NOTES = ['Signature numérique KVES : la page À propos vérifie que les fichiers de l\'application viennent bien de KVES et n\'ont pas été modifiés (signature Ed25519).'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -949,6 +949,7 @@ function render() {
   $('#weekTag').textContent = 'Semaine ' + wkNo() + ' · ' + fmt(currentWeight()) + ' kg → ' + P.goal;
   var map = { today: viewToday, train: viewTrain, meals: viewMeals, track: viewTrack, history: viewHistory, settings: viewSettings, more: viewMore, avis: viewAvis, owner: viewOwner, sources: viewSources, player: viewPlayer, sante: viewSante, confid: viewConfid, cond: viewCond, adapt: viewAdapt };
   view.innerHTML = map[tab]();
+  if ($('#sigstat')) setTimeout(sigRun, 0);
   if (render._tab !== undefined && render._tab !== tab) { var h1 = view.querySelector('h1'); if (h1) { h1.setAttribute('tabindex', '-1'); try { h1.focus({ preventScroll: true }); } catch (e) {} } }
   render._tab = tab;
   document.querySelectorAll('#nav button').forEach(function (b) { if (b.getAttribute('data-v') === (({ avis: 'more', settings: 'more', owner: 'more', sources: 'more', player: 'more', sante: 'more', confid: 'more', cond: 'more', adapt: 'more' })[tab] || tab)) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
@@ -1690,7 +1691,7 @@ function viewMore() {
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
     '<div class="card"><h2>Comment le programme s\'adapte</h2><p class="small">Ce qui change selon ton objectif, et ce qui reste fixe.</p><button class="btn alt" data-act="tab" data-v="adapt">Lire</button></div>' +
     shareCard() +
-    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><img class="klogo" src="logo-kves.png" alt="KVES Services &amp; Tech" width="900" height="491"><p class="small">Une application de KVES Services &amp; Tech.</p><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>' +
+    '<div class="card"><h2>À propos</h2><img class="banner" src="banner.jpg" alt="' + NOM + '" width="1200" height="593"><img class="klogo" src="logo-kves.png" alt="KVES Services &amp; Tech" width="900" height="491"><p class="small">Une application de KVES Services &amp; Tech.</p><p class="small" id="sigstat" role="status">' + SIG_MSG[SIG.s] + '</p><p class="small" id="sigfp" hidden><span>Empreinte de la clé KVES :</span> <code id="sigfpv"></code></p><p class="small">' + NOM + ' · version ' + VERSION + ' · © ' + AUTEUR + '. Tes données restent sur ton téléphone.</p><button class="btn alt sm back" data-act="tab" data-v="owner">Espace propriétaire</button></div>' +
     '<div class="card"><h2>Légal</h2><div class="links"><button class="linkrow" data-act="tab" data-v="sante">Avertissement santé</button><button class="linkrow" data-act="tab" data-v="confid">Politique de confidentialité</button><button class="linkrow" data-act="tab" data-v="cond">Conditions d\'utilisation</button></div></div>';
 }
 function avItem(it, i) {
@@ -2614,6 +2615,48 @@ function lvlSave() {
 }
 function lvlCard() {
   return '<div class="card"><h2>Niveau de départ</h2><p class="small">Règle la variante de chaque exercice selon ce que tu sais déjà faire.</p><button class="btn alt" data-act="lvlopen">Régler mon niveau</button></div>';
+}
+/* signature KVES (18.4) : vérifie que les fichiers viennent bien de KVES (Ed25519 + empreintes SHA-256) */
+var SIG = { s: 'idle', fp: '', run: false };
+var SIG_MSG = {
+  idle: 'Vérification de la signature KVES…',
+  ok: 'Signature KVES vérifiée : les fichiers sont authentiques.',
+  bad: 'Signature KVES invalide : ne fais pas confiance à cette copie.',
+  changed: 'Fichiers différents de la version signée : mets l\'application à jour.',
+  none: 'Signature KVES non configurée.',
+  na: 'Vérification impossible pour le moment (hors ligne ou appareil trop ancien).'
+};
+var SIG_CHECK = ['index.html', 'app.js', 'langues.js', 'donnees.js', 'theme-init.js', 'styles.css', 'manifest.webmanifest'];
+function sigGet(u, bin) {
+  return fetch(u).then(function (r) { if (!r.ok) { var e = new Error('http'); e.status = r.status; throw e; } return bin ? r.arrayBuffer() : r.text(); });
+}
+function sigPaint() {
+  var e = $('#sigstat'), f = $('#sigfp'), v = $('#sigfpv');
+  if (e) { e.textContent = SIG_MSG[SIG.s]; e.className = 'small' + (SIG.s === 'ok' ? ' sigok' : (SIG.s === 'bad' || SIG.s === 'changed') ? ' sigko' : ''); }
+  if (f && v) { f.hidden = !SIG.fp; v.textContent = SIG.fp; }
+}
+function sigDone(s, fp) { SIG.s = s; SIG.fp = fp || ''; SIG.run = false; sigPaint(); }
+function sigHex(buf, n) { return Array.prototype.map.call(new Uint8Array(buf).slice(0, n), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
+function sigRun() {
+  if (SIG.run || SIG.s !== 'idle') { sigPaint(); return; }
+  SIG.run = true;
+  if (!subtle() || !window.TextEncoder) { sigDone('na'); return; }
+  var miss = function (e) { return e && e.status ? null : false; };
+  Promise.all([sigGet('kves-cle-publique.txt').catch(miss), sigGet('SIGNATURE-KVES.sig').catch(miss), sigGet('SIGNATURE-KVES.txt', true).catch(miss)]).then(function (a) {
+    if (a[0] === false || a[1] === false || a[2] === false) { sigDone('na'); return; }
+    if (!a[0] || !a[1] || !a[2]) { sigDone('none'); return; }
+    var pub = unb64u(a[0].trim()), fp = '';
+    return subtle().digest('SHA-256', pub).then(function (d) { fp = sigHex(d, 8).toUpperCase().replace(/(.{4})/g, '$1 ').trim(); return subtle().importKey('raw', pub, { name: 'Ed25519' }, false, ['verify']); })
+      .then(function (k) { return subtle().verify({ name: 'Ed25519' }, k, unb64u(a[1].trim()), a[2]); })
+      .then(function (ok) {
+        if (!ok) { sigDone('bad', fp); return; }
+        var want = {};
+        new TextDecoder().decode(a[2]).split('\n').forEach(function (l) { var m = l.match(/^([0-9a-f]{64})  (\S+)$/); if (m) want[m[2]] = m[1]; });
+        return Promise.all(SIG_CHECK.filter(function (f) { return want[f]; }).map(function (f) {
+          return sigGet(f, true).then(function (b) { return subtle().digest('SHA-256', b); }).then(function (d) { return sigHex(d, 32) === want[f]; });
+        })).then(function (r) { sigDone(r.every(Boolean) ? 'ok' : 'changed', fp); });
+      });
+  }).catch(function () { sigDone('na'); });
 }
 function modal(h) {
   var m = $('#modal');
