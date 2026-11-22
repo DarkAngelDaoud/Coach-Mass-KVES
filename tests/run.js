@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.8' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.9' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,29 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.9 : export de photos chiffré */
+  var jpg79 = (await (async function () { var pp = await br.newPage(); var u = await pp.evaluate(function () { var c = document.createElement('canvas'); c.width = 40; c.height = 40; var x = c.getContext('2d'); x.fillStyle = '#3a7'; x.fillRect(0, 0, 40, 40); return c.toDataURL('image/jpeg'); }); await pp.close(); return u; })());
+  fs.writeFileSync('/tmp/ph179.jpg', Buffer.from(jpg79.split(',')[1], 'base64'));
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav'); await pg.waitForTimeout(700);
+  await pg.evaluate(function () { document.querySelector('#modal').hidden = true; window.__coach.setTab('track'); });
+  await pg.setInputFiles('[data-ph=add]', '/tmp/ph179.jpg'); await pg.waitForTimeout(1200);
+  await pg.click('[data-act=phexpenc]');
+  await pg.fill('#enc1', 'phrase-photos-1'); await pg.fill('#enc2', 'phrase-photos-1');
+  var [dlp2] = await Promise.all([pg.waitForEvent('download', { timeout: 20000 }), pg.click('[data-act=encgo]')]);
+  var ptxt = fs.readFileSync(await dlp2.path(), 'utf8'), pobj = JSON.parse(ptxt);
+  t('photos chiffrées : fichier chiffré, sans image lisible', /^photos-coach-mass-chiffrees-/.test(dlp2.suggestedFilename()) && pobj.coachMasseEnc === 1 && ptxt.indexOf('data:image') < 0 && ptxt.indexOf('base64,') < 0 && ptxt.indexOf('coach-masse-photos') < 0, [dlp2.suggestedFilename(), Object.keys(pobj)]);
+  fs.copyFileSync(await dlp2.path(), '/tmp/ph179.enc.json');
+  await pg.context().close();
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav'); await pg.waitForTimeout(700);
+  await pg.evaluate(function () { document.querySelector('#modal').hidden = true; window.__coach.setTab('track'); });
+  var n0 = await pg.evaluate(function () { return document.querySelectorAll('img').length; });
+  await pg.setInputFiles('[data-ph=imp]', '/tmp/ph179.enc.json'); await pg.waitForSelector('#encp');
+  await pg.fill('#encp', 'mauvaise'); await pg.click('[data-act=encimpgo]'); await pg.waitForTimeout(800);
+  t('photos chiffrées : mauvaise phrase refusée', /incorrecte/.test(await pg.textContent('#encmsg')));
+  await pg.fill('#encp', 'phrase-photos-1'); await pg.click('[data-act=encimpgo]'); await pg.waitForTimeout(1500);
+  var cnt = await pg.evaluate(function () { return new Promise(function (res) { var r = indexedDB.open('coach-masse-ph'); r.onsuccess = function () { var q = r.result.transaction('p').objectStore('p').count(); q.onsuccess = function () { res(q.result); }; }; r.onerror = function () { res(-1); }; }); });
+  t('photos chiffrées : bonne phrase : photo restaurée', cnt === 1, cnt);
+  await pg.context().close();
   /* 17.8 : sauvegarde chiffrée */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.evaluate(function () { var D = window.__coach.D(); D.profile.onboarded = true; D.profile.healthOk = true; D.profile.w0 = 77.7; D.profile.goal = 83.3; window.__coach.setTab('track'); });
