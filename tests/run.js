@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.6' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.7' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,102 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.7 : tests unitaires des calculs du coaching (valeurs attendues calculées à la main) */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  var U7 = await pg.evaluate(function () {
+    var c = window.__coach.calc, D = window.__coach.D(), P = D.profile, out = {};
+    function ds(n) { var d = new Date(); d.setDate(d.getDate() - n); var m = d.getMonth() + 1, j = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (j < 10 ? '0' : '') + j; }
+    function reset() { D.logs = {}; D.sessions = []; P.onboarded = true; P.kcalAdj = 0; P.lastAdj = ''; P.deloadOn = ''; P.deloadUntil = ''; P.deloadLast = 0; P.deloadSkip = 0; P.absSkip = ''; P.start = ds(0); P.days = []; }
+    function who(g, o, age, h, w) { reset(); P.gender = g; P.obj = o; P.age = age; P.height = h; P.w0 = w; }
+    function weigh(arr) { D.logs = {}; arr.forEach(function (x) { D.logs[ds(x[0])] = { weight: x[1] }; }); }
+    /* métabolisme et calories */
+    who('h', 'masse', 30, 175, 70);
+    out.bmrH = c.bmr(); out.tdeeH = c.tdee(); out.masse = c.kcalCore(); out.protMasse = c.protTarget();
+    P.obj = 'perte'; out.perte = c.kcalCore(); P.obj = 'maintien'; out.maint = c.kcalCore(); out.protMaint = c.protTarget();
+    who('f', 'perte', 28, 165, 60); out.perteF = c.kcalCore(); out.tdeeF = c.tdee();
+    who('h', 'masse', 20, 190, 130); out.masseMax = c.kcalCore();
+    who('f', 'masse', 80, 140, 40); out.masseMin = c.kcalCore();
+    who('h', 'masse', 30, 175, 70); P.kcalAdj = 300; out.targetAdj = c.kcalTarget();
+    /* eau */
+    who('h', 'masse', 30, 175, 70); P.days = []; out.eauRepos = c.waterTarget(); P.days = [0, 1, 2, 3, 4, 5, 6]; out.eauSeance = c.waterTarget();
+    P.w0 = 40; out.eauMin = c.waterTarget(); P.w0 = 150; out.eauMax = c.waterTarget();
+    /* objectif réaliste */
+    out.g1 = c.goalCheck('masse', 175, 70, 95); out.g2 = c.goalCheck('masse', 175, 70, 80); out.g3 = c.goalCheck('perte', 175, 70, 50); out.g4 = c.goalCheck('perte', 0, 70, 60);
+    /* pente de poids */
+    who('h', 'masse', 30, 175, 70);
+    weigh([[28, 70], [21, 70.2], [14, 70.4], [7, 70.6], [0, 70.8]]); out.slope = c.slopeWeek(28);
+    weigh([[2, 70], [1, 70.5]]); out.slopeFew = c.slopeWeek(28);
+    weigh([[8, 70], [6, 70.2], [4, 70.4], [0, 70.6]]); out.slopeShort = c.slopeWeek(28);
+    /* suggestions : poids stable / trop lent / trop vite selon l'objectif */
+    function flat(rate) { return [[28, 70], [21, 70 + rate], [14, 70 + 2 * rate], [7, 70 + 3 * rate], [0, 70 + 4 * rate]]; }
+    who('h', 'masse', 30, 175, 70); weigh(flat(0.0125)); var q = c.suggestion(); out.sugMasseLent = q && q.v;
+    weigh(flat(0.8)); q = c.suggestion(); out.sugMasseVite = q && q.v;
+    weigh(flat(0.4)); out.sugMasseOk = c.suggestion();
+    P.lastAdj = ds(3); weigh(flat(0.0125)); out.sugPause = c.suggestion(); P.lastAdj = '';
+    who('h', 'perte', 30, 175, 70); weigh(flat(-0.05)); out.sugPerteFloor = c.suggestion();
+    P.kcalAdj = 200; q = c.suggestion(); out.sugPerteLent = q && q.v;
+    P.kcalAdj = 0; weigh(flat(-0.8)); q = c.suggestion(); out.sugPerteVite = q && q.v;
+    who('h', 'maintien', 30, 175, 70); weigh(flat(0.5)); q = c.suggestion(); out.sugMaintHaut = q && q.v;
+    weigh(flat(-0.5)); q = c.suggestion(); out.sugMaintBas = q && q.v;
+    /* montée de niveau */
+    reset(); D.levels = {};
+    function L(id, n, reps, hi) { var a = []; for (var i = 0; i < n; i++) a.push({ id: id, name: 'x', hi: hi, sn: i + 1, reps: reps, m: true }); return a; }
+    function plan(id, sets) { return [{ e: c.ex(id), sets: sets }]; }
+    var ups = c.progress(plan('pompes', 3), L('pompes', 3, 12, 12));
+    out.lvA = D.levels.pompes.level; out.upsA = ups[0]; out.nameA = c.ex('pompes').levels[1];
+    D.levels = {}; c.progress(plan('pompes', 3), L('pompes', 2, 12, 12)); out.lvB = D.levels.pompes ? D.levels.pompes.level : 0;
+    D.levels = {}; var lg = L('pompes', 3, 12, 12); lg[1].reps = 11; c.progress(plan('pompes', 3), lg); out.lvC = D.levels.pompes ? D.levels.pompes.level : 0;
+    D.levels = { pompes: { level: 3, off: 0 } }; ups = c.progress(plan('pompes', 3), L('pompes', 3, 12, 12)); out.lvD = D.levels.pompes.level; out.offD = D.levels.pompes.off; out.upsD = ups[0];
+    D.levels = { gainage: { level: 2, off: 0 } }; c.progress(plan('gainage', 3), L('gainage', 3, 45, 45)); out.offG = D.levels.gainage.off;
+    /* records */
+    reset(); D.sessions = [{ date: ds(3), logs: [{ id: 'pompes', name: 'Pompes', reps: 10, m: true }, { id: 'gainage', name: 'Gainage', reps: 40, m: true }] }];
+    var pr = c.findPrs([{ id: 'pompes', name: 'Pompes', reps: 12, m: true }]); out.prN = pr.length; out.prOld = pr[0] && pr[0].old; out.prV = pr[0] && pr[0].v; out.prNx = pr[0] && pr[0].nx;
+    out.prNoMeasure = c.findPrs([{ id: 'pompes', name: 'Pompes', reps: 12, m: false }]).length;
+    out.prEqual = c.findPrs([{ id: 'pompes', name: 'Pompes', reps: 10, m: true }]).length;
+    out.prOtherVariant = c.findPrs([{ id: 'pompes', name: 'Pompes archer', reps: 20, m: true }]).length;
+    pr = c.findPrs([{ id: 'gainage', name: 'Gainage', reps: 50, m: true }]); out.prTimedNx = pr[0] && pr[0].nx;
+    /* allègement et reprise */
+    reset(); P.start = ds(35); out.dlLong = c.deloadDue(); out.wk6 = c.wkNo();
+    reset(); out.dlNew = c.deloadDue();
+    reset(); P.start = ds(14); D.sessions = [1, 2, 3].map(function (i) { return { date: ds(i), rpe: 5, logs: [] }; }); out.dlRpeHigh = c.deloadDue();
+    D.sessions = [1, 2, 3].map(function (i) { return { date: ds(i), rpe: 3, logs: [] }; }); out.dlRpeLow = c.deloadDue();
+    D.sessions = [1, 2, 3].map(function (i) { return { date: ds(i), rpe: 5, logs: [] }; }); P.deloadSkip = c.wkNo(); out.dlSkip = c.deloadDue();
+    reset(); out.absNone = c.absenceDue();
+    D.sessions = [{ date: ds(12), logs: [] }]; out.abs12 = c.absenceDue();
+    D.sessions = [{ date: ds(5), logs: [] }]; out.abs5 = c.absenceDue();
+    D.sessions = [{ date: ds(12), logs: [] }]; P.absSkip = ds(12); out.absSkipped = c.absenceDue();
+    return out;
+  });
+  var near = function (a, b, e) { return typeof a === 'number' && Math.abs(a - b) <= (e || 0.0001); };
+  t('calcul : métabolisme de base d\'un homme (70 kg, 175 cm, 30 ans) = 1648,75', near(U7.bmrH, 1648.75), U7.bmrH);
+  t('calcul : dépense totale = 2308', U7.tdeeH === 2308, U7.tdeeH);
+  t('calcul : calories prise de masse = 2710 (dépense + 400)', U7.masse === 2710, U7.masse);
+  t('calcul : calories perte de poids = 1850 (déficit de 20 %)', U7.perte === 1850, U7.perte);
+  t('calcul : calories maintien = 2310', U7.maint === 2310, U7.maint);
+  t('calcul : protéines masse 125 g, maintien 110 g (70 kg)', U7.protMasse === 125 && U7.protMaint === 110, [U7.protMasse, U7.protMaint]);
+  t('calcul : perte pour une femme (60 kg) = 1490, au-dessus du plancher de 1200', U7.tdeeF === 1862 && U7.perteF === 1490, [U7.tdeeF, U7.perteF]);
+  t('calcul : prise de masse plafonnée à 3400 et planchée à 1600', U7.masseMax === 3400 && U7.masseMin === 1600, [U7.masseMax, U7.masseMin]);
+  t('calcul : réglage de calories ajouté à la cible de masse (+300)', U7.targetAdj === 3010, U7.targetAdj);
+  t('calcul : eau = 30 ml/kg, +500 les jours de séance, bornée entre 2000 et 3500', U7.eauRepos === 2100 && U7.eauSeance === 2600 && U7.eauMin === 2000 && U7.eauMax === 3500, [U7.eauRepos, U7.eauSeance, U7.eauMin, U7.eauMax]);
+  t('calcul : objectif réaliste (IMC > 27 refusé, écart > 15 % refusé, bon objectif accepté)', U7.g1 !== '' && U7.g2 === '' && U7.g3 !== '' && U7.g4 === '', [U7.g1.length, U7.g2, U7.g3.length, U7.g4]);
+  t('calcul : pente du poids = +0,2 kg par semaine', near(U7.slope, 0.2, 0.001), U7.slope);
+  t('calcul : pente absente avec moins de 3 pesées ou moins de 10 jours', U7.slopeFew === null && U7.slopeShort === null, [U7.slopeFew, U7.slopeShort]);
+  t('calcul : masse, poids qui monte trop lentement : +300 kcal', U7.sugMasseLent === 300, U7.sugMasseLent);
+  t('calcul : masse, poids qui monte trop vite : -200 kcal', U7.sugMasseVite === -200, U7.sugMasseVite);
+  t('calcul : masse, bon rythme : aucune suggestion', U7.sugMasseOk === null, U7.sugMasseOk);
+  t('calcul : pas de nouvelle suggestion moins de 14 jours après un ajustement', U7.sugPause === null, U7.sugPause);
+  t('calcul : perte, poids qui ne baisse pas : -150 kcal (jamais sous le plancher) ; qui baisse trop vite : +200 kcal', U7.sugPerteFloor === null && U7.sugPerteLent === -150 && U7.sugPerteVite === 200, [U7.sugPerteFloor, U7.sugPerteLent, U7.sugPerteVite]);
+  t('calcul : maintien, poids qui monte : -150 ; qui baisse : +150', U7.sugMaintHaut === -150 && U7.sugMaintBas === 150, [U7.sugMaintHaut, U7.sugMaintBas]);
+  t('calcul : montée de niveau quand toutes les séries atteignent l\'objectif', U7.lvA === 1 && U7.upsA === U7.nameA, [U7.lvA, U7.upsA]);
+  t('calcul : pas de montée si une série manque ou n\'atteint pas l\'objectif', U7.lvB === 0 && U7.lvC === 0, [U7.lvB, U7.lvC]);
+  t('calcul : au niveau maximum, l\'objectif augmente (+2 répétitions, +5 s en gainage)', U7.lvD === 3 && U7.offD === 2 && /objectif augmenté/.test(U7.upsD) && U7.offG === 5, [U7.lvD, U7.offD, U7.upsD, U7.offG]);
+  t('calcul : record détecté (10 → 12, prochain objectif 13)', U7.prN === 1 && U7.prOld === 10 && U7.prV === 12 && U7.prNx === 13, [U7.prN, U7.prOld, U7.prV, U7.prNx]);
+  t('calcul : pas de record sans mesure réelle, à égalité ou sur une autre variante', U7.prNoMeasure === 0 && U7.prEqual === 0 && U7.prOtherVariant === 0, [U7.prNoMeasure, U7.prEqual, U7.prOtherVariant]);
+  t('calcul : record en gainage : prochain objectif +5 s', U7.prTimedNx === 55, U7.prTimedNx);
+  t('calcul : semaine 6 après 35 jours ; allègement conseillé après 5 semaines, pas au début', U7.wk6 === 6 && U7.dlLong === true && U7.dlNew === false, [U7.wk6, U7.dlLong, U7.dlNew]);
+  t('calcul : allègement si effort moyen élevé (≥ 4,5), pas s\'il est faible, pas si reporté', U7.dlRpeHigh === true && U7.dlRpeLow === false && U7.dlSkip === false, [U7.dlRpeHigh, U7.dlRpeLow, U7.dlSkip]);
+  t('calcul : reprise proposée après 10 jours d\'absence, pas avant, pas si ignorée', U7.absNone === false && U7.abs12 === true && U7.abs5 === false && U7.absSkipped === false, [U7.absNone, U7.abs12, U7.abs5, U7.absSkipped]);
+  await pg.context().close();
   /* 17.6 : niveau de départ */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.evaluate(function () { var D = window.__coach.D(); D.profile.onboarded = true; D.profile.healthOk = true; window.__coach.render(); });
