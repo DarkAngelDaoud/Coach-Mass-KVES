@@ -4,7 +4,7 @@
 
 Un coach de poche pour prendre du muscle et du poids à la maison, sans salle de sport, sans compte et sans connexion internet.
 
-Version 17.9 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
+Version 18.0 · © KVES · Application web installable (PWA) · Toutes les données restent sur ton téléphone
 
 <p align="center">
   <img src="capture-aujourdhui.png" alt="Écran Aujourd'hui" width="23%">
@@ -158,6 +158,7 @@ Chaque fichier source porte la marque `© KVES · Coach-Mass-KVES`, qui apparaî
 | 17.7 | Tests automatiques des calculs du coaching |
 | 17.8 | Sauvegarde chiffrée par phrase secrète |
 | 17.9 | Export de photos chiffré |
+| 18.0 | Traductions déplacées dans langues.js (fichier à part) |
 | 15.0 | Eau : objectif personnalisé et rappel du coach |
 | 14.9 | Carte Légal en liste, sous À propos |
 | 14.8 | Application minifiée (app.js) ; code lisible dans app.source.js |
@@ -294,6 +295,7 @@ Le projet est une application web statique : du HTML, du CSS et du JavaScript, s
 | `app.js` | Fichier **généré** : toute la logique, assemblée depuis `src/` |
 | `src/` | Le code source, découpé en 19 modules numérotés (données, état, vues, séance, avis, courses, rappels, sauvegarde...) |
 | `build.js` | Assemble `src/` en `app.js` : `node build.js` |
+| `langues.js` | Traductions (anglais, arabe, darija), lisible, chargé avant `app.js` |
 | `tests/run.js` | Tests automatiques : `node build.js && node tests/run.js` |
 | `styles.css` | Styles, thèmes clair et sombre, adaptation portrait et paysage |
 | `banner.jpg` | Bannière du projet (README et Plus > À propos) |
