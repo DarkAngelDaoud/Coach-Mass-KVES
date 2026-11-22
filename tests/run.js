@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.4' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.5' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,27 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.5 : numéro de format des données */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  var d75 = await pg.evaluate(function () { return window.__coach.D(); });
+  t('format : les données portent le numéro 1', d75.schema === 1, d75.schema);
+  await pg.evaluate(function () { localStorage.setItem('coach-masse-v1', JSON.stringify({ profile: { w0: 77 }, logs: {}, sessions: [], measures: [] })); });
+  await pg.reload(); await pg.waitForSelector('#nav');
+  var d76 = await dataOf(pg);
+  t('format : anciennes données sans numéro migrées sans perte', d76.schema === 1 && d76.profile.w0 === 77, [d76.schema, d76.profile.w0]);
+  await pg.evaluate(function () { localStorage.setItem('coach-masse-v1', JSON.stringify({ schema: 99, profile: { w0: 66, futur: 'x' }, logs: {}, sessions: [], measures: [] })); });
+  await pg.reload(); await pg.waitForSelector('#nav'); await pg.waitForTimeout(1300);
+  var kept = await pg.evaluate(function () { return localStorage.getItem('coach-masse-v1-newer'); });
+  t('format : données plus récentes : copie de sécurité gardée', !!kept && JSON.parse(kept).schema === 99 && JSON.parse(kept).profile.futur === 'x', kept);
+  t('format : données plus récentes : avertissement affiché', /plus récente/.test(await pg.textContent('body')));
+  await pg.evaluate(function () { localStorage.removeItem('coach-masse-v1-newer'); localStorage.removeItem('coach-masse-v1'); });
+  await pg.reload(); await pg.waitForSelector('#nav');
+  fs.writeFileSync('/tmp/futur75.json', JSON.stringify({ schema: 99, profile: { w0: 55 }, logs: {}, sessions: [], measures: [] }));
+  await pg.click('#nav [data-v=settings]').catch(function () {});
+  await pg.setInputFiles('#importFile', '/tmp/futur75.json'); await pg.waitForTimeout(500);
+  var d77 = await dataOf(pg);
+  t('format : import d\'une sauvegarde plus récente refusé, rien modifié', d77.profile.w0 !== 55 && /plus récente/.test(await pg.textContent('body')), d77.profile.w0);
+  await pg.context().close();
   /* 17.4 : oeil sur les mots de passe */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=pinset]'); await pg.waitForTimeout(200);
