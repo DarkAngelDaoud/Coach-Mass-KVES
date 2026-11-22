@@ -4,7 +4,7 @@ var fs = require('fs'), path = require('path'), crypto = require('crypto');
 var root = __dirname, fails = [], warns = [], okn = 0;
 function rd(f) { return fs.readFileSync(path.join(root, f), 'utf8'); }
 function ok(c, msg, warn) { if (c) okn++; else (warn ? warns : fails).push(msg); }
-var PUB = ['index.html', 'app.js', 'theme-init.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'avis-config.js'];
+var PUB = ['index.html', 'app.js', 'langues.js', 'theme-init.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'avis-config.js'];
 var HAS_SRC = fs.existsSync(path.join(root, 'app.source.js')); /* app.js est minifié depuis app.source.js (lisible) */
 if (HAS_SRC) PUB.push('app.source.js');
 var code = PUB.map(function (f) { return [f, rd(f)]; });

@@ -1,6 +1,6 @@
 {
- "version": "17.9",
+ "version": "18.0",
  "notes": [
-  "Export de photos chiffré facultatif (Suivi, photos) : même phrase secrète que pour la sauvegarde. À l'import, l'appli reconnaît le fichier et demande la phrase."
+  "Les traductions (anglais, arabe, darija) sont maintenant dans un fichier à part, langues.js : plus facile à relire et à corriger. Rien ne change à l'écran."
  ]
 }

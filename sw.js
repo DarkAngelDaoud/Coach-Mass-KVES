@@ -1,7 +1,7 @@
 /* © KVES · Coach-Mass-KVES */
-var CACHE = 'coach-masse-v17-9';
+var CACHE = 'coach-masse-v18-0';
 /* Fichiers indispensables : tout est mis en cache ou rien (pas de mélange d'anciens et de nouveaux fichiers). */
-var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'version.json', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
+var FILES = ['./', 'index.html', 'styles.css', 'theme-init.js', 'app.js', 'langues.js', 'version.json', 'banner.jpg', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 var OPTIONAL = ['avis-config.js'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) {
