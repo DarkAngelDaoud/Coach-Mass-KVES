@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.0';
+var VERSION = '17.1';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Politique de confidentialité mise à jour : le QR ne contient que l\'adresse de l\'appli ; tabac, douleurs, photos, export des photos, image du bilan et voix y sont décrits.', 'Texte toujours à faire relire avant toute publication publique.'];
+var NOTES = ['Mises à jour en deux temps : une annonce des nouveautés, puis le choix de mettre à jour (l\'appli recharge) ou d\'ignorer (tu gardes ta version).', 'L\'application ne change plus de version toute seule : elle garde la même version tant que tu n\'as pas accepté.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40 },
@@ -278,7 +278,7 @@ function dnum(s) { return Math.round(new Date(s + 'T00:00:00').getTime() / 864e5
 
 function defaults() {
   return {
-    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
+    profile: { start: today(), w0: 75, goal: 80, height: 179, age: 41, days: [1, 3, 5], tempo: 3, voice: true, voiceFr: false, tabac: false, absSkip: '', ignUpd: '', tabacFrom: '', phExp: '', deloadUntil: '', vib: true,
       count: true, auto: true, restBonus: 15, sound: true, rotate: false, metro: true, warn10: true, vol: 7, hasBar: false, cigs: false, kcalAdj: 0, lastAdj: '', bkLast: '', bkEvery: 7, vibLevel: 2, exCfg: {}, seenVersion: '', gender: 'n', obj: 'masse', onboarded: false, healthOk: false, early: false, rmWater: false, rmLe: '', mt1: '', mt2: '', mt3: '', mt4: '', mt5: '', deloadOn: '', deloadLast: 0, deloadSkip: 0, parq: '', parqDate: '', extras: [], sessOff: [], advOn: false, avisName: '', avisEmail: '', theme: 'auto', rmOn: false, rmW: '07:30', rmM: '22:00', rmLw: '', rmLm: '', lang: 'fr', noEgg: false, noMilk: false, noNuts: false, noGluten: false, veg: false, budget: 'normal', shopDays: 7, shopM3: 'mix', shopM5: 'mix', shopDone: {} },
     logs: {}, measures: [], sessions: [], levels: {}, avis: { sent: [], inbox: [] }
   };
@@ -1904,7 +1904,7 @@ function viewConfid() { return viewLegal('confid'); }
 function viewCond() { return viewLegal('cond'); }
 function viewAdapt() { return viewLegal('adapt'); }
 function viewMore() {
-  return '<h1>Plus</h1>' +
+  return '<h1>Plus</h1>' + (PEND ? '<div class="card"><h2>Mise à jour disponible</h2>' + (PEND.v ? '<p class="small">Version ' + esc(PEND.v) + '</p>' : '') + '<button class="btn" data-act="updopen">Voir les nouveautés</button></div>' : '') +
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
@@ -2701,13 +2701,45 @@ function checkUpdate() {
   P.seenVersion = VERSION; save();
   if (seen && seen !== VERSION && !R) whatsNew();
 }
+/* Mise à jour en deux temps : 1) annonce des nouveautés, 2) choix de mettre à jour (recharge) ou d'ignorer (on garde la version actuelle). */
+var PEND = null, ACCEPT = false;
+function updStep1() {
+  if (!PEND) return;
+  var n = (PEND.notes || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('');
+  modal('<h2>Nouvelle version disponible</h2>' + (PEND.v ? '<p class="small">' + esc(NOM) + ' · version ' + esc(PEND.v) + '</p>' : '') + (n ? '<ul class="list">' + n + '</ul>' : '') + '<button class="btn" data-act="updnext">Suite</button>');
+}
+function updStep2() {
+  modal('<h2>Mettre à jour ?</h2><p>L\'application va se recharger. Tes données sont conservées.</p><button class="btn go" data-act="updgo">Mettre à jour et recharger</button><button class="btn alt" data-act="updignore">Ignorer et garder cette version</button>');
+}
+function offerUpdate() {
+  if (!PEND) return;
+  if (PEND.v && PEND.v === VERSION) { try { PEND.w.postMessage({ type: 'skip' }); } catch (e) {} PEND = null; return; }
+  if (PEND.v && P.ignUpd === PEND.v) { if (tab === 'more') render(); return; }
+  if (R) { toast('Nouvelle version disponible : voir dans Plus.'); return; }
+  updStep1();
+}
+function pendUpdate(w) {
+  if (!w || (PEND && PEND.w === w)) return;
+  var done = false;
+  function fin(o) { if (done) return; done = true; PEND = { w: w, v: o.version || '', notes: o.notes || [] }; offerUpdate(); }
+  try { var ch = new MessageChannel(); ch.port1.onmessage = function (e) { fin(e.data || {}); }; w.postMessage({ type: 'info' }, [ch.port2]); } catch (e) { fin({}); }
+  setTimeout(function () { fin({}); }, 3000);
+}
+function watchReg(reg) {
+  if (!reg) return;
+  if (reg.waiting && navigator.serviceWorker.controller) pendUpdate(reg.waiting);
+  reg.addEventListener('updatefound', function () {
+    var nw = reg.installing; if (!nw) return;
+    nw.addEventListener('statechange', function () { if (nw.state === 'installed' && navigator.serviceWorker.controller) pendUpdate(nw); });
+  });
+}
 if (navigator.serviceWorker) {
   var hadController = !!navigator.serviceWorker.controller, lastUpd = 0;
   navigator.serviceWorker.addEventListener('controllerchange', function () {
     if (!hadController) { hadController = true; return; }
-    if (R) { toast('Mise à jour prête : elle s\'appliquera à la prochaine ouverture.'); return; }
-    modal('<h2>Nouvelle version prête</h2><p>Une mise à jour de ' + esc(NOM) + ' vient d\'être téléchargée. Recharge pour l\'utiliser.</p><button class="btn" data-act="modalreload">Recharger maintenant</button><button class="btn alt" data-act="modalclose">Plus tard</button>');
+    if (ACCEPT) window.location.reload();
   });
+  navigator.serviceWorker.getRegistration().then(watchReg).catch(function () {});
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState !== 'visible' || Date.now() - lastUpd < 3600000) return;
     lastUpd = Date.now();
@@ -2720,6 +2752,10 @@ document.addEventListener('click', function (ev) {
   var a = t.getAttribute('data-act');
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
+  else if (a === 'updopen') updStep1();
+  else if (a === 'updnext') updStep2();
+  else if (a === 'updgo') { if (PEND && PEND.w) { ACCEPT = true; try { PEND.w.postMessage({ type: 'skip' }); } catch (e) { window.location.reload(); } toast('Mise à jour en cours…'); } else closeModal(); }
+  else if (a === 'updignore') { if (PEND) { P.ignUpd = PEND.v || '?'; save(); } closeModal(); toast('Mise à jour ignorée. Tu pourras la faire depuis Plus.'); render(); }
 });
 /* © KVES · Coach-Mass-KVES */
 /* ====================== sources et limites ====================== */
@@ -4389,12 +4425,17 @@ function startI18n() {
   var X = {"en": {"Dernière mise à jour : 22 novembre 2026": "Last updated: 22 November 2026"}, "ar": {"Dernière mise à jour : 22 novembre 2026": "آخر تحديث: 22 نونبر 2026"}, "ma": {"Dernière mise à jour : 22 novembre 2026": "Akhir mise à jour: 22 nowanbir 2026"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
+
+(function(){
+  var X = {"en": {"Nouvelle version disponible": "New version available", "Suite": "Next", "Mettre à jour ?": "Update?", "L'application va se recharger. Tes données sont conservées.": "The app will reload. Your data is kept.", "Mettre à jour et recharger": "Update and reload", "Ignorer et garder cette version": "Ignore and keep this version", "Nouvelle version disponible : voir dans Plus.": "New version available: see More.", "Mise à jour en cours…": "Updating…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "Update ignored. You can do it later from More.", "Mise à jour disponible": "Update available", "Voir les nouveautés": "See what's new", "Version": "Version"}, "ar": {"Nouvelle version disponible": "نسخة جديدة متوفرة", "Suite": "التالي", "Mettre à jour ?": "هل تريد التحديث؟", "L'application va se recharger. Tes données sont conservées.": "سيُعاد تحميل التطبيق. بياناتك محفوظة.", "Mettre à jour et recharger": "حدّث وأعد التحميل", "Ignorer et garder cette version": "تجاهل والاحتفاظ بهذه النسخة", "Nouvelle version disponible : voir dans Plus.": "نسخة جديدة متوفرة: انظر في المزيد.", "Mise à jour en cours…": "التحديث جارٍ…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "تم تجاهل التحديث. يمكنك إجراؤه لاحقا من المزيد.", "Mise à jour disponible": "تحديث متوفر", "Voir les nouveautés": "اطلع على الجديد", "Version": "النسخة"}, "ma": {"Nouvelle version disponible": "Nsskha jdida kayna", "Suite": "Mn b3d", "Mettre à jour ?": "Tdir mise à jour?", "L'application va se recharger. Tes données sont conservées.": "L-application ghadi t3awd t-tcharja. L-ma3lumat dyalk ghadi tb9a.", "Mettre à jour et recharger": "Dir mise à jour w 3awd charja", "Ignorer et garder cette version": "Tjahel w khlli had nsskha", "Nouvelle version disponible : voir dans Plus.": "Nsskha jdida kayna: shuf f Plus.", "Mise à jour en cours…": "Mise à jour kat-t3mel…", "Mise à jour ignorée. Tu pourras la faire depuis Plus.": "Mise à jour tjahlat. Imkn lik dirha mn b3d mn Plus.", "Mise à jour disponible": "Mise à jour kayna", "Voir les nouveautés": "Shuf l-jdid", "Version": "Nsskha"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
 startI18n();
 /* © KVES · Coach-Mass-KVES */
 applyRotate();
 render();
 requestAnimationFrame(frame);
 if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
-if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); }); }
+if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').then(watchReg).catch(function () {}); }); }
 window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); } };
 })();
