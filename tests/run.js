@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,19 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.2 : illustrations des étirements */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=train]'); await pg.click('[data-act=start]');
+  for (var z72 = 0; z72 < 12 && /Échauffement/.test(await pg.textContent('#runner')); z72++) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(120); }
+  await pg.click('#runner [data-act=pain]'); await pg.click('#runner [data-act=painend]'); await pg.waitForTimeout(300);
+  await pg.click('#runner [data-act=stretch]'); await pg.waitForTimeout(300);
+  var figs72 = [];
+  for (var s72 = 0; s72 < 5; s72++) {
+    figs72.push(await pg.evaluate(function () { var v = document.querySelector('#runner svg.anim'); return v ? v.getAttribute('data-fig') + ':' + v.querySelectorAll('polyline.fig').length : ''; }));
+    if (s72 < 4) { await pg.click('#runner [data-act=skip]'); await pg.waitForTimeout(150); }
+  }
+  t('étirements : une illustration différente par exercice', figs72.join('|').split('|').every(function (x, i) { return /^st(Chest|Quad|Ham|Child|Breath):[3-9]$/.test(x); }) && new Set(figs72).size === 5, figs72);
+  await pg.context().close();
   /* 17.1 : mises à jour en deux temps */
   var VJ = JSON.parse(fs.readFileSync(path.join(root, 'version.json'), 'utf8'));
   t('version.json : version cohérente avec l\'application', typeof VJ.version === 'string' && VJ.notes.length >= 1 && /\bVERSION = '/.test(fs.readFileSync(path.join(root, 'app.source.js'), 'utf8')) && fs.readFileSync(path.join(root, 'app.source.js'), 'utf8').indexOf("var VERSION = '" + VJ.version + "'") >= 0, VJ.version);
