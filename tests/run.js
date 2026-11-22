@@ -11,10 +11,11 @@ try { chromium = require('playwright').chromium; } catch (e) { chromium = requir
 var root = path.join(__dirname, '..'), fails = 0, ok = 0;
 function t(name, cond, extra) { if (cond) ok++; else { fails++; console.log('ECHEC : ' + name + (extra !== undefined ? ' -> ' + JSON.stringify(extra) : '')); } }
 var types = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
-var CFGKEY = null, BREAK = null, SWV = null;
+var CFGKEY = null, BREAK = null, SWV = null, OVR = null;
 var server = http.createServer(function (q, r) {
   var p = decodeURIComponent(q.url.split('?')[0]); if (p === '/') p = '/index.html';
   if (BREAK && p === BREAK) { r.writeHead(500); return r.end('boom'); }
+  if (OVR && OVR[p] !== undefined) { r.writeHead(200, { 'content-type': 'text/plain' }); return r.end(OVR[p]); }
   if (SWV && p === '/sw.js') { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end(fs.readFileSync(path.join(root, 'sw.js'), 'utf8').replace(/coach-masse-v[0-9-]+'/, 'coach-masse-v' + SWV.cache + "'")); }
   if (SWV && p === '/version.json') { r.writeHead(200, { 'content-type': 'application/json' }); return r.end(JSON.stringify({ version: SWV.version, notes: ['Test nouveauté A', 'Test nouveauté B'] })); }
   if (p === '/avis-config.js' && CFGKEY) { r.writeHead(200, { 'content-type': 'application/javascript' }); return r.end('window.AVIS_CONFIG=' + JSON.stringify({ publicKey: CFGKEY, email: '', whatsapp: '' }) + ';'); }
@@ -175,7 +176,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.3' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.4' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +412,51 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.4 : signature KVES (Ed25519) */
+  var crypto7 = require('crypto');
+  var kp = crypto7.generateKeyPairSync('ed25519'), pubRaw = Buffer.from(kp.publicKey.export({ format: 'jwk' }).x, 'base64url');
+  var sigTxt = fs.readFileSync(path.join(root, 'SIGNATURE-KVES.txt'));
+  var sigOk = crypto7.sign(null, sigTxt, kp.privateKey).toString('base64url');
+  async function aboutSig(ovr) {
+    OVR = ovr; var q = await newPage(br); await q.goto(url); await q.waitForSelector('#nav');
+    await q.evaluate(function () { window.__coach.setTab('more'); }); await q.waitForTimeout(500); await q.evaluate(function () { document.querySelector('#modal').hidden = true; });
+    var txt = ''; for (var w = 0; w < 30 && !/vérifiée|invalide|différents|non configurée|impossible/.test(txt); w++) { await q.waitForTimeout(250); txt = await q.textContent('#sigstat'); }
+    var fpv = await q.evaluate(function () { var e = document.getElementById('sigfpv'); return e ? e.textContent : ''; });
+    await q.context().close(); OVR = null; return { txt: txt, fp: fpv };
+  }
+  var s0 = await aboutSig(null);
+  t('signature : sans fichiers de signature, message « non configurée » (l\'appli fonctionne)', /non configurée/.test(s0.txt), s0.txt);
+  var s1 = await aboutSig({ '/SIGNATURE-KVES.txt': sigTxt, '/SIGNATURE-KVES.sig': sigOk, '/kves-cle-publique.txt': pubRaw.toString('base64url') });
+  t('signature : signature valide et fichiers conformes : « vérifiée » + empreinte de la clé', /vérifiée/.test(s1.txt) && /^[0-9A-F]{4}( [0-9A-F]{4}){3}$/.test(s1.fp), [s1.txt, s1.fp]);
+  var badTxt = Buffer.from(sigTxt.toString('utf8').replace(/^[0-9a-f]/m, function (c) { return c === 'a' ? 'b' : 'a'; }));
+  var s2 = await aboutSig({ '/SIGNATURE-KVES.txt': badTxt, '/SIGNATURE-KVES.sig': sigOk, '/kves-cle-publique.txt': pubRaw.toString('base64url') });
+  t('signature : liste modifiée après signature : « invalide »', /invalide/.test(s2.txt), s2.txt);
+  var chgTxt = Buffer.from(sigTxt.toString('utf8').replace(/^[0-9a-f]{64}(  app\.js)$/m, '0'.repeat(64) + '$1'));
+  var s3 = await aboutSig({ '/SIGNATURE-KVES.txt': chgTxt, '/SIGNATURE-KVES.sig': crypto7.sign(null, chgTxt, kp.privateKey).toString('base64url'), '/kves-cle-publique.txt': pubRaw.toString('base64url') });
+  t('signature : fichier du site différent de celui signé : « fichiers différents »', /différents/.test(s3.txt), s3.txt);
+  var kp2 = crypto7.generateKeyPairSync('ed25519'), pub2 = Buffer.from(kp2.publicKey.export({ format: 'jwk' }).x, 'base64url');
+  var s4 = await aboutSig({ '/SIGNATURE-KVES.txt': sigTxt, '/SIGNATURE-KVES.sig': sigOk, '/kves-cle-publique.txt': pub2.toString('base64url') });
+  t('signature : signature faite avec une autre clé que celle publiée : « invalide »', /invalide/.test(s4.txt), s4.txt);
+  /* outil privé de signature : création de clé, signature, vérification indépendante avec Node */
+  var tool = path.join(root, 'outils', 'SIGNER-KVES.html');
+  var ctx7 = await br.newContext({ acceptDownloads: true }), tp7 = await ctx7.newPage(), dls = {};
+  tp7.on('download', async function (d) { var f = path.join(os.tmpdir(), 'dl-' + Date.now() + '-' + d.suggestedFilename()); await d.saveAs(f); dls[d.suggestedFilename()] = f; });
+  await tp7.goto('file://' + tool);
+  await tp7.fill('#p1', 'court'); await tp7.fill('#p2', 'court'); await tp7.click('#gen');
+  t('outil de signature : phrase trop courte refusée', /10 caractères/.test(await tp7.textContent('#mg')));
+  await tp7.fill('#p1', 'phrase-de-test-kves'); await tp7.fill('#p2', 'phrase-de-test-kves'); await tp7.click('#gen'); await tp7.waitForTimeout(2500);
+  var keyJson = dls['KVES-cle-privee-CHIFFREE.json'], pubTxt = dls['kves-cle-publique.txt'];
+  var keyStr = keyJson ? fs.readFileSync(keyJson, 'utf8') : '';
+  t('outil de signature : clé créée, privée chiffrée (aucun octet de clé en clair), empreinte affichée', !!keyJson && !!pubTxt && /"kves":"cle-privee"/.test(keyStr) && keyStr.indexOf('MC4CAQAw') < 0 && /Empreinte/.test(await tp7.textContent('#mg')), Object.keys(dls));
+  await tp7.setInputFiles('#kf', keyJson); await tp7.setInputFiles('#tf', path.join(root, 'SIGNATURE-KVES.txt')); await tp7.fill('#sp', 'mauvaise-phrase'); await tp7.click('#sig'); await tp7.waitForTimeout(1500);
+  t('outil de signature : mauvaise phrase : aucune signature créée', /Échec/.test(await tp7.textContent('#ms')) && !dls['SIGNATURE-KVES.sig']);
+  await tp7.fill('#sp', 'phrase-de-test-kves'); await tp7.click('#sig'); await tp7.waitForTimeout(2000);
+  var sigFile = dls['SIGNATURE-KVES.sig'];
+  var pubObj = crypto7.createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: fs.readFileSync(pubTxt, 'utf8').trim() }, format: 'jwk' });
+  t('outil de signature : la signature produite est valide (vérifiée par Node, de façon indépendante)', !!sigFile && crypto7.verify(null, sigTxt, pubObj, Buffer.from(fs.readFileSync(sigFile, 'utf8').trim(), 'base64url')));
+  var s5 = await aboutSig({ '/SIGNATURE-KVES.txt': sigTxt, '/SIGNATURE-KVES.sig': fs.readFileSync(sigFile, 'utf8'), '/kves-cle-publique.txt': fs.readFileSync(pubTxt, 'utf8') });
+  t('signature : clé et signature créées par l\'outil, vérifiées par l\'application', /vérifiée/.test(s5.txt), s5.txt);
+  await ctx7.close();
   /* 18.3 : identité visuelle KVES */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.evaluate(function () { window.__coach.setTab('more'); });
