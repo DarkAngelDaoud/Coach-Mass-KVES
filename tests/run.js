@@ -175,7 +175,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '17.3' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '17.4' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -411,6 +411,18 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 17.4 : oeil sur les mots de passe */
+  pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
+  await pg.click('#nav [data-v=more]'); await pg.click('[data-act=pinset]'); await pg.waitForTimeout(200);
+  t('oeil : un bouton Voir par champ de code', (await pg.locator('#modal .eye').count()) === 2);
+  await pg.fill('#pin1', '4821');
+  t('oeil : champ masqué par défaut', (await pg.getAttribute('#pin1', 'type')) === 'password');
+  await pg.click('#modal .eye >> nth=0');
+  t('oeil : Voir affiche le code, Masquer le recache', (await pg.getAttribute('#pin1', 'type')) === 'text' && (await pg.inputValue('#pin1')) === '4821' && (await pg.textContent('#modal .eye >> nth=0')).includes('Masquer') && (await pg.getAttribute('#modal .eye >> nth=0', 'aria-pressed')) === 'true');
+  await pg.click('#modal .eye >> nth=0');
+  t('oeil : second clic remasque', (await pg.getAttribute('#pin1', 'type')) === 'password');
+  await pg.click('[data-act=modalclose]');
+  await pg.context().close();
   /* 17.3 : verrou par code */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   t('verrou : absent par défaut', !(await pg.isVisible('#lockpin')));
