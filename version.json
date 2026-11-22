@@ -1,6 +1,6 @@
 {
- "version": "17.2",
+ "version": "17.3",
  "notes": [
-  "Les étirements ont maintenant une illustration animée pour chaque mouvement (pectoraux, cuisses, arrière des cuisses, posture de l'enfant, respiration)."
+  "Verrouillage par code facultatif (Plus) : un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement."
  ]
 }

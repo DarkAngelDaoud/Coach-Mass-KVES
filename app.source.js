@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '17.2';
+var VERSION = '17.3';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Les étirements ont maintenant une illustration animée pour chaque mouvement (pectoraux, cuisses, arrière des cuisses, posture de l\'enfant, respiration).'];
+var NOTES = ['Verrouillage par code facultatif (Plus) : un code de 4 à 8 chiffres cache l\'application à l\'ouverture et après une minute d\'absence. C\'est un verrou d\'écran, pas un chiffrement.'];
 var STRETCH = [
   { l: 'Étire les pectoraux : avant-bras contre un mur, tourne doucement le buste', s: 30, fig: 'stChest', period: 4 },
   { l: 'Étire les cuisses : debout, talon vers la fesse, une jambe puis l\'autre', s: 40, fig: 'stQuad', period: 5 },
@@ -1921,6 +1921,7 @@ function viewAdapt() { return viewLegal('adapt'); }
 function viewMore() {
   return '<h1>Plus</h1>' + (PEND ? '<div class="card"><h2>Mise à jour disponible</h2>' + (PEND.v ? '<p class="small">Version ' + esc(PEND.v) + '</p>' : '') + '<button class="btn" data-act="updopen">Voir les nouveautés</button></div>' : '') +
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
+    pinCard() +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
@@ -2698,6 +2699,76 @@ document.addEventListener('change', function (ev) {
 });
 /* © KVES · Coach-Mass-KVES */
 /* ====================== mise à jour : popup « nouveautés » et « version prête » ====================== */
+/* verrou par code (17.3) : cache l'écran, ne chiffre pas les données */
+var PIN_KEY = 'coach-masse-pin-v1', lockEl = null, lockHid = 0, lockFails = 0, lockUntil = 0, lockForgot = false;
+function pinRec() { try { return JSON.parse(localStorage.getItem(PIN_KEY) || 'null'); } catch (e) { return null; } }
+function pinOk() { return !!(subtle() && window.TextEncoder); }
+function pinHash(pin, salt) {
+  return subtle().importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']).then(function (k) {
+    return subtle().deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: 150000 }, k, 256);
+  }).then(function (b) { return b64u(new Uint8Array(b)); });
+}
+function pinSet(pin) { var salt = rnd(16); return pinHash(pin, salt).then(function (h) { localStorage.setItem(PIN_KEY, JSON.stringify({ s: b64u(salt), h: h })); }); }
+function pinCheck(pin) { var r = pinRec(); if (!r) return Promise.resolve(true); return pinHash(pin, unb64u(r.s)).then(function (h) { return h === r.h; }); }
+function lockMk(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt) e.textContent = txt; return e; }
+function lockShow() {
+  if (!pinRec() || lockEl) return;
+  var el = lockMk('div', 'lockscr'), inp = lockMk('input'), msg = lockMk('p', 'small');
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+  inp.type = 'password'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off'); inp.maxLength = 8; inp.id = 'lockpin'; inp.setAttribute('aria-label', 'Code');
+  msg.id = 'lockmsg'; msg.setAttribute('role', 'alert');
+  var go = lockMk('button', 'btn', 'Déverrouiller'); go.setAttribute('data-act', 'lockgo');
+  var fg = lockMk('button', 'btn alt sm', 'Code oublié'); fg.setAttribute('data-act', 'lockforgot');
+  el.appendChild(lockMk('h2', '', 'Application verrouillée')); el.appendChild(lockMk('p', 'small', 'Saisis ton code pour continuer.'));
+  el.appendChild(inp); el.appendChild(msg); el.appendChild(go); el.appendChild(fg);
+  document.body.appendChild(el); lockEl = el; lockForgot = false;
+  try { inp.focus(); } catch (e) {}
+}
+function lockHide() { if (lockEl) { lockEl.remove(); lockEl = null; } lockFails = 0; }
+function lockMsg(t) { var m = $('#lockmsg'); if (m) m.textContent = t; }
+function lockTry() {
+  var inp = $('#lockpin'); if (!inp) return;
+  if (Date.now() < lockUntil) { lockMsg('Trop d\'essais : réessaie dans quelques secondes.'); return; }
+  pinCheck(inp.value).then(function (ok) {
+    if (ok) { lockHide(); return; }
+    lockFails++; inp.value = '';
+    if (lockFails >= 5) { lockFails = 0; lockUntil = Date.now() + 30000; lockMsg('Trop d\'essais : réessaie dans quelques secondes.'); } else lockMsg('Code incorrect.');
+  }).catch(function () { lockMsg('Code incorrect.'); });
+}
+function lockForgotGo(btn) {
+  if (!lockForgot) { lockForgot = true; btn.textContent = 'Confirmer : effacer toutes les données et le code'; lockMsg('Sans le code, la seule issue est d\'effacer les données de l\'appli.'); return; }
+  phWipe(); D = defaults(); P = D.profile; save(); try { localStorage.removeItem(PIN_KEY); } catch (e) {} lockHide(); applyTheme(); render();
+}
+function pinCard() {
+  if (!pinOk()) return '';
+  var on = !!pinRec();
+  return '<div class="card"><h2>Verrouillage par code</h2><p class="small">Un code de 4 à 8 chiffres cache l\'application à l\'ouverture et après une minute d\'absence. C\'est un verrou d\'écran, pas un chiffrement : il protège d\'un regard indiscret.</p>' +
+    (on ? '<p class="small"><b>Code actif.</b></p><button class="btn" data-act="locknow">Verrouiller maintenant</button> <button class="btn alt" data-act="pinoff">Retirer le code</button>' : '<button class="btn alt" data-act="pinset">Activer le code</button>') + '</div>';
+}
+function pinSetOpen() {
+  modal('<h2>Choisir un code</h2><label class="f">Code (4 à 8 chiffres)<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin1"></label><label class="f">Répète le code<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin2"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinsave">Enregistrer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
+}
+function pinOffOpen() {
+  modal('<h2>Retirer le code</h2><label class="f">Code actuel<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin1"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinoffgo">Retirer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
+}
+function pinMsg(t) { var m = $('#pinmsg'); if (m) m.textContent = t; }
+function pinSave() {
+  var a = $('#pin1').value, b = $('#pin2').value;
+  if (!/^\d{4,8}$/.test(a)) { pinMsg('Le code doit contenir 4 à 8 chiffres.'); return; }
+  if (a !== b) { pinMsg('Les deux codes ne correspondent pas.'); return; }
+  pinSet(a).then(function () { closeModal(); toast('Code enregistré.'); render(); }).catch(function () { pinMsg('Impossible d\'enregistrer le code.'); });
+}
+function pinOffGo() {
+  pinCheck($('#pin1').value).then(function (ok) { if (!ok) { pinMsg('Code incorrect.'); return; } try { localStorage.removeItem(PIN_KEY); } catch (e) {} closeModal(); toast('Code retiré.'); render(); }).catch(function () { pinMsg('Code incorrect.'); });
+}
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'hidden') lockHid = Date.now();
+  else if (lockHid && Date.now() - lockHid > 60000) lockShow();
+});
+document.addEventListener('keydown', function (ev) {
+  if (ev.key !== 'Enter' || !ev.target || !ev.target.id) return;
+  if (ev.target.id === 'lockpin') lockTry();
+});
 function modal(h) {
   var m = $('#modal');
   if (m.hidden) modal._prev = document.activeElement;
@@ -2767,6 +2838,13 @@ document.addEventListener('click', function (ev) {
   var a = t.getAttribute('data-act');
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
+  else if (a === 'lockgo') lockTry();
+  else if (a === 'lockforgot') lockForgotGo(t);
+  else if (a === 'locknow') lockShow();
+  else if (a === 'pinset') pinSetOpen();
+  else if (a === 'pinoff') pinOffOpen();
+  else if (a === 'pinsave') pinSave();
+  else if (a === 'pinoffgo') pinOffGo();
   else if (a === 'updopen') updStep1();
   else if (a === 'updnext') updStep2();
   else if (a === 'updgo') { if (PEND && PEND.w) { ACCEPT = true; try { PEND.w.postMessage({ type: 'skip' }); } catch (e) { window.location.reload(); } toast('Mise à jour en cours…'); } else closeModal(); }
@@ -4450,11 +4528,17 @@ function startI18n() {
   var X = {"en": {"Étirement des pectoraux": "Chest stretch", "Avant-bras contre le mur": "Forearm on the wall", "Tourne le buste": "Turn your chest", "Étirement des cuisses": "Quad stretch", "Debout, jambes tendues": "Standing, legs straight", "Talon vers la fesse": "Heel to buttock", "Étirement arrière des cuisses": "Hamstring stretch", "Assis, dos droit": "Sitting, back straight", "Penche-toi sans forcer": "Lean forward gently", "Posture de l'enfant": "Child's pose", "Assis sur les talons": "Sitting on your heels", "Bras devant, front vers le sol": "Arms forward, forehead down", "Respiration lente": "Slow breathing", "Inspire, bras levés": "Breathe in, arms up", "Expire, bras baissés": "Breathe out, arms down"}, "ar": {"Étirement des pectoraux": "تمدد الصدر", "Avant-bras contre le mur": "الساعد على الحائط", "Tourne le buste": "أدر صدرك", "Étirement des cuisses": "تمدد الفخذ", "Debout, jambes tendues": "واقفا، الساقان مستقيمتان", "Talon vers la fesse": "الكعب نحو المؤخرة", "Étirement arrière des cuisses": "تمدد خلف الفخذ", "Assis, dos droit": "جالسا، الظهر مستقيم", "Penche-toi sans forcer": "انحنِ بلطف", "Posture de l'enfant": "وضعية الطفل", "Assis sur les talons": "جالسا على الكعبين", "Bras devant, front vers le sol": "الذراعان للأمام، الجبهة نحو الأرض", "Respiration lente": "تنفس بطيء", "Inspire, bras levés": "شهيق، الذراعان مرفوعتان", "Expire, bras baissés": "زفير، الذراعان منخفضتان"}, "ma": {"Étirement des pectoraux": "Tmdid dyal s-sder", "Avant-bras contre le mur": "Sa3d 3la l-hit", "Tourne le buste": "Dwwer s-sder", "Étirement des cuisses": "Tmdid dyal l-fkhed", "Debout, jambes tendues": "Wa9ef, rjlin mdoudin", "Talon vers la fesse": "Ka3b nhar l-mou'akhira", "Étirement arrière des cuisses": "Tmdid dyal mor l-fkhed", "Assis, dos droit": "Jales, d-dhar mdoud", "Penche-toi sans forcer": "Mil b-hdou", "Posture de l'enfant": "Wad3iyat t-tfl", "Assis sur les talons": "Jales 3la l-ka3biyn", "Bras devant, front vers le sol": "Drai3 l-qoddam, jbha l-lard", "Respiration lente": "Tnfos bti", "Inspire, bras levés": "Shhiq, drai3 l-fouq", "Expire, bras baissés": "Zfir, drai3 l-t7t"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
+
+(function(){
+  var X = {"en": {"Verrouillage par code": "Code lock", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "A 4 to 8 digit code hides the app when you open it and after a minute away. It is a screen lock, not encryption: it protects against prying eyes.", "Code actif.": "Code active.", "Verrouiller maintenant": "Lock now", "Retirer le code": "Remove code", "Activer le code": "Turn on code", "Choisir un code": "Choose a code", "Code (4 à 8 chiffres)": "Code (4 to 8 digits)", "Répète le code": "Repeat the code", "Enregistrer": "Save", "Annuler": "Cancel", "Retirer": "Remove", "Code actuel": "Current code", "Le code doit contenir 4 à 8 chiffres.": "The code must have 4 to 8 digits.", "Les deux codes ne correspondent pas.": "The two codes do not match.", "Impossible d'enregistrer le code.": "Could not save the code.", "Code enregistré.": "Code saved.", "Code retiré.": "Code removed.", "Code incorrect.": "Wrong code.", "Application verrouillée": "App locked", "Saisis ton code pour continuer.": "Enter your code to continue.", "Déverrouiller": "Unlock", "Code oublié": "Forgot code", "Confirmer : effacer toutes les données et le code": "Confirm: erase all data and the code", "Sans le code, la seule issue est d'effacer les données de l'appli.": "Without the code, the only way out is to erase the app's data.", "Trop d'essais : réessaie dans quelques secondes.": "Too many tries: try again in a few seconds.", "Code": "Code"}, "ar": {"Verrouillage par code": "القفل برمز", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "رمز من 4 إلى 8 أرقام يخفي التطبيق عند فتحه وبعد دقيقة من الغياب. هو قفل للشاشة وليس تشفيرا: يحميك من النظرات الفضولية.", "Code actif.": "الرمز مفعّل.", "Verrouiller maintenant": "اقفل الآن", "Retirer le code": "إزالة الرمز", "Activer le code": "تفعيل الرمز", "Choisir un code": "اختر رمزا", "Code (4 à 8 chiffres)": "الرمز (من 4 إلى 8 أرقام)", "Répète le code": "أعد كتابة الرمز", "Enregistrer": "حفظ", "Annuler": "إلغاء", "Retirer": "إزالة", "Code actuel": "الرمز الحالي", "Le code doit contenir 4 à 8 chiffres.": "يجب أن يتكون الرمز من 4 إلى 8 أرقام.", "Les deux codes ne correspondent pas.": "الرمزان غير متطابقين.", "Impossible d'enregistrer le code.": "تعذر حفظ الرمز.", "Code enregistré.": "تم حفظ الرمز.", "Code retiré.": "تمت إزالة الرمز.", "Code incorrect.": "الرمز غير صحيح.", "Application verrouillée": "التطبيق مقفل", "Saisis ton code pour continuer.": "أدخل رمزك للمتابعة.", "Déverrouiller": "فتح القفل", "Code oublié": "نسيت الرمز", "Confirmer : effacer toutes les données et le code": "تأكيد: مسح كل البيانات والرمز", "Sans le code, la seule issue est d'effacer les données de l'appli.": "بدون الرمز، الحل الوحيد هو مسح بيانات التطبيق.", "Trop d'essais : réessaie dans quelques secondes.": "محاولات كثيرة: أعد المحاولة بعد ثوان.", "Code": "الرمز"}, "ma": {"Verrouillage par code": "Qfel b-code", "Un code de 4 à 8 chiffres cache l'application à l'ouverture et après une minute d'absence. C'est un verrou d'écran, pas un chiffrement : il protège d'un regard indiscret.": "Code mn 4 l 8 d l-arqam kaykhbbi l-application mnin tfta7ha w mn b3d dqiqa dyal l-ghyab. Hada qfel dyal l-ecran machi chiffrement: kayhmik mn nadra dyal l-fdoul.", "Code actif.": "Code mfa33al.", "Verrouiller maintenant": "Qfel daba", "Retirer le code": "7yyd l-code", "Activer le code": "Fa33al l-code", "Choisir un code": "Khtar code", "Code (4 à 8 chiffres)": "Code (mn 4 l 8 d l-arqam)", "Répète le code": "3awd kteb l-code", "Enregistrer": "Sjjel", "Annuler": "Lghi", "Retirer": "7yyd", "Code actuel": "L-code d daba", "Le code doit contenir 4 à 8 chiffres.": "L-code khass ykon mn 4 l 8 d l-arqam.", "Les deux codes ne correspondent pas.": "L-codayn mashi bhal bhal.", "Impossible d'enregistrer le code.": "Ma9dernach nsjjlo l-code.", "Code enregistré.": "L-code tsjjel.", "Code retiré.": "L-code tms7.", "Code incorrect.": "L-code ghalat.", "Application verrouillée": "L-application mqfula", "Saisis ton code pour continuer.": "Kteb l-code dyalk bach tkmml.", "Déverrouiller": "7ll l-qfel", "Code oublié": "Nsit l-code", "Confirmer : effacer toutes les données et le code": "Akked: mse7 koll l-ma3lumat w l-code", "Sans le code, la seule issue est d'effacer les données de l'appli.": "Bla l-code, l-7ell l-wa7id howa tms7 l-ma3lumat d l-application.", "Trop d'essais : réessaie dans quelques secondes.": "Bzzaf d l-m7awalat: 3awd mn b3d chi tawani.", "Code": "Code"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
 startI18n();
 /* © KVES · Coach-Mass-KVES */
 applyRotate();
 render();
 requestAnimationFrame(frame);
+lockShow();
 if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').then(watchReg).catch(function () {}); }); }
 window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); } };
