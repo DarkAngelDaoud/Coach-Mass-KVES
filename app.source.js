@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.4';
+var VERSION = '18.5';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Signature numérique KVES : la page À propos vérifie que les fichiers de l\'application viennent bien de KVES et n\'ont pas été modifiés (signature Ed25519).'];
+var NOTES = ['Protection des données : une copie de sécurité est gardée à part, et si ton navigateur efface les données, l\'application te propose de les restaurer. Avant une mise à jour, tu peux d\'abord faire une sauvegarde.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -104,9 +104,10 @@ function normalize(o) {
     avis: { sent: Array.isArray(av.sent) ? cleanV(av.sent, 2, 20000) : [], inbox: Array.isArray(av.inbox) ? cleanV(av.inbox, 2, 20000) : [] } };
 }
 var D;
-var NEWER = false;
+var NEWER = false, STORE_EMPTY = false;
 try {
   var rawD = JSON.parse(localStorage.getItem(KEY) || 'null');
+  STORE_EMPTY = rawD === null;
   if (schemaOf(rawD) > SCHEMA) { NEWER = true; if (!localStorage.getItem(KEY + '-newer')) localStorage.setItem(KEY + '-newer', localStorage.getItem(KEY)); }
   D = normalize(rawD);
   if (rawD && !NEWER && schemaOf(rawD) < SCHEMA) localStorage.setItem(KEY, JSON.stringify(D));
@@ -129,7 +130,7 @@ function saveFlag(ok) {
   var k = document.createElement('button'); k.className = 'btn sm'; k.setAttribute('data-act', 'bkexport'); k.textContent = trText('Sauvegarder maintenant');
   b.appendChild(t); b.appendChild(k); document.body.appendChild(b);
 }
-function save() { var ok = true; try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { ok = false; } try { saveFlag(ok); } catch (e) {} try { syncRemind(); } catch (e) {} }
+function save() { safeSoon(); var ok = true; try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) { ok = false; } try { saveFlag(ok); } catch (e) {} try { syncRemind(); } catch (e) {} }
 
 function log(d) { return D.logs[d || today()] || (D.logs[d || today()] = {}); }
 function lv(id) { return D.levels[id] || (D.levels[id] = { level: 0, off: 0 }); }
@@ -1685,7 +1686,7 @@ function viewAdapt() { return viewLegal('adapt'); }
 function viewMore() {
   return '<h1>Plus</h1>' + (PEND ? '<div class="card"><h2>Mise à jour disponible</h2>' + (PEND.v ? '<p class="small">Version ' + esc(PEND.v) + '</p>' : '') + '<button class="btn" data-act="updopen">Voir les nouveautés</button></div>' : '') +
     '<div class="card"><h2>Boîte à avis</h2><p class="small">Une idée, un problème, un merci ? Ton avis est chiffré sur ton téléphone avant l\'envoi : seul le propriétaire de l\'application peut le lire.</p><button class="btn" data-act="tab" data-v="avis">Donner mon avis</button></div>' +
-    pinCard() + lvlCard() +
+    persistCard() + pinCard() + lvlCard() +
     '<div class="card"><h2>Réglages</h2><p class="small">Jours de séance, voix, sons, objectif de poids, rotation de l\'écran.</p><button class="btn alt" data-act="tab" data-v="settings">Ouvrir les réglages</button></div>' +
     '<div class="card"><h2>Lecteur de musique</h2><p class="small">Écoute la musique de ton téléphone (MP3, M4A). Rien n\'est copié ni envoyé.</p><button class="btn alt" data-act="tab" data-v="player">Ouvrir le lecteur</button></div>' +
     '<div class="card"><h2>Sources et limites</h2><p class="small">D\'où viennent les repères du programme, et les précautions à connaître.</p><button class="btn alt" data-act="tab" data-v="sources">Lire</button></div>' +
@@ -2168,7 +2169,7 @@ function bkSnap(kind, id, json) {
 function bkRefresh() {
   return bkAll().then(function (a) { BK_LIST = a; if (tab === 'settings') render(); }).catch(function () { BK_LIST = false; });
 }
-function bkAuto() { return bkSnap('auto', 'auto-' + today()); }
+function bkAuto() { safePut(); return bkSnap('auto', 'auto-' + today()); }
 
 /* données abîmées au démarrage : on garde le texte brut pour ne pas le perdre */
 if (window.__cmCorrupt) {
@@ -2431,7 +2432,7 @@ document.addEventListener('click', function (ev) {
   if (a === 'import') { $('#importFile').click(); return; }
   if (a === 'reset') {
     if (!resetArmed) { resetArmed = true; render(); return; }
-    bkSnap('avant', 'avant-reset-' + Date.now()); phWipe(); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
+    bkSnap('avant', 'avant-reset-' + Date.now()); safeWipe(); phWipe(); D = defaults(); P = D.profile; save(); applyTheme(); resetArmed = false; render(); return;
   }
   /* séance */
   if (!R) return;
@@ -2548,7 +2549,7 @@ function lockTry() {
 }
 function lockForgotGo(btn) {
   if (!lockForgot) { lockForgot = true; btn.textContent = 'Confirmer : effacer toutes les données et le code'; lockMsg('Sans le code, la seule issue est d\'effacer les données de l\'appli.'); return; }
-  phWipe(); D = defaults(); P = D.profile; save(); try { localStorage.removeItem(PIN_KEY); } catch (e) {} lockHide(); applyTheme(); render();
+  safeWipe(); phWipe(); D = defaults(); P = D.profile; save(); try { localStorage.removeItem(PIN_KEY); } catch (e) {} lockHide(); applyTheme(); render();
 }
 function pinCard() {
   if (!pinOk()) return '';
@@ -2658,6 +2659,46 @@ function sigRun() {
       });
   }).catch(function () { sigDone('na'); });
 }
+/* protection des données (18.5) : copie de sécurité dans le stockage « cache » (distinct de localStorage), restauration proposée si les données ont disparu */
+var SAFE_CACHE = 'coach-masse-safe', SAFE_URL = './copie-securite', safeT = 0;
+function safePut() {
+  try {
+    if (!window.caches || !hasData(D)) return Promise.resolve();
+    return caches.open(SAFE_CACHE).then(function (c) { return c.put(SAFE_URL, new Response(JSON.stringify({ at: new Date().toISOString(), v: VERSION, data: D }))); }).catch(function () {});
+  } catch (e) { return Promise.resolve(); }
+}
+function safeSoon() { clearTimeout(safeT); safeT = setTimeout(safePut, 3000); }
+function safeGet() {
+  try {
+    if (!window.caches) return Promise.resolve(null);
+    return caches.open(SAFE_CACHE).then(function (c) { return c.match(SAFE_URL); }).then(function (r) { return r ? r.json() : null; }).catch(function () { return null; });
+  } catch (e) { return Promise.resolve(null); }
+}
+function safeWipe() { try { if (window.caches) caches.delete(SAFE_CACHE); } catch (e) {} }
+var RC = null;
+function recoverCheck() {
+  return Promise.all([safeGet(), bkAll().catch(function () { return []; })]).then(function (a) {
+    var cand = [];
+    if (a[0] && a[0].data && hasData(a[0].data)) cand.push({ at: a[0].at || '', n: (a[0].data.sessions || []).length, json: JSON.stringify(a[0].data) });
+    (a[1] || []).forEach(function (r) { if (r && r.json && (r.sessions > 0 || r.days > 0) && r.kind !== 'corrompu') cand.push({ at: r.at || '', n: r.sessions || 0, json: r.json }); });
+    cand.sort(function (x, y) { return x.at < y.at ? 1 : -1; });
+    if (!cand.length) return false;
+    RC = cand[0];
+    modal('<h2>Tes données ont disparu</h2><p>Ce navigateur a perdu les données de l\'application, mais une copie a été retrouvée :</p><p><b>' + esc(RC.at.slice(0, 10) + ' ' + RC.at.slice(11, 16)) + '</b> · <b>' + RC.n + '</b> <span>séances</span></p><button class="btn go" data-act="rcgo">Restaurer cette copie</button> <button class="btn alt" data-act="rcno">Non, repartir de zéro</button>');
+    return true;
+  }).catch(function () { return false; });
+}
+function recoverGo() {
+  try { var o = JSON.parse(RC.json); if (!validData(o)) throw 0; closeModal(); applyData(o, 'avant-restauration'); toast('Données restaurées.'); }
+  catch (e) { toast('Cette copie est illisible.'); }
+  RC = null;
+}
+function recoverNo() { RC = null; safeWipe(); closeModal(); if (needOnboarding()) showOnboarding(); }
+function persistCard() {
+  var standalone = false; try { standalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches); } catch (e) {}
+  if (PERSIST !== false || standalone) return '';
+  return '<div class="card"><h2>Stockage non protégé</h2><p class="small">Ton navigateur peut effacer les données de ce site. Installe l\'application (menu ⋮ puis « Installer l\'application ») et pense à exporter une sauvegarde.</p></div>';
+}
 function modal(h) {
   var m = $('#modal');
   if (m.hidden) modal._prev = document.activeElement;
@@ -2684,7 +2725,7 @@ function updStep1() {
   modal('<h2>Nouvelle version disponible</h2>' + (PEND.v ? '<p class="small">' + esc(NOM) + ' · version ' + esc(PEND.v) + '</p>' : '') + (n ? '<ul class="list">' + n + '</ul>' : '') + '<button class="btn" data-act="updnext">Suite</button>');
 }
 function updStep2() {
-  modal('<h2>Mettre à jour ?</h2><p>L\'application va se recharger. Tes données sont conservées.</p><button class="btn go" data-act="updgo">Mettre à jour et recharger</button><button class="btn alt" data-act="updignore">Ignorer et garder cette version</button>');
+  modal('<h2>Mettre à jour ?</h2><p>L\'application va se recharger. Tes données sont conservées. Par prudence, tu peux d\'abord faire une sauvegarde.</p><button class="btn alt" data-act="updbk">Sauvegarder d\'abord</button> <button class="btn go" data-act="updgo">Mettre à jour et recharger</button><button class="btn alt" data-act="updignore">Ignorer et garder cette version</button>');
 }
 function offerUpdate() {
   if (!PEND) return;
@@ -2728,6 +2769,9 @@ document.addEventListener('click', function (ev) {
   if (a === 'modalclose') closeModal();
   else if (a === 'modalreload') window.location.reload();
   else if (a === 'eye') eyeToggle(t);
+  else if (a === 'rcgo') recoverGo();
+  else if (a === 'rcno') recoverNo();
+  else if (a === 'updbk') exportData();
   else if (a === 'exportenc') encExportOpen();
   else if (a === 'encgo') encExportGo();
   else if (a === 'encimpgo') encImportGo();
@@ -3220,9 +3264,10 @@ render();
 requestAnimationFrame(frame);
 lockShow();
 if (NEWER) setTimeout(function () { toast('Tes données viennent d\'une version plus récente : une copie a été gardée à part.'); }, 900);
-if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
+if (STORE_EMPTY) setTimeout(function () { recoverCheck().then(function (found) { if (found) return; if (needOnboarding()) showOnboarding(); else setTimeout(checkUpdate, 400); }); }, 300);
+else if (needOnboarding()) setTimeout(showOnboarding, 300); else setTimeout(checkUpdate, 700);
 if ('serviceWorker' in navigator) { window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').then(watchReg).catch(function () {}); }); }
-window.__coach = { D: function () { return D; }, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); },
+window.__coach = { D: function () { return D; }, save: save, startSession: startSession, render: render, setTab: function (t) { tab = t; render(); },
   /* calculs du coaching exposés pour les tests automatiques (lecture seule, aucun effet sur l'écran) */
   calc: { bmr: bmr, tdee: tdee, kcalCore: kcalCore, kcalTarget: kcalTarget, protTarget: protTarget, waterTarget: waterTarget, goalCheck: goalCheck, slopeWeek: slopeWeek, suggestion: suggestion, findPrs: findPrs, deloadDue: deloadDue, absenceDue: absenceDue, wkNo: wkNo, ex: function (id) { return EX.filter(function (e) { return e.id === id; })[0]; },
     progress: function (plan, logs) { var o = R; R = { plan: plan }; try { return applyProgress(logs); } finally { R = o; } } } };

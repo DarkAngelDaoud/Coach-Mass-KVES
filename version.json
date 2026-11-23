@@ -1,6 +1,6 @@
 {
- "version": "18.4",
+ "version": "18.5",
  "notes": [
-  "Signature numérique KVES : la page À propos vérifie que les fichiers de l'application viennent bien de KVES et n'ont pas été modifiés (signature Ed25519)."
+  "Protection des données : une copie de sécurité est gardée à part, et si ton navigateur efface les données, l'application te propose de les restaurer. Avant une mise à jour, tu peux d'abord faire une sauvegarde."
  ]
 }
