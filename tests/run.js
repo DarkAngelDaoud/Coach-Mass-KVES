@@ -176,7 +176,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.4' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.5' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -412,6 +412,38 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.5 : protection des données (copie de sécurité + restauration) */
+  async function seed185() {
+    var q = await newPage(br, { onb: true }); await q.goto(url); await q.waitForSelector('#nav');
+    await q.evaluate(function () { var D = window.__coach.D(); D.profile.onboarded = true; D.profile.healthOk = true; D.profile.w0 = 71.5; D.sessions.push({ date: '2026-11-01', min: 30, sets: 10, week: 1, logs: [] }, { date: '2026-11-03', min: 31, sets: 11, week: 1, logs: [] }); window.__coach.save(); });
+    await q.waitForTimeout(3800); return q;
+  }
+  var p5 = await seed185();
+  var hasCopy = await p5.evaluate(function () { return caches.open('coach-masse-safe').then(function (c) { return c.match('./copie-securite'); }).then(function (r) { return !!r; }); });
+  t('protection : une copie de sécurité est gardée à part après un enregistrement', hasCopy);
+  await p5.evaluate(function () { localStorage.clear(); });
+  await p5.reload(); await p5.waitForSelector('[data-act=rcgo]', { timeout: 8000 });
+  t('protection : données effacées : la restauration est proposée avec le nombre de séances', /2/.test(await p5.textContent('#modal')));
+  await p5.click('[data-act=rcgo]'); await p5.waitForTimeout(600);
+  var back = await p5.evaluate(function () { var D = window.__coach.D(); return [D.sessions.length, D.profile.w0]; });
+  t('protection : restauration complète (séances et profil)', back[0] === 2 && back[1] === 71.5, back);
+  await p5.context().close();
+  var p6 = await seed185();
+  await p6.evaluate(function () { localStorage.clear(); return caches.delete('coach-masse-safe'); });
+  await p6.waitForTimeout(500);
+  var idbOk = await p6.evaluate(function () { return new Promise(function (res) { var r = indexedDB.open('coach-masse-bk'); r.onsuccess = function () { var q = r.result.transaction(r.result.objectStoreNames[0]).objectStore(r.result.objectStoreNames[0]).count(); q.onsuccess = function () { res(q.result); }; }; r.onerror = function () { res(-1); }; }); });
+  await p6.reload(); await p6.waitForTimeout(1500);
+  t('protection : sans copie cache, la sauvegarde automatique interne est proposée', idbOk > 0 ? await p6.isVisible('[data-act=rcgo]') : true, idbOk);
+  await p6.context().close();
+  var p7 = await seed185();
+  await p7.evaluate(function () { localStorage.clear(); }); await p7.reload(); await p7.waitForSelector('[data-act=rcno]', { timeout: 8000 });
+  await p7.click('[data-act=rcno]'); await p7.waitForTimeout(600);
+  var gone = await p7.evaluate(function () { return caches.has('coach-masse-safe'); });
+  t('protection : « repartir de zéro » efface la copie de sécurité', gone === false);
+  await p7.context().close();
+  var p8 = await newPage(br, { onb: true }); await p8.goto(url); await p8.waitForSelector('#nav'); await p8.waitForTimeout(1500);
+  t('protection : nouvel utilisateur : aucune fausse alerte de données perdues', !(await p8.isVisible('[data-act=rcgo]')));
+  await p8.context().close();
   /* 18.4 : signature KVES (Ed25519) */
   var crypto7 = require('crypto');
   var kp = crypto7.generateKeyPairSync('ed25519'), pubRaw = Buffer.from(kp.publicKey.export({ format: 'jwk' }).x, 'base64url');
