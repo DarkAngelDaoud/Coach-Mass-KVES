@@ -439,6 +439,8 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('signature : signature faite avec une autre clé que celle publiée : « invalide »', /invalide/.test(s4.txt), s4.txt);
   /* outil privé de signature : création de clé, signature, vérification indépendante avec Node */
   var tool = path.join(root, 'outils', 'SIGNER-KVES.html');
+  if (!fs.existsSync(tool)) { console.log('  (outil privé outils/SIGNER-KVES.html absent du dépôt : tests de l\'outil ignorés, normal)'); } else {
+  if (!fs.existsSync(tool)) { console.log('(outil de signature absent de ce dossier : normal, il reste privé sur l\'ordinateur de KVES ; ses tests sont ignorés ici)'); } else {
   var ctx7 = await br.newContext({ acceptDownloads: true }), tp7 = await ctx7.newPage(), dls = {};
   tp7.on('download', async function (d) { var f = path.join(os.tmpdir(), 'dl-' + Date.now() + '-' + d.suggestedFilename()); await d.saveAs(f); dls[d.suggestedFilename()] = f; });
   await tp7.goto('file://' + tool);
@@ -457,6 +459,8 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   var s5 = await aboutSig({ '/SIGNATURE-KVES.txt': sigTxt, '/SIGNATURE-KVES.sig': fs.readFileSync(sigFile, 'utf8'), '/kves-cle-publique.txt': fs.readFileSync(pubTxt, 'utf8') });
   t('signature : clé et signature créées par l\'outil, vérifiées par l\'application', /vérifiée/.test(s5.txt), s5.txt);
   await ctx7.close();
+  }
+  }
   /* 18.3 : identité visuelle KVES */
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.evaluate(function () { window.__coach.setTab('more'); });
