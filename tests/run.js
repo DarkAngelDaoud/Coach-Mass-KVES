@@ -177,7 +177,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '19.0' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '19.1' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -413,6 +413,18 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 19.1 : pastilles de statut */
+  var pc = await newPage(br); await pc.goto(url); await pc.waitForSelector('#nav');
+  var c0 = await pc.evaluate(function () { return Array.prototype.map.call(document.querySelectorAll('.chips .chip'), function (e) { return e.textContent.replace(/\s+/g, ' ').trim(); }); });
+  t('pastilles : séances, eau et repas affichées', c0.length >= 3 && /Séances/.test(c0.join('|')) && /Eau/.test(c0.join('|')) && /Repas/.test(c0.join('|')), c0);
+  await pc.evaluate(function () {
+    var D = window.__coach.D(), P = D.profile, d = new Date(), off = (d.getDay() + 6) % 7; d.setDate(d.getDate() - off);
+    D.sessions = []; for (var i = 0; i < P.days.length; i++) { var x = new Date(d); x.setDate(d.getDate() + i); D.sessions.push({ date: x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2), min: 30, sets: 10, week: 1, logs: [] }); }
+    P.start = '2020-01-01'; window.__coach.save(); window.__coach.render();
+  });
+  var c1 = await pc.evaluate(function () { var e = document.querySelectorAll('.chips .chip'), o = {}; Array.prototype.forEach.call(e, function (x) { o[x.className] = x.textContent.replace(/\s+/g, ' ').trim(); }); return o; });
+  t('pastilles : semaine complète : Séances en vert et série de 1 semaine', Object.keys(c1).some(function (k) { return /c-train/.test(k) && / ok/.test(k); }) && Object.keys(c1).some(function (k) { return /c-today/.test(k) && /Série 1/.test(c1[k]); }), c1);
+  await pc.context().close();
   /* 19.0 : relief et mouvement */
   var pm = await newPage(br); await pm.goto(url); await pm.waitForSelector('#nav');
   var mv = await pm.evaluate(function () { var c = document.querySelector('.card'), r = document.querySelector('.ring .rfg'), b = document.querySelector('[data-act=start]'); return [getComputedStyle(c).boxShadow !== 'none', r ? getComputedStyle(r).animationName : 'absent', b ? getComputedStyle(b).animationName : 'absent']; });
