@@ -319,3 +319,5 @@ Version 18.5 : protection des donnees. Contexte : l'utilisateur constate que tou
 Version 18.6 : harmonisation des couleurs (palette Auto Manag KVES : bleu marine #054571, vert #18B169, vert texte #0B6B3E, bleu clair #6FB4E8 en sombre). Fichiers : styles.css, index.html (theme-color), manifest, app.js. Suite prevue : 18.7 en-tete et barre du bas, 18.8 cartes.
 
 Version 18.7 : en-tete (icone KVES 40 px + Coach Mass + KVES en petites capitales + semaine a droite) et onglet actif en pastille arrondie. Fichiers : index.html, styles.css, app.js. Suite : 18.8 cartes.
+
+Version 18.8 : carte principale (heroCard) sur Aujourd'hui : jauge de progression poids de depart -> objectif, degrade bleu marine ; cartes plus arrondies, bordure superieure coloree supprimee. Fin de l'harmonisation Auto Manag.

@@ -209,7 +209,16 @@ body[data-tab="history"] { --accent: var(--c-history); }
 .runner { --accent: var(--c-train); }
 .top { background: transparent; }
 h1::after { content: ""; display: block; width: 46px; height: 4px; border-radius: 2px; background: var(--accent); margin-top: 8px; }
-.card { border-top: 3px solid color-mix(in srgb, var(--accent) 75%, var(--line)); }
+.card { border-radius: 18px; }
+.card.hero { flex-direction: row; align-items: center; gap: 16px; color: #fff; border: 0; border-radius: 22px; padding: 18px; background: linear-gradient(160deg, #054571, #0A2F4D); }
+.ring { width: 96px; height: 96px; flex: none; }
+.ring .rbg { fill: none; stroke: rgba(255,255,255,0.22); stroke-width: 10; }
+.ring .rfg { fill: none; stroke: #fff; stroke-width: 10; stroke-linecap: round; }
+.ring text { fill: #fff; font-size: 20px; font-weight: 800; }
+.hbody { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.hl { font-size: 0.85rem; color: rgba(255,255,255,0.82); }
+.hbig { font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hs { font-size: 0.85rem; color: rgba(255,255,255,0.82); }
 .stat b { color: var(--accent); }
 .bar i { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 60%, var(--bg)), var(--accent)); }
 /* popup */

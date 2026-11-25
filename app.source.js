@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.7';
+var VERSION = '18.8';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['En-tête avec le logo KVES et nom de l\'application, onglet actif de la barre du bas dans une pastille colorée.'];
+var NOTES = ['Écran Aujourd\'hui : carte principale bleu marine avec jauge de progression vers ton objectif de poids, cartes plus arrondies.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -538,11 +538,19 @@ function tabacCard() {
   if (a !== null) h += '<div class="stats"><div class="stat"><b>' + fmt(a, 1) + '</b><span>par jour, 7 derniers jours</span></div>' + (b !== null ? '<div class="stat"><b>' + fmt(b, 1) + '</b><span>par jour, 7 jours d\'avant</span></div>' : '') + '</div>';
   return h + '<p class="small">Noter sans te juger. Chaque jour compte. Pour être aidé à arrêter, parles-en à un médecin ou à un pharmacien.</p><p class="small">Un jour passé sans saisie compte pour 0 cigarette.</p></div>';
 }
+function heroCard() {
+  var w0 = +P.w0, g = +P.goal, c = currentWeight(), pct = 100;
+  if (g !== w0) pct = Math.max(0, Math.min(100, Math.round((c - w0) / (g - w0) * 100)));
+  var left = Math.abs(g - c), done = pct >= 100 || left < 0.05, C = 276.46;
+  return '<div class="card hero"><svg viewBox="0 0 100 100" class="ring" role="img" aria-label="' + pct + ' %"><circle cx="50" cy="50" r="44" class="rbg"/><circle cx="50" cy="50" r="44" class="rfg" stroke-dasharray="' + (C * pct / 100).toFixed(1) + ' ' + C + '" transform="rotate(-90 50 50)"/><text x="50" y="57" text-anchor="middle">' + pct + ' %</text></svg>' +
+    '<div class="hbody"><span class="hl">Poids actuel</span><b class="hbig">' + fmt(c) + ' kg</b>' +
+    '<span class="hs"><span>Objectif</span> ' + fmt(g) + ' kg · ' + (done ? '<span>Objectif atteint</span>' : '<span>Reste</span> ' + fmt(left) + ' kg') + '</span></div></div>';
+}
 function viewToday() {
   var l = log(), m = coachMsg(), sug = suggestion();
   var energy = [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="energy" data-n="' + n + '" class="' + (+l.energy === n ? 'on' : '') + '">' + n + '</button>'; }).join('');
   var water = +l.water || 0;
-  var h = '<div class="card coach"><span class="head">Le coach · ' + m[0] + '</span><p class="msg">' + m[1] + '</p></div>';
+  var h = heroCard() + '<div class="card coach"><span class="head">Le coach · ' + m[0] + '</span><p class="msg">' + m[1] + '</p></div>';
   h += bkBanner();
   h += deloadCard();
   h += parqCard();
