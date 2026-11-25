@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '19.0';
+var VERSION = '19.1';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Plus de relief et de mouvement : ombres douces sous les cartes, boutons qui réagissent au toucher, jauge qui se remplit, bouton « Lancer la séance » qui respire. Tout s\'arrête si ton téléphone réduit les animations.'];
+var NOTES = ['Écran Aujourd\'hui : pastilles de statut (séances de la semaine, série de semaines complètes, eau, repas) qui passent au vert quand l\'objectif est atteint.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -546,11 +546,39 @@ function heroCard() {
     '<div class="hbody"><span class="hl">Poids actuel</span><b class="hbig">' + fmt(c) + ' kg</b>' +
     '<span class="hs"><span>Objectif</span> ' + fmt(g) + ' kg · ' + (done ? '<span>Objectif atteint</span>' : '<span>Reste</span> ' + fmt(left) + ' kg') + '</span></div></div>';
 }
+function weekDone() {
+  var a = weekStartStr(), e = new Date(a + 'T12:00:00'), k = {}; e.setDate(e.getDate() + 6);
+  var b = dstr(e);
+  D.sessions.forEach(function (s) { if (!s.partial && !s.quick && s.date >= a && s.date <= b) k[s.date] = 1; });
+  return Object.keys(k).length;
+}
+function streakWeeks() {
+  var n = P.days.length; if (!n) return 0;
+  var d = new Date(weekStartStr() + 'T12:00:00'), cnt = 0, w, e, a, b, k;
+  for (w = 0; w < 104; w++) {
+    a = dstr(d); e = new Date(d); e.setDate(e.getDate() + 6); b = dstr(e);
+    if (b < P.start) break;
+    k = {}; D.sessions.forEach(function (s) { if (!s.partial && !s.quick && s.date >= a && s.date <= b) k[s.date] = 1; });
+    if (Object.keys(k).length >= n) cnt++; else if (w > 0) break;
+    d.setDate(d.getDate() - 7);
+  }
+  return cnt;
+}
+function chip(cls, label, val, ok) { return '<span class="chip ' + cls + (ok ? ' ok' : '') + '"><span>' + label + '</span> <b>' + val + '</b></span>'; }
+function chipsRow() {
+  var l = log(), n = P.days.length, wd = weekDone(), st = streakWeeks(), wt = waterTarget(), tg = kcalTarget();
+  var wp = Math.round((+l.water || 0) / wt * 100), mp = Math.round(eatenKcal() / tg * 100);
+  var h = '<div class="chips">';
+  if (n) h += chip('c-train', 'Séances', wd + '/' + n, wd >= n);
+  if (st > 0) h += chip('c-today', 'Série', st + ' <span>sem.</span>', true);
+  h += chip('c-track', 'Eau', wp + ' %', wp >= 100) + chip('c-meals', 'Repas', mp + ' %', mp >= 95);
+  return h + '</div>';
+}
 function viewToday() {
   var l = log(), m = coachMsg(), sug = suggestion();
   var energy = [1, 2, 3, 4, 5].map(function (n) { return '<button data-act="energy" data-n="' + n + '" class="' + (+l.energy === n ? 'on' : '') + '">' + n + '</button>'; }).join('');
   var water = +l.water || 0;
-  var h = heroCard() + '<div class="card coach"><span class="head">Le coach · ' + m[0] + '</span><p class="msg">' + m[1] + '</p></div>';
+  var h = heroCard() + chipsRow() + '<div class="card coach"><span class="head">Le coach · ' + m[0] + '</span><p class="msg">' + m[1] + '</p></div>';
   h += bkBanner();
   h += deloadCard();
   h += parqCard();

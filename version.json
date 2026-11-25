@@ -1,6 +1,6 @@
 {
- "version": "19.0",
+ "version": "19.1",
  "notes": [
-  "Plus de relief et de mouvement : ombres douces sous les cartes, boutons qui réagissent au toucher, jauge qui se remplit, bouton « Lancer la séance » qui respire. Tout s'arrête si ton téléphone réduit les animations."
+  "Écran Aujourd'hui : pastilles de statut (séances de la semaine, série de semaines complètes, eau, repas) qui passent au vert quand l'objectif est atteint."
  ]
 }

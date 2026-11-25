@@ -338,3 +338,13 @@ details.card:not([open]) { padding-top: 10px; padding-bottom: 10px; }
   .modal:not([hidden]) { animation: mf 0.18s ease-out; }
   @keyframes mf { from { opacity: 0; } }
 }
+
+/* 19.1 : pastilles de statut */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--cc, var(--accent)); flex: none; }
+.chip.c-train { --cc: var(--c-train); } .chip.c-today { --cc: var(--c-today); } .chip.c-track { --cc: var(--c-track); } .chip.c-meals { --cc: var(--c-meals); }
+.chip b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.chip.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); border-color: transparent; color: var(--ok); }
+.chip.ok b { color: var(--ok); }
+.chip.ok::before { background: var(--ok); }
