@@ -1,13 +1,13 @@
-Signature KVES · Coach-Mass-KVES · version 18.9
+Signature KVES · Coach-Mass-KVES · version 19.0
 Empreintes SHA-256 des fichiers publiés. Pour vérifier un fichier : sha256sum <fichier>. Une empreinte différente = fichier modifié.
 
 95d9097a893868436ade6d62e596ec0effca07b4a638d70894ec21266e1a4f21  index.html
-1004799b2e885393bd839d972a7b342c94232a1cd3c2e15cb30838e9e0d2775e  app.js
+cd4caff28ea3d508ebaea03443810554647086ab8a0aa28b1fa69be12d744740  app.js
 1b3cc60b421b9d0491793334b31e5a10e3d258375a5b7d9406920eba6da0bc6d  langues.js
 5a7c7c8630feb6267cf30539ff3d6dd9a8b94ed288e02a875450000ab9dbd573  donnees.js
 31c12b6e670c43f715019a7d983f61b53fa9c92153380c05d53903e5892437b5  theme-init.js
-a2d6b7b4c104c3f5f303530ba8058d7dab37719978632cba87368ffd1909ab33  styles.css
-27c20c25fcd0a5a3c8d01568bf8a225b7532f7745bb1a40d1cc54dea491fb760  sw.js
+eb9a0d8ce5ac8f49f93c368b86fbeae0fb9b0f274a47519827a1101b04b2e535  styles.css
+7c559356c6e2a586b66000b543c408183e91dd77ef2b91f16508da36401e3754  sw.js
 1b22e7646e7cb903db4f238bfacc6fe2c22265dd8133a9440228215c5e950762  manifest.webmanifest
 1ce557e5380206a398c33b1c0d014cc082e7f1ade36a6d18433537ef80f7e4a9  banner.jpg
 58fe039f79babd99c4d8f311d91c87e81a8ea841281b9d9e99c56e22adac9167  share.jpg
