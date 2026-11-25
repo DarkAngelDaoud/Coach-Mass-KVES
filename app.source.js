@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.5';
+var VERSION = '18.6';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Protection des données : une copie de sécurité est gardée à part, et si ton navigateur efface les données, l\'application te propose de les restaurer. Avant une mise à jour, tu peux d\'abord faire une sauvegarde.'];
+var NOTES = ['Nouvelles couleurs aux teintes du logo KVES (bleu marine et vert), en mode clair comme en mode sombre.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -1871,7 +1871,7 @@ function applyTheme() {
   var th = P.theme || 'auto', r = document.documentElement;
   if (th === 'light' || th === 'dark') r.setAttribute('data-theme', th); else r.removeAttribute('data-theme');
   var light = th === 'light' || (th === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
-  document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', light ? '#F2F4F3' : '#0C1318'); });
+  document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.removeAttribute('media'); m.setAttribute('content', light ? '#F1F5F9' : '#0B141C'); });
 }
 if (window.matchMedia) {
   try { window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', function () { if ((P.theme || 'auto') === 'auto') applyTheme(); }); } catch (e) {}

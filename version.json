@@ -1,6 +1,6 @@
 {
- "version": "18.5",
+ "version": "18.6",
  "notes": [
-  "Protection des données : une copie de sécurité est gardée à part, et si ton navigateur efface les données, l'application te propose de les restaurer. Avant une mise à jour, tu peux d'abord faire une sauvegarde."
+  "Nouvelles couleurs aux teintes du logo KVES (bleu marine et vert), en mode clair comme en mode sombre."
  ]
 }
