@@ -1,6 +1,6 @@
 {
- "version": "18.6",
+ "version": "18.7",
  "notes": [
-  "Nouvelles couleurs aux teintes du logo KVES (bleu marine et vert), en mode clair comme en mode sombre."
+  "En-tête avec le logo KVES et nom de l'application, onglet actif de la barre du bas dans une pastille colorée."
  ]
 }
