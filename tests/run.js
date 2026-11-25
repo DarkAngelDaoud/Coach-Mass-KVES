@@ -155,9 +155,9 @@ function snaps(pg) {
   var d = await dataOf(pg);
   t('mini compteur : série libre enregistrée', d.sessions.length === 1 && d.sessions[0].free && d.sessions[0].logs[0].reps === 2, d.sessions);
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]'); await pg.click('[data-act=theme][data-v=light]');
-  t('thème clair appliqué', await pg.evaluate(function () { return getComputedStyle(document.body).backgroundColor === 'rgb(242, 244, 243)'; }));
+  t('thème clair appliqué', await pg.evaluate(function () { return getComputedStyle(document.body).backgroundColor === 'rgb(241, 245, 249)'; }));
   await pg.click('[data-act=theme][data-v=auto]');
-  t('thème auto suit le système (sombre)', await pg.evaluate(function () { return getComputedStyle(document.body).backgroundColor === 'rgb(12, 19, 24)'; }));
+  t('thème auto suit le système (sombre)', await pg.evaluate(function () { return getComputedStyle(document.body).backgroundColor === 'rgb(11, 20, 28)'; }));
   t('aucune erreur (courses, minuteur, thème)', pg.errs.length === 0, pg.errs);
   await pg.context().close();
 
@@ -176,7 +176,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.5' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.6' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -240,9 +240,9 @@ function snaps(pg) {
   pg = await newPage(br, { colorScheme: 'dark' }); await pg.goto(url);
   t('barre du bas : 6 icônes', (await pg.$$('#nav button svg')).length === 6);
   await pg.evaluate(function () { window.__coach.setTab('train'); });
-  t('couleur Séance (orange)', await pg.evaluate(function () { return getComputedStyle(document.body).getPropertyValue('--accent').toLowerCase().indexOf('ff9a4d') >= 0; }));
+  t('couleur Séance (vert KVES)', await pg.evaluate(function () { return getComputedStyle(document.body).getPropertyValue('--accent').toLowerCase().indexOf('18b169') >= 0; }));
   await pg.evaluate(function () { window.__coach.setTab('meals'); });
-  t('couleur Repas (vert)', await pg.evaluate(function () { return getComputedStyle(document.body).getPropertyValue('--accent').toLowerCase().indexOf('3fd39b') >= 0; }));
+  t('couleur Repas (vert KVES)', await pg.evaluate(function () { return getComputedStyle(document.body).getPropertyValue('--accent').toLowerCase().indexOf('18b169') >= 0; }));
   await pg.evaluate(function () { window.__coach.setTab('train'); });
   await pg.click('[data-ex=pompes] details.cfg >> nth=0 >> summary');
   await pg.click('[data-act=excfg][data-id=pompes][data-k=sets][data-d="-1"]');
@@ -1334,4 +1334,3 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   console.log(ok + ' vérifications réussies, ' + fails + ' échec(s)');
   process.exit(fails ? 1 : 0);
 })().catch(function (e) { console.error(e); process.exit(2); });
-
