@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '18.8';
+var VERSION = '18.9';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Écran Aujourd\'hui : carte principale bleu marine avec jauge de progression vers ton objectif de poids, cartes plus arrondies.'];
+var NOTES = ['Le verrou accepte maintenant un vrai mot de passe de 6 à 32 caractères (lettres et chiffres) avec un indicateur de force. Ton ancien code reste valable.'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -2535,11 +2535,11 @@ function lockShow() {
   if (!pinRec() || lockEl) return;
   var el = lockMk('div', 'lockscr'), inp = lockMk('input'), msg = lockMk('p', 'small');
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
-  inp.type = 'password'; inp.setAttribute('inputmode', 'numeric'); inp.setAttribute('autocomplete', 'off'); inp.maxLength = 8; inp.id = 'lockpin'; inp.setAttribute('aria-label', 'Code');
+  inp.type = 'password'; inp.setAttribute('autocomplete', 'off'); inp.setAttribute('autocapitalize', 'none'); inp.maxLength = 32; inp.id = 'lockpin'; inp.setAttribute('aria-label', 'Mot de passe');
   msg.id = 'lockmsg'; msg.setAttribute('role', 'alert');
   var go = lockMk('button', 'btn', 'Déverrouiller'); go.setAttribute('data-act', 'lockgo');
-  var fg = lockMk('button', 'btn alt sm', 'Code oublié'); fg.setAttribute('data-act', 'lockforgot');
-  el.appendChild(lockMk('h2', '', 'Application verrouillée')); el.appendChild(lockMk('p', 'small', 'Saisis ton code pour continuer.'));
+  var fg = lockMk('button', 'btn alt sm', 'Mot de passe oublié'); fg.setAttribute('data-act', 'lockforgot');
+  el.appendChild(lockMk('h2', '', 'Application verrouillée')); el.appendChild(lockMk('p', 'small', 'Saisis ton mot de passe pour continuer.'));
   el.appendChild(inp); el.appendChild(msg); el.appendChild(go); el.appendChild(fg);
   document.body.appendChild(el); lockEl = el; lockForgot = false;
   try { inp.focus(); } catch (e) {}
@@ -2552,34 +2552,44 @@ function lockTry() {
   pinCheck(inp.value).then(function (ok) {
     if (ok) { lockHide(); return; }
     lockFails++; inp.value = '';
-    if (lockFails >= 5) { lockFails = 0; lockUntil = Date.now() + 30000; lockMsg('Trop d\'essais : réessaie dans quelques secondes.'); } else lockMsg('Code incorrect.');
-  }).catch(function () { lockMsg('Code incorrect.'); });
+    if (lockFails >= 5) { lockFails = 0; lockUntil = Date.now() + 30000; lockMsg('Trop d\'essais : réessaie dans quelques secondes.'); } else lockMsg('Mot de passe incorrect.');
+  }).catch(function () { lockMsg('Mot de passe incorrect.'); });
 }
 function lockForgotGo(btn) {
-  if (!lockForgot) { lockForgot = true; btn.textContent = 'Confirmer : effacer toutes les données et le code'; lockMsg('Sans le code, la seule issue est d\'effacer les données de l\'appli.'); return; }
+  if (!lockForgot) { lockForgot = true; btn.textContent = 'Confirmer : effacer toutes les données et le mot de passe'; lockMsg('Sans le mot de passe, la seule issue est d\'effacer les données de l\'appli.'); return; }
   safeWipe(); phWipe(); D = defaults(); P = D.profile; save(); try { localStorage.removeItem(PIN_KEY); } catch (e) {} lockHide(); applyTheme(); render();
 }
 function pinCard() {
   if (!pinOk()) return '';
   var on = !!pinRec();
-  return '<div class="card"><h2>Verrouillage par code</h2><p class="small">Un code de 4 à 8 chiffres cache l\'application à l\'ouverture et après une minute d\'absence. C\'est un verrou d\'écran, pas un chiffrement : il protège d\'un regard indiscret.</p>' +
-    (on ? '<p class="small"><b>Code actif.</b></p><button class="btn" data-act="locknow">Verrouiller maintenant</button> <button class="btn alt" data-act="pinoff">Retirer le code</button>' : '<button class="btn alt" data-act="pinset">Activer le code</button>') + '</div>';
+  return '<div class="card"><h2>Verrouillage par mot de passe</h2><p class="small">Un mot de passe de 6 à 32 caractères (lettres et chiffres) cache l\'application à l\'ouverture et après une minute d\'absence. C\'est un verrou d\'écran, pas un chiffrement : il protège d\'un regard indiscret.</p>' +
+    (on ? '<p class="small"><b>Mot de passe actif.</b></p><button class="btn" data-act="locknow">Verrouiller maintenant</button> <button class="btn alt" data-act="pinoff">Retirer le mot de passe</button>' : '<button class="btn alt" data-act="pinset">Activer le mot de passe</button>') + '</div>';
 }
 function pinSetOpen() {
-  modal('<h2>Choisir un code</h2><label class="f">Code (4 à 8 chiffres)<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin1"></label><label class="f">Répète le code<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin2"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinsave">Enregistrer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
+  modal('<h2>Choisir un mot de passe</h2><label class="f">Mot de passe (6 à 32 caractères, lettres et chiffres)<input type="password" autocomplete="off" autocapitalize="none" maxlength="32" id="pin1"></label><p class="small" id="pinstr" aria-live="polite"></p><label class="f">Répète le mot de passe<input type="password" autocomplete="off" autocapitalize="none" maxlength="32" id="pin2"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinsave">Enregistrer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
 }
 function pinOffOpen() {
-  modal('<h2>Retirer le code</h2><label class="f">Code actuel<input type="password" inputmode="numeric" autocomplete="off" maxlength="8" id="pin1"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinoffgo">Retirer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
+  modal('<h2>Retirer le mot de passe</h2><label class="f">Mot de passe actuel<input type="password" autocomplete="off" autocapitalize="none" maxlength="32" id="pin1"></label><p class="small" id="pinmsg" role="alert"></p><button class="btn" data-act="pinoffgo">Retirer</button> <button class="btn alt" data-act="modalclose">Annuler</button>');
 }
+function pinValid(p) { return typeof p === 'string' && p.length >= 6 && p.length <= 32 && /[A-Za-z]/.test(p) && /\d/.test(p); }
+function pinStrength(p) {
+  if (!pinValid(p)) return 'Faible';
+  var s = 0; if (p.length >= 10) s++; if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++;
+  return s >= 2 ? 'Fort' : 'Correct';
+}
+document.addEventListener('input', function (ev) {
+  if (!ev.target || ev.target.id !== 'pin1') return;
+  var o = $('#pinstr'); if (o) o.textContent = ev.target.value ? pinStrength(ev.target.value) : '';
+});
 function pinMsg(t) { var m = $('#pinmsg'); if (m) m.textContent = t; }
 function pinSave() {
   var a = $('#pin1').value, b = $('#pin2').value;
-  if (!/^\d{4,8}$/.test(a)) { pinMsg('Le code doit contenir 4 à 8 chiffres.'); return; }
-  if (a !== b) { pinMsg('Les deux codes ne correspondent pas.'); return; }
-  pinSet(a).then(function () { closeModal(); toast('Code enregistré.'); render(); }).catch(function () { pinMsg('Impossible d\'enregistrer le code.'); });
+  if (!pinValid(a)) { pinMsg('Le mot de passe doit faire 6 à 32 caractères, avec au moins une lettre et un chiffre.'); return; }
+  if (a !== b) { pinMsg('Les deux mots de passe ne correspondent pas.'); return; }
+  pinSet(a).then(function () { closeModal(); toast('Mot de passe enregistré.'); render(); }).catch(function () { pinMsg('Impossible d\'enregistrer le mot de passe.'); });
 }
 function pinOffGo() {
-  pinCheck($('#pin1').value).then(function (ok) { if (!ok) { pinMsg('Code incorrect.'); return; } try { localStorage.removeItem(PIN_KEY); } catch (e) {} closeModal(); toast('Code retiré.'); render(); }).catch(function () { pinMsg('Code incorrect.'); });
+  pinCheck($('#pin1').value).then(function (ok) { if (!ok) { pinMsg('Mot de passe incorrect.'); return; } try { localStorage.removeItem(PIN_KEY); } catch (e) {} closeModal(); toast('Mot de passe retiré.'); render(); }).catch(function () { pinMsg('Mot de passe incorrect.'); });
 }
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'hidden') lockHid = Date.now();

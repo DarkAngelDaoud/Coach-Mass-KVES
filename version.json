@@ -1,6 +1,6 @@
 {
- "version": "18.8",
+ "version": "18.9",
  "notes": [
-  "Écran Aujourd'hui : carte principale bleu marine avec jauge de progression vers ton objectif de poids, cartes plus arrondies."
+  "Le verrou accepte maintenant un vrai mot de passe de 6 à 32 caractères (lettres et chiffres) avec un indicateur de force. Ton ancien code reste valable."
  ]
 }
