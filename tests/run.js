@@ -177,7 +177,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.8' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.9' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -413,6 +413,16 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.9 : un ancien code numérique reste valable */
+  var pl = await newPage(br); await pl.goto(url); await pl.waitForSelector('#nav');
+  await pl.evaluate(function () {
+    var salt = crypto.getRandomValues(new Uint8Array(16)), b64u = function (u) { var s = ''; u.forEach(function (c) { s += String.fromCharCode(c); }); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+    return crypto.subtle.importKey('raw', new TextEncoder().encode('4821'), 'PBKDF2', false, ['deriveBits']).then(function (k) { return crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: salt, iterations: 150000 }, k, 256); }).then(function (b) { localStorage.setItem('coach-masse-pin-v1', JSON.stringify({ s: b64u(salt), h: b64u(new Uint8Array(b)) })); });
+  });
+  await pl.reload(); await pl.waitForSelector('#lockpin');
+  await pl.fill('#lockpin', '4821'); await pl.keyboard.press('Enter'); await pl.waitForTimeout(700);
+  t('verrou : un ancien code numérique (4821) déverrouille toujours', !(await pl.isVisible('#lockpin')));
+  await pl.context().close();
   /* 18.8 : carte principale à jauge */
   var pa = await newPage(br); await pa.goto(url); await pa.waitForSelector('#nav');
   await pa.evaluate(function () { var D = window.__coach.D(); D.profile.w0 = 70; D.profile.goal = 80; D.logs[(new Date()).toISOString().slice(0, 10)] = { weight: 75 }; window.__coach.save(); window.__coach.render(); });
@@ -722,10 +732,10 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=pinset]'); await pg.waitForTimeout(200);
   t('oeil : un bouton Voir par champ de code', (await pg.locator('#modal .eye').count()) === 2);
-  await pg.fill('#pin1', '4821');
+  await pg.fill('#pin1', 'Kves2026');
   t('oeil : champ masqué par défaut', (await pg.getAttribute('#pin1', 'type')) === 'password');
   await pg.click('#modal .eye >> nth=0');
-  t('oeil : Voir affiche le code, Masquer le recache', (await pg.getAttribute('#pin1', 'type')) === 'text' && (await pg.inputValue('#pin1')) === '4821' && (await pg.textContent('#modal .eye >> nth=0')).includes('Masquer') && (await pg.getAttribute('#modal .eye >> nth=0', 'aria-pressed')) === 'true');
+  t('oeil : Voir affiche le code, Masquer le recache', (await pg.getAttribute('#pin1', 'type')) === 'text' && (await pg.inputValue('#pin1')) === 'Kves2026' && (await pg.textContent('#modal .eye >> nth=0')).includes('Masquer') && (await pg.getAttribute('#modal .eye >> nth=0', 'aria-pressed')) === 'true');
   await pg.click('#modal .eye >> nth=0');
   t('oeil : second clic remasque', (await pg.getAttribute('#pin1', 'type')) === 'password');
   await pg.click('[data-act=modalclose]');
@@ -734,24 +744,31 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   pg = await newPage(br); await pg.goto(url); await pg.waitForSelector('#nav');
   t('verrou : absent par défaut', !(await pg.isVisible('#lockpin')));
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=pinset]');
-  await pg.fill('#pin1', '12'); await pg.fill('#pin2', '12'); await pg.click('[data-act=pinsave]');
-  t('verrou : code trop court refusé', /4 à 8/.test(await pg.textContent('#pinmsg')));
-  await pg.fill('#pin1', '4821'); await pg.fill('#pin2', '4822'); await pg.click('[data-act=pinsave]');
+  await pg.fill('#pin1', 'ab1'); await pg.fill('#pin2', 'ab1'); await pg.click('[data-act=pinsave]');
+  t('verrou : mot de passe trop court refusé', /6 à 32/.test(await pg.textContent('#pinmsg')));
+  await pg.fill('#pin1', '12345678'); await pg.fill('#pin2', '12345678'); await pg.click('[data-act=pinsave]');
+  t('verrou : chiffres seuls refusés (il faut une lettre)', /une lettre et un chiffre/.test(await pg.textContent('#pinmsg')));
+  await pg.fill('#pin1', 'Kves2026'); await pg.waitForTimeout(100);
+  t('verrou : indicateur de force affiché', /Correct|Fort/.test(await pg.textContent('#pinstr')));
+  await pg.fill('#pin1', 'Kves!Coach2026x'); await pg.waitForTimeout(100);
+  t('verrou : indicateur Fort pour un mot de passe long et varié', /Fort/.test(await pg.textContent('#pinstr')));
+  t('verrou : clavier normal (pas de clavier numérique)', (await pg.getAttribute('#pin1', 'inputmode')) === null);
+  await pg.fill('#pin1', 'Kves2026'); await pg.fill('#pin2', 'Kves2027'); await pg.click('[data-act=pinsave]');
   t('verrou : codes différents refusés', /ne correspondent pas/.test(await pg.textContent('#pinmsg')));
-  await pg.fill('#pin2', '4821'); await pg.click('[data-act=pinsave]'); await pg.waitForTimeout(600);
+  await pg.fill('#pin2', 'Kves2026'); await pg.click('[data-act=pinsave]'); await pg.waitForTimeout(600);
   var rec = await pg.evaluate(function () { return localStorage.getItem('coach-masse-pin-v1'); });
   t('verrou : code enregistré sous forme d\'empreinte (pas en clair)', !!rec && rec.indexOf('4821') < 0 && /"h":/.test(rec), rec);
   await pg.reload(); await pg.waitForSelector('#lockpin');
   t('verrou : écran de verrouillage à l\'ouverture', await pg.isVisible('#lockpin'));
   await pg.fill('#lockpin', '0000'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(600);
   t('verrou : mauvais code refusé', await pg.isVisible('#lockpin') && /incorrect/.test(await pg.textContent('#lockmsg')));
-  await pg.fill('#lockpin', '4821'); await pg.keyboard.press('Enter'); await pg.waitForTimeout(600);
+  await pg.fill('#lockpin', 'Kves2026'); await pg.keyboard.press('Enter'); await pg.waitForTimeout(600);
   t('verrou : bon code déverrouille', !(await pg.isVisible('#lockpin')));
   for (var q73 = 0; q73 < 5; q73++) { await pg.evaluate(function () { window.__coach.render(); }); }
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=locknow]');
   t('verrou : verrouiller maintenant', await pg.isVisible('#lockpin'));
   for (var f73 = 0; f73 < 5; f73++) { await pg.fill('#lockpin', '1111'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(450); }
-  await pg.fill('#lockpin', '4821'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(500);
+  await pg.fill('#lockpin', 'Kves2026'); await pg.click('[data-act=lockgo]'); await pg.waitForTimeout(500);
   t('verrou : 5 échecs déclenchent une pause (même le bon code est refusé)', await pg.isVisible('#lockpin') && /Trop d/.test(await pg.textContent('#lockmsg')));
   await pg.reload(); await pg.waitForSelector('#lockpin');
   await pg.click('[data-act=lockforgot]');
