@@ -177,7 +177,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.9' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '19.0' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -413,6 +413,16 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 19.0 : relief et mouvement */
+  var pm = await newPage(br); await pm.goto(url); await pm.waitForSelector('#nav');
+  var mv = await pm.evaluate(function () { var c = document.querySelector('.card'), r = document.querySelector('.ring .rfg'), b = document.querySelector('[data-act=start]'); return [getComputedStyle(c).boxShadow !== 'none', r ? getComputedStyle(r).animationName : 'absent', b ? getComputedStyle(b).animationName : 'absent']; });
+  t('relief : les cartes ont une ombre', mv[0], mv);
+  t('mouvement : la jauge est animée', mv[1] === 'rf', mv);
+  await pm.context().close();
+  var pr = await newPage(br, { reducedMotion: 'reduce' }); await pr.goto(url); await pr.waitForSelector('#nav');
+  var mr = await pr.evaluate(function () { var r = document.querySelector('.ring .rfg'), b = document.querySelector('[data-act=start]'); return [r ? getComputedStyle(r).animationName : 'absent', b ? getComputedStyle(b).animationName : 'absent']; });
+  t('mouvement : animations réduites : aucune animation (jauge et bouton)', mr[0] !== 'rf' && mr[1] !== 'glow', mr);
+  await pr.context().close();
   /* 18.9 : un ancien code numérique reste valable */
   var pl = await newPage(br); await pl.goto(url); await pl.waitForSelector('#nav');
   await pl.evaluate(function () {
