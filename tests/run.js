@@ -177,7 +177,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '19.1' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '19.2' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -413,6 +413,11 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 19.2 : écrans vides illustrés */
+  var pe = await newPage(br); await pe.goto(url); await pe.waitForSelector('#nav');
+  await pe.evaluate(function () { var D = window.__coach.D(); D.sessions = []; window.__coach.save(); window.__coach.setTab('history'); });
+  t('écran vide : historique illustré sans séance', await pe.isVisible('#view .empty-art svg') && /Aucune séance enregistrée/.test(await pe.textContent('#view')));
+  await pe.context().close();
   /* 19.1 : pastilles de statut */
   var pc = await newPage(br); await pc.goto(url); await pc.waitForSelector('#nav');
   var c0 = await pc.evaluate(function () { return Array.prototype.map.call(document.querySelectorAll('.chips .chip'), function (e) { return e.textContent.replace(/\s+/g, ' ').trim(); }); });
@@ -923,6 +928,7 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   }
   var qd = await qp.textContent('#runner');
   t('express : écran de fin avec explication, sans question d\'effort', qd.includes('ne compte pas pour la montée de niveau') && !qd.includes('Effort ressenti'), qd.slice(0, 160));
+  t('fin de séance : médaille affichée avec confettis', await qp.isVisible('#runner .trophy svg') && (await qp.locator('#runner .trophy .cf').count()) === 6);
   var qdata = await dataOf(qp);
   t('express : séance marquée quick et complète', qdata.sessions.length === 1 && qdata.sessions[0].quick === true && qdata.sessions[0].partial === false, qdata.sessions);
   await qp.click('#runner [data-act=closerun]'); await qp.click('#nav [data-v=today]');
