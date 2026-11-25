@@ -176,7 +176,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.6' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.7' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -412,6 +412,11 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.7 : en-tête KVES et pastille de l'onglet actif */
+  var p9 = await newPage(br); await p9.goto(url); await p9.waitForSelector('#nav');
+  var hd = await p9.evaluate(function () { var i = document.querySelector('.top .blogo'); var s = document.querySelector('.top .bsub'); var on = document.querySelector('#nav button.on'); return [!!i && i.naturalWidth > 0, !!s && s.textContent === 'KVES', !!on && parseFloat(getComputedStyle(on).borderTopLeftRadius) >= 12, document.documentElement.scrollWidth <= window.innerWidth]; });
+  t('en-tête : logo KVES chargé', hd[0], hd); t('en-tête : sous-titre KVES', hd[1]); t('barre du bas : onglet actif en pastille arrondie', hd[2]); t('en-tête : pas de défilement horizontal', hd[3]);
+  await p9.context().close();
   /* 18.5 : protection des données (copie de sécurité + restauration) */
   async function seed185() {
     var q = await newPage(br, { onb: true }); await q.goto(url); await q.waitForSelector('#nav');
