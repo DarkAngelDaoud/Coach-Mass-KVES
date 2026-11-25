@@ -8,9 +8,9 @@
 var KEY = 'coach-masse-v1';
 var JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
-var VERSION = '19.1';
+var VERSION = '19.2';
 var NOM = 'Coach-Mass-KVES', AUTEUR = 'KVES';
-var NOTES = ['Écran Aujourd\'hui : pastilles de statut (séances de la semaine, série de semaines complètes, eau, repas) qui passent au vert quand l\'objectif est atteint.'];
+var NOTES = ['Fin de séance : médaille animée avec confettis et pastille « Nouveau record ! » ; dessins dans les écrans vides (historique, courbes).'];
 var CD = window.CM_DATA;
 if (!CD) { document.body.textContent = 'Fichier donnees.js introuvable : recharge la page ou réinstalle l\'application.'; return; }
 var STRETCH = CD.STRETCH, WARM = CD.WARM, EX = CD.EX, LEGS = CD.LEGS, FIG = CD.FIG, FIGS = CD.FIGS, MEALS = CD.MEALS, EXTRA = CD.EXTRA, BASE_KCAL = CD.BASE_KCAL, SHOPN = CD.SHOPN, SHOP_ORDER = CD.SHOP_ORDER, SLOTS = CD.SLOTS, EXTRA_OPTS = CD.EXTRA_OPTS, ZONES = CD.ZONES, MUSCLE_NAMES = CD.MUSCLE_NAMES, META = CD.META, HL = CD.HL, RISK = CD.RISK;
@@ -802,7 +802,7 @@ function weightChart() {
 }
 
 function barChart(items, unit) {
-  if (!items.length) return '<p class="small">Aucune séance terminée sur cette période. Fais une séance pour voir ta courbe.</p>';
+  if (!items.length) return emptyArt('chart') + '<p class="small">Aucune séance terminée sur cette période. Fais une séance pour voir ta courbe.</p>';
   var W = 340, H = 170, ml = 38, mr = 10, mt = 18, mb = 26, n = items.length;
   var mx = niceMax(Math.max.apply(null, items.map(function (x) { return x.v; })) * 1.08);
   var iw = (W - ml - mr) / n, bw = Math.min(30, iw * 0.7);
@@ -895,7 +895,7 @@ function viewTrack() {
 
 function viewHistory() {
   var ss = D.sessions, h = '<h1>Historique</h1>';
-  if (!ss.length) return h + '<div class="card"><p>Aucune séance enregistrée pour le moment. Chaque série que tu fais est conservée ici, avec la date, la variante et tes répétitions.</p></div>';
+  if (!ss.length) return h + '<div class="card empty">' + emptyArt('hist') + '<p>Aucune séance enregistrée pour le moment. Chaque série que tu fais est conservée ici, avec la date, la variante et tes répétitions.</p></div>';
   var done = ss.filter(function (x) { return !x.partial; }), mins = 0, reps = 0;
   ss.forEach(function (x) { mins += x.min || 0; (x.logs || []).forEach(function (l) { var e = FIGS[l.id]; if (e && !e.timed) reps += l.reps; }); });
   h += '<div class="card"><div class="stats"><div class="stat"><b>' + done.length + '</b><span>séances</span></div><div class="stat"><b>' + Math.round(mins / 60 * 10) / 10 + '</b><span>heures</span></div><div class="stat"><b>' + reps + '</b><span>répétitions</span></div></div></div>';
@@ -1321,9 +1321,21 @@ function draw() {
   if (R.last >= 0) setTxt('tmr', R.last);
   if (R.phase === 'work' && R.count) setTxt('cnt', R.count);
 }
+function trophyArt(rec) {
+  var cf = [[22, 30, '#18B169'], [98, 26, '#6FB4E8'], [14, 64, '#F2B84B'], [106, 62, '#18B169'], [34, 12, '#6FB4E8'], [86, 10, '#F2B84B']], s = '', i;
+  for (i = 0; i < cf.length; i++) s += '<circle class="cf" style="animation-delay:' + (i * 0.08).toFixed(2) + 's" cx="' + cf[i][0] + '" cy="' + cf[i][1] + '" r="4" fill="' + cf[i][2] + '"/>';
+  return '<div class="trophy" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="tr" cx="60" cy="62" r="40"/>' + s + '<path class="ck" d="M42 62 L55 75 L80 48" fill="none" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>' +
+    (rec ? '<p class="trec"><span class="chip ok"><b>Nouveau record !</b></span></p>' : '');
+}
+function emptyArt(kind) {
+  var a = kind === 'chart'
+    ? '<path d="M14 8 V72 H108" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><rect x="28" y="46" width="14" height="26" rx="4" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4 4"/><rect x="52" y="32" width="14" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4 4"/><rect x="76" y="18" width="14" height="54" rx="4" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="4 4"/>'
+    : '<rect x="18" y="16" width="84" height="64" rx="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M18 36 H102" stroke="currentColor" stroke-width="3"/><path d="M38 8 V24 M82 8 V24" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><circle cx="40" cy="52" r="3.5" fill="currentColor"/><circle cx="60" cy="52" r="3.5" fill="currentColor"/><circle cx="80" cy="52" r="3.5" fill="currentColor"/><circle cx="40" cy="67" r="3.5" fill="currentColor"/><circle cx="102" cy="78" r="13" fill="#18B169"/><path d="M102 71 V85 M95 78 H109" stroke="#fff" stroke-width="3.5" stroke-linecap="round"/>';
+  return '<div class="empty-art" aria-hidden="true"><svg viewBox="0 0 120 90">' + a + '</svg></div>';
+}
 function drawDone() {
   var h = '<div class="rtop"><span class="small">' + (R.partial ? (R.solo ? 'Exercice interrompu' : 'Séance interrompue') : (R.solo ? 'Exercice terminé' : 'Séance terminée')) + '</span></div>';
-  h += '<div class="rbody"><div class="rl"><p class="title">' + (R.solo ? 'Enregistré dans l\'historique (libre)' : R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
+  h += '<div class="rbody"><div class="rl">' + (!R.partial && !R.solo ? trophyArt(R.prs && R.prs.length) : '') + '<p class="title">' + (R.solo ? 'Enregistré dans l\'historique (libre)' : R.partial ? 'Séance incomplète enregistrée' : 'Séance validée') + '</p><div class="stats"><div class="stat"><b>' + R.min + '</b><span>minutes</span></div><div class="stat"><b>' + R.logs.length + '</b><span>séries</span></div><div class="stat"><b>' + R.logs.reduce(function (a, x) { return a + (R.plan.filter(function (p) { return p.e.id === x.id; })[0].e.timed ? 0 : x.reps); }, 0) + '</b><span>répétitions</span></div></div></div><div class="rr">';
   if (R.ups && R.ups.length) h += '<div class="card"><h2>Tu passes au niveau supérieur</h2><ul class="list">' + R.ups.map(function (u) { return '<li>' + esc(u) + '</li>'; }).join('') + '</ul></div>';
   if (R.prs && R.prs.length) h += '<div class="card"><h2>Nouveau record</h2><ul class="list">' + R.prs.map(function (r) { var u = r.timed ? ' s' : ''; return '<li><b>' + esc(r.name) + '</b> : <span>' + r.v + u + '</span> <span class="small">(<span>' + r.old + u + '</span>)</span><br><span class="small">Prochain objectif</span> <span>' + r.nx + u + '</span></li>'; }).join('') + '</ul></div>';
   if (R.pain && R.pain.length) h += '<div class="card"><h2>Douleur signalée</h2><p class="small"><b>' + R.pain.map(esc).join(', ') + '</b></p><p class="small">Repose-toi. Si la douleur revient ou dure, consulte un médecin ou un kinésithérapeute.</p></div>';

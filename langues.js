@@ -1283,4 +1283,10 @@ window.CM_I18N = function (LANG_DATA, PT, LANGS) {
   var X = {"en": {"Séances": "Sessions", "Série": "Streak", "sem.": "wk", "Eau": "Water", "Repas": "Meals"}, "ar": {"Séances": "الحصص", "Série": "السلسلة", "sem.": "أسبوع", "Eau": "الماء", "Repas": "الوجبات"}, "ma": {"Séances": "Jalsat", "Série": "Sa7ba", "sem.": "smana", "Eau": "L-ma", "Repas": "L-wajabat"}};
   Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
 })();
+
+/* 19.2 : fin de séance */
+(function(){
+  var X = {"en": {"Nouveau record !": "New record!"}, "ar": {"Nouveau record !": "رقم قياسي جديد!"}, "ma": {"Nouveau record !": "Record jdid!"}};
+  Object.keys(X).forEach(function (l) { if (LANG_DATA[l]) Object.keys(X[l]).forEach(function (k) { if (!(k in LANG_DATA[l].w)) LANG_DATA[l].w[k] = X[l][k]; }); });
+})();
 };

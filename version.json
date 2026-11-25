@@ -1,6 +1,6 @@
 {
- "version": "19.1",
+ "version": "19.2",
  "notes": [
-  "Écran Aujourd'hui : pastilles de statut (séances de la semaine, série de semaines complètes, eau, repas) qui passent au vert quand l'objectif est atteint."
+  "Fin de séance : médaille animée avec confettis et pastille « Nouveau record ! » ; dessins dans les écrans vides (historique, courbes)."
  ]
 }

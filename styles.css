@@ -348,3 +348,22 @@ details.card:not([open]) { padding-top: 10px; padding-bottom: 10px; }
 .chip.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); border-color: transparent; color: var(--ok); }
 .chip.ok b { color: var(--ok); }
 .chip.ok::before { background: var(--ok); }
+
+/* 19.2 : fin de séance et écrans vides */
+.trophy { display: flex; justify-content: center; margin: 4px 0 2px; }
+.trophy svg { width: 120px; height: 120px; overflow: visible; }
+.trophy .tr { fill: var(--accent); }
+.trophy .ck { stroke: var(--accent-ink); }
+.trophy .cf { transform-box: fill-box; transform-origin: center; }
+.trec { text-align: center; margin: 0 0 4px; }
+.empty-art { display: flex; justify-content: center; color: var(--muted); margin: 4px 0 8px; opacity: 0.85; }
+.empty-art svg { width: 132px; height: 99px; }
+.card.empty { text-align: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .trophy .tr { transform-box: fill-box; transform-origin: center; animation: tpop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+  @keyframes tpop { from { transform: scale(0.4); opacity: 0; } }
+  .trophy .ck { stroke-dasharray: 60; animation: tck 0.5s 0.35s ease-out both; }
+  @keyframes tck { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+  .trophy .cf { animation: tcf 0.9s 0.3s ease-out both; }
+  @keyframes tcf { from { transform: scale(0) translateY(14px); opacity: 0; } 60% { opacity: 1; } }
+}
