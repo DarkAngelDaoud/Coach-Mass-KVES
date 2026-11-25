@@ -176,7 +176,7 @@ function snaps(pg) {
   await pg.click('#nav [data-v=more]'); await pg.click('[data-act=tab][data-v=settings]');
   var dl = pg.waitForEvent('download'); await pg.click('#view [data-act=bkexport]');
   var file = await dl, fpath = await file.path(), body = JSON.parse(fs.readFileSync(fpath, 'utf8'));
-  t('export : format enveloppé', body.coachMasse === '18.7' && body.data.sessions.length === 1, Object.keys(body));
+  t('export : format enveloppé', body.coachMasse === '18.8' && body.data.sessions.length === 1, Object.keys(body));
   t('export : date de sauvegarde enregistrée', (await dataOf(pg)).profile.bkLast.length === 10);
   t('bannière disparue après sauvegarde', !(await (async function () { await pg.click('#nav [data-v=today]'); return (await pg.textContent('#view')).includes('Sauvegarde conseillée'); })()));
   /* import invalide : rien ne change */
@@ -412,6 +412,14 @@ avis:{sent:[{d:'2026-11-12',type:'Idée',stars:5,len:120}],inbox:[{code:'CM1.'+'
   t('réglages : la section reste ouverte après une action', await pg.isVisible('[data-act=testvoice]'));
   await pg.context().close();
 
+  /* 18.8 : carte principale à jauge */
+  var pa = await newPage(br); await pa.goto(url); await pa.waitForSelector('#nav');
+  await pa.evaluate(function () { var D = window.__coach.D(); D.profile.w0 = 70; D.profile.goal = 80; D.logs[(new Date()).toISOString().slice(0, 10)] = { weight: 75 }; window.__coach.save(); window.__coach.render(); });
+  var hv = await pa.evaluate(function () { var h = document.querySelector('.card.hero'); return h ? [h.textContent, document.querySelector('.ring .rfg').getAttribute('stroke-dasharray'), document.documentElement.scrollWidth <= window.innerWidth] : null; });
+  t('carte principale : affichée avec poids actuel et objectif', !!hv && /75/.test(hv[0]) && /80/.test(hv[0]), hv);
+  t('carte principale : jauge à 50 % (70 → 80, actuel 75)', !!hv && parseFloat(hv[1]) > 137 && parseFloat(hv[1]) < 139, hv);
+  t('carte principale : pas de défilement horizontal', !!hv && hv[2]);
+  await pa.context().close();
   /* 18.7 : en-tête KVES et pastille de l'onglet actif */
   var p9 = await newPage(br); await p9.goto(url); await p9.waitForSelector('#nav');
   var hd = await p9.evaluate(function () { var i = document.querySelector('.top .blogo'); var s = document.querySelector('.top .bsub'); var on = document.querySelector('#nav button.on'); return [!!i && i.naturalWidth > 0, !!s && s.textContent === 'KVES', !!on && parseFloat(getComputedStyle(on).borderTopLeftRadius) >= 12, document.documentElement.scrollWidth <= window.innerWidth]; });
